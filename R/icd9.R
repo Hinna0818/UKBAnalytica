@@ -86,6 +86,7 @@ parse_icd9_diagnoses <- function(dt) {
 
   eids_with_codes <- unique(codes_long$eid)
   dt_sub <- dt[eid %in% eids_with_codes, c("eid", date_cols), with = FALSE]
+  dt_sub[, (date_cols) := lapply(.SD, as.character), .SDcols = date_cols]
 
   dates_long <- data.table::melt(
     dt_sub, id.vars = "eid", measure.vars = date_cols,

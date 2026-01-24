@@ -51,6 +51,8 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     ))
   }
 
+  dt[, (code_cols) := lapply(.SD, as.integer), .SDcols = code_cols]
+
   codes_long <- data.table::melt(
     dt[, c("eid", code_cols), with = FALSE],
     id.vars = "eid", measure.vars = code_cols,
@@ -89,6 +91,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
 
   eids_with_codes <- unique(codes_long$eid)
   dt_sub <- dt[eid %in% eids_with_codes, c("eid", year_cols), with = FALSE]
+  dt_sub[, (year_cols) := lapply(.SD, as.numeric), .SDcols = year_cols]
 
   years_long <- data.table::melt(
     dt_sub, id.vars = "eid", measure.vars = year_cols,

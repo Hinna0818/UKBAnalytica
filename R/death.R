@@ -47,6 +47,7 @@ parse_death_records <- function(dt) {
   }
 
   death_dates <- dt[, c("eid", death_date_cols), with = FALSE]
+  death_dates[, (death_date_cols) := lapply(.SD, as.character), .SDcols = death_date_cols]
   death_dates_long <- data.table::melt(
     death_dates, id.vars = "eid", measure.vars = death_date_cols,
     variable.name = "col", value.name = "death_date", na.rm = TRUE
@@ -75,6 +76,7 @@ parse_death_records <- function(dt) {
   primary_long <- NULL
 
   if (length(primary_cols) > 0) {
+    dt[, (primary_cols) := lapply(.SD, as.character), .SDcols = primary_cols]
     primary_long <- data.table::melt(
       dt[, c("eid", primary_cols), with = FALSE],
       id.vars = "eid", measure.vars = primary_cols,
@@ -90,6 +92,7 @@ parse_death_records <- function(dt) {
   secondary_long <- NULL
 
   if (length(secondary_cols) > 0) {
+    dt[, (secondary_cols) := lapply(.SD, as.character), .SDcols = secondary_cols]
     secondary_long <- data.table::melt(
       dt[, c("eid", secondary_cols), with = FALSE],
       id.vars = "eid", measure.vars = secondary_cols,
@@ -196,6 +199,8 @@ get_death_dates <- function(dt) {
       eid = integer(0), death_date = as.Date(character(0))
     ))
   }
+
+  dt[, (death_date_cols) := lapply(.SD, as.character), .SDcols = death_date_cols]
 
   death_dates <- data.table::melt(
     dt[, c("eid", death_date_cols), with = FALSE],

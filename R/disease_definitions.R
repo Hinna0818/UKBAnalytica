@@ -69,7 +69,7 @@ get_predefined_diseases <- function() {
     # Aortic diseases
     AA = create_disease_definition(
       name = "Aortic Aneurysm",
-      icd10_pattern = "^I71",
+      icd10_pattern = "^(I71)",
       icd9_pattern = "^441"
     ),
     TAA = create_disease_definition(
@@ -128,6 +128,108 @@ get_predefined_diseases <- function() {
       name = "Vascular Disease",
       icd10_pattern = "^(I71|I72|I73|I77|I78|I79)",
       icd9_pattern = "^(441|442|443|447)"
+    ),
+
+    # Coronary and rhythm disorders
+    Angina = create_disease_definition(
+      name = "Angina Pectoris",
+      icd10_pattern = "^I20",
+      icd9_pattern = "^413",
+      sr_codes = c(1074)
+    ),
+    Atrial_Fibrillation = create_disease_definition(
+      name = "Atrial Fibrillation/Flutter",
+      icd10_pattern = "^I48",
+      icd9_pattern = "^(4273|4274)",
+      sr_codes = c(1471, 1483, 1485)
+    ),
+
+    # Respiratory diseases
+    Asthma = create_disease_definition(
+      name = "Asthma",
+      icd10_pattern = "^(J45|J46)",
+      icd9_pattern = "^493",
+      sr_codes = c(1111)
+    ),
+    COPD = create_disease_definition(
+      name = "Chronic Obstructive Pulmonary Disease",
+      icd10_pattern = "^(J41|J42|J43|J44)",
+      icd9_pattern = "^(491|492|496)",
+      sr_codes = c(1112, 1113, 1472)
+    ),
+
+    # Renal and metabolic
+    CKD = create_disease_definition(
+      name = "Chronic Kidney Disease",
+      icd10_pattern = "^(N18|N19)",
+      icd9_pattern = "^(585|586)",
+      sr_codes = c(1192, 1193, 1194, 1405, 1582, 1675)
+    ),
+    Hyperlipidemia = create_disease_definition(
+      name = "Hyperlipidemia/High Cholesterol",
+      icd10_pattern = "^E78",
+      icd9_pattern = "^272",
+      sr_codes = c(1473)
+    ),
+
+    # Peripheral vascular and thromboembolic
+    PAD = create_disease_definition(
+      name = "Peripheral Arterial Disease",
+      icd10_pattern = "^(I702|I703|I704|I708|I709|I738|I739|I74)",
+      icd9_pattern = "^(4402|4403|4409|4439)",
+      sr_codes = c(1067, 1104, 1105)
+    ),
+    VTE = create_disease_definition(
+      name = "Venous Thromboembolism",
+      icd10_pattern = "^(I26|I80|I81|I82)",
+      icd9_pattern = "^(4151|451|453)",
+      sr_codes = c(1068, 1093, 1094)
+    ),
+
+    # Musculoskeletal and rheumatologic
+    Osteoarthritis = create_disease_definition(
+      name = "Osteoarthritis",
+      icd10_pattern = "^(M15|M16|M17|M18|M19)",
+      icd9_pattern = "^715",
+      sr_codes = c(1465)
+    ),
+    Rheumatoid_Arthritis = create_disease_definition(
+      name = "Rheumatoid Arthritis",
+      icd10_pattern = "^(M05|M06)",
+      icd9_pattern = "^714",
+      sr_codes = c(1464, 1477)
+    ),
+
+    # Neurologic and psychiatric
+    Parkinsons = create_disease_definition(
+      name = "Parkinson's Disease",
+      icd10_pattern = "^G20",
+      icd9_pattern = "^3320",
+      sr_codes = c(1262)
+    ),
+    Dementia = create_disease_definition(
+      name = "Dementia/Alzheimer's Disease",
+      icd10_pattern = "^(F00|F01|F02|F03|G30)",
+      icd9_pattern = "^(290|3310)",
+      sr_codes = c(1263)
+    ),
+    Epilepsy = create_disease_definition(
+      name = "Epilepsy",
+      icd10_pattern = "^(G40|G41)",
+      icd9_pattern = "^345",
+      sr_codes = c(1264)
+    ),
+    Depression = create_disease_definition(
+      name = "Depressive Disorders",
+      icd10_pattern = "^(F32|F33)",
+      icd9_pattern = "^(2962|2963|311)",
+      sr_codes = c(1286, 1531, 1682)
+    ),
+    Anxiety = create_disease_definition(
+      name = "Anxiety Disorders",
+      icd10_pattern = "^(F40|F41)",
+      icd9_pattern = "^(3000|3002|3003)",
+      sr_codes = c(1287)
     )
   )
 }
