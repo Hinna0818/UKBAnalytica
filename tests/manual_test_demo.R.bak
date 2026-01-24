@@ -1,0 +1,132 @@
+# ============================================================================
+# UKBAnalytica 测试脚本
+# 使用 raw_demo.csv 验证核心函数
+# ============================================================================
+
+library(data.table)
+
+# 加载包函数（开发模式）
+source("R/UKBAnalytica-package.R")
+source("R/extract_icd10.R")
+source("R/extract_icd9.R")
+source("R/extract_self_report.R")
+source("R/extract_death.R")
+source("R/disease_definitions.R")
+source("R/survival.R")
+
+# ============================================================================
+# 1. 加载测试数据
+# ============================================================================
+cat("========== 加载测试数据 ==========\n")
+
+dt <- fread("raw_demo.csv")
+cat(sprintf("数据维度: %d 行 x %d 列\n", nrow(dt), ncol(dt)))
+cat(sprintf("eid 列表: %s\n", paste(dt$eid, collapse = ", ")))
+
+# 查看 p41270 (ICD-10) 内容
+cat("\n========== p41270 (ICD-10) 原始内容 ==========\n")
+print(dt[, .(eid, p41270)])
+
+# ============================================================================
+# 2. 测试 ICD-10 解析
+# ============================================================================
+cat("\n========== 测试 extract_icd10_long() ==========\n")
+
+icd10_long <- extract_icd10_long(dt)
+cat(sprintf("解析得到 %d 条 ICD-10 记录\n", nrow(icd10_long)))
+print(head(icd10_long, 20))
+
+# 检查 Index Match 是否正确
+cat("\n验证 Index Match (第一个样本):\n")
+cat("原始 p41270:\n")
+print(dt[1, p41270])
+cat("\n原始 p41280_a0 ~ a5:\n
+")
+print(dt[1, .(p41280_a0, p41280_a1, p41280_a2, p41280_a3, p41280_a4, p41280_a5)])
+cat("\n解析结果:\n")
+print(icd10_long[eid == dt$eid[1]][1:6])
+
+# ============================================================================
+# 3. 测试 ICD-10 筛选
+# ============================================================================
+cat("\n========== 测试疾病筛选 ==========\n")
+
+# 筛选高血压 (I10)
+hypertension <- filter_icd10_by_pattern(icd10_long, "^I10", "Hypertension")
+cat(sprintf("高血压 (I10) 记录数: %d\n", nrow(hypertension)))
+print(hypertension)
+
+# 筛选主动脉瘤 (I71)
+aa <- filter_icd10_by_pattern(icd10_long, "^I71", "AA")
+cat(sprintf("\n主动脉瘤 (I71) 记录数: %d\n", nrow(aa)))
+print(aa)
+
+# ============================================================================
+# 4. 测试 Self-report 解析
+# ============================================================================
+cat("\n========== 测试 extract_self_report_long() ==========\n")
+
+sr_long <- extract_self_report_long(dt)
+cat(sprintf("解析得到 %d 条 Self-report 记录\n", nrow(sr_long)))
+print(head(sr_long, 20))
+
+# ============================================================================
+# 5. 测试死亡数据解析
+# ============================================================================
+cat("\n========== 测试 extract_death_long() ==========\n")
+
+death_long <- extract_death_long(dt)
+cat(sprintf("解析得到 %d 条死亡记录\n", nrow(death_long)))
+print(death_long)
+
+# ============================================================================
+# 6. 测试完整生存数据生成
+# ============================================================================
+cat("\n========== 测试 get_survival_data() ==========\n")
+
+# 定义测试疾病
+test_diseases <- list(
+  Hypertension = define_disease(
+    name = "Hypertension",
+    icd10_pattern = "^I10"
+  ),
+  AA = define_disease(
+    name = "Aortic Aneurysm",
+    icd10_pattern = "^I71"
+  ),
+  Diabetes = define_disease(
+    name = "Diabetes",
+    icd10_pattern = "^(E10|E11|E12|E13|E14)"
+  )
+)
+
+surv_data <- get_survival_data(
+  dt,
+  disease_definitions = test_diseases,
+  censor_date = as.Date("2023-10-31"),
+  baseline_col = "p53_i0"
+)
+
+cat("\n生存数据结果:\n")
+print(surv_data)
+
+# ============================================================================
+# 7. 测试预定义疾病
+# ============================================================================
+cat("\n========== 测试预定义疾病库 ==========\n")
+
+predefined <- get_predefined_diseases()
+cat(sprintf("预定义疾病数量: %d\n", length(predefined)))
+cat(sprintf("疾病列表: %s\n", paste(names(predefined), collapse = ", ")))
+
+# 使用预定义疾病进行分析
+surv_data2 <- get_survival_data(
+  dt,
+  disease_definitions = predefined[c("Hypertension", "CVD", "Diabetes")],
+  censor_date = as.Date("2023-10-31")
+)
+
+cat("\n使用预定义疾病的生存数据:\n")
+print(surv_data2)
+
+cat("\n========== 测试完成 ==========\n")

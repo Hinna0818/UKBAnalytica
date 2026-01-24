@@ -1,0 +1,29 @@
+# R package specific
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+
+# Build artifacts
+*.tar.gz
+*.zip
+man/*.Rd
+NAMESPACE
+
+# macOS
+.DS_Store
+
+# Test outputs
+test_output/
+tests/skill.md
+tests/raw_demo.csv
+tests/test_demo.R
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*~
+*.swp
+*.swo

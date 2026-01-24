@@ -1,0 +1,21 @@
+Package: UKBAnalytica
+Title: UK Biobank Data Processing and Survival Analysis Toolkit
+Version: 0.2.0
+Authors@R: 
+    person("Nan", "He", email = "nanh302311@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0008-6932-3867"))
+Description: A high-performance R package for processing UK Biobank (UKB) 
+    Research Analysis Platform (RAP) exported data. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+URL: https://github.com/Hinna0818/UKBAnalytica
+BugReports: https://github.com/Hinna0818/UKBAnalytica/issues
+Imports: 
+    data.table (>= 1.14.0),
+    stringi (>= 1.7.0)
+Suggests:
+    testthat (>= 3.0.0),
+    survival
+Config/testthat/edition: 3

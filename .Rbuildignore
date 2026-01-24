@@ -1,0 +1,13 @@
+^\.Rproj\.user$
+^\.Rhistory$
+^\.RData$
+^\.DS_Store$
+^Makefile$
+^README\.Rmd$
+^outcome\.Rmd$
+^raw_demo\.csv$
+^skill\.md$
+^test_demo\.R$
+^\.git$
+^\.gitignore$
+^README\.html$
