@@ -140,6 +140,94 @@ extract_cases_by_source <- function(dt,
 }
 
 
+#' @title Generate Wide-Format with Dual Source Definition
+#'
+#' @description
+#' Internal function that generates wide-format disease status using separate
+#' sources for prevalent (history) and incident cases. This supports the common
+#' epidemiological practice of using self-report for baseline exclusion but not
+#' for outcome ascertainment.
+#'
+#' @param dt A data.table containing UKB data.
+#' @param disease_definitions Named list of disease definitions.
+#' @param prevalent_sources Sources for identifying prevalent cases.
+#' @param outcome_sources Sources for identifying incident cases.
+#' @param censor_date Administrative censoring date.
+#' @param baseline_col Column name for baseline date.
+#'
+#' @return A data.table with _history and _incident columns per disease.
+#'
+#' @keywords internal
+generate_wide_format_dual_source <- function(dt,
+                                              disease_definitions,
+                                              prevalent_sources,
+                                              outcome_sources,
+                                              censor_date,
+                                              baseline_col) {
+
+  if (!data.table::is.data.table(dt)) {
+    dt <- data.table::as.data.table(dt)
+  }
+
+  # Extract prevalent cases (includes self-report)
+  prevalent_long <- extract_cases_by_source(
+    dt, disease_definitions, prevalent_sources, censor_date, baseline_col
+  )
+
+  # Extract outcome cases (excludes self-report)
+  outcome_long <- extract_cases_by_source(
+    dt, disease_definitions, outcome_sources, censor_date, baseline_col
+  )
+
+  all_eids <- dt[, .(eid)]
+  wide_dt <- data.table::copy(all_eids)
+
+  diseases <- names(disease_definitions)
+
+  for (d in diseases) {
+    # History from prevalent_sources
+    d_prevalent <- prevalent_long[disease == d]
+    # Incident from outcome_sources
+    d_outcome <- outcome_long[disease == d]
+
+    d_wide <- data.table::copy(all_eids)
+
+    # Mark history (prevalent) from prevalent_sources
+    if (nrow(d_prevalent) > 0) {
+      prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
+      d_wide[, (paste0(d, "_history")) := as.integer(eid %in% prevalent_eids)]
+    } else {
+      d_wide[, (paste0(d, "_history")) := 0L]
+    }
+
+    # Mark incident from outcome_sources
+    if (nrow(d_outcome) > 0) {
+      d_wide <- data.table::merge.data.table(
+        d_wide,
+        d_outcome[, .(eid, status)],
+        by = "eid", all.x = TRUE
+      )
+      d_wide[, (paste0(d, "_incident")) := as.integer(status == 1L & !is.na(status))]
+      d_wide[, status := NULL]
+    } else {
+      d_wide[, (paste0(d, "_incident")) := 0L]
+    }
+
+    # Replace NA with 0
+    hist_col <- paste0(d, "_history")
+    inc_col <- paste0(d, "_incident")
+    data.table::set(d_wide, which(is.na(d_wide[[hist_col]])), hist_col, 0L)
+    data.table::set(d_wide, which(is.na(d_wide[[inc_col]])), inc_col, 0L)
+
+    d_wide <- d_wide[, c("eid", hist_col, inc_col), with = FALSE]
+    wide_dt <- data.table::merge.data.table(wide_dt, d_wide, by = "eid", all.x = TRUE)
+  }
+
+  data.table::setorder(wide_dt, eid)
+  return(wide_dt)
+}
+
+
 #' @title Generate Wide-Format Disease Status Table
 #'
 #' @description

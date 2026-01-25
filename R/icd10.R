@@ -112,7 +112,7 @@ parse_icd10_diagnoses <- function(dt) {
 #' aa_cases <- filter_icd10_codes(icd10_long, "^I71", "Aortic_Aneurysm")
 #' }
 #'
-#' @export
+#' @keywords internal
 filter_icd10_codes <- function(icd10_long, pattern, disease_label) {
   if (!data.table::is.data.table(icd10_long)) {
     icd10_long <- data.table::as.data.table(icd10_long)
@@ -134,7 +134,7 @@ filter_icd10_codes <- function(icd10_long, pattern, disease_label) {
 #' @return A data.table with columns: \code{eid}, \code{disease},
 #'   \code{earliest_date}, \code{source}.
 #'
-#' @export
+#' @keywords internal
 aggregate_icd10_earliest <- function(icd10_filtered) {
   if (!data.table::is.data.table(icd10_filtered)) {
     icd10_filtered <- data.table::as.data.table(icd10_filtered)

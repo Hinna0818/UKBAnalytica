@@ -58,21 +58,24 @@ library(data.table)
 ukb_data <- fread("population.csv")
 
 # Define diseases of interest
-diseases <- get_predefined_diseases()[c("Hypertension", "Diabetes")]
+diseases <- get_predefined_diseases()[c("AA", "Hypertension", "Diabetes")]
 
 # Generate survival dataset
+# - Use self-report for prevalent exclusion (baseline disease history)
+# - Use only hospital records for outcome ascertainment (more reliable)
 analysis_dt <- build_survival_dataset(
   dt = ukb_data,
   disease_definitions = diseases,
-  sources = "ICD10",
-  primary_disease = "Hypertension"
+  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),  # Include self-report
+  outcome_sources = c("ICD10", "ICD9", "Death"),                   # Exclude self-report
+  primary_disease = "AA"
 )
 
-# Cox regression
+# Cox regression (excluding prevalent cases)
 library(survival)
 cox_model <- coxph(
-  Surv(outcome_surv_time, outcome_status) ~ Diabetes_history,
-  data = analysis_dt
+  Surv(outcome_surv_time, outcome_status) ~ Hypertension_history + Diabetes_history,
+  data = analysis_dt[AA_history == 0]  # Exclude baseline prevalent cases
 )
 summary(cox_model)
 ```
@@ -129,16 +132,48 @@ Each disease generates two columns for flexible use, plus outcome columns:
 
 ## Sensitivity Analysis
 
+The package supports separate source definitions for prevalent case exclusion and outcome ascertainment:
+
 ```r
-# Main analysis: Hospital diagnoses only
-main_dt <- build_survival_dataset(ukb_data, diseases, sources = "ICD10")
+# Main analysis: 
+# - Self-report for baseline exclusion (captures pre-existing conditions)
+# - Hospital records only for outcome (more reliable dates)
+main_dt <- build_survival_dataset(
+  ukb_data, 
+  diseases,
+  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+  outcome_sources = c("ICD10", "Death")
+)
 
-# Sensitivity: Include self-reported data
-sens_dt <- build_survival_dataset(ukb_data, diseases, sources = c("ICD10", "Self-report"))
+# Sensitivity 1: Hospital records only (strictest definition)
+strict_dt <- build_survival_dataset(
+  ukb_data, 
+  diseases,
+  prevalent_sources = c("ICD10", "ICD9"),
+  outcome_sources = c("ICD10", "ICD9")
+)
 
-# Compare case counts
+# Sensitivity 2: All sources including self-report for outcome
+# (Note: self-report dates are year-only, less precise)
+broad_dt <- build_survival_dataset(
+  ukb_data, 
+  diseases,
+  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+  outcome_sources = c("ICD10", "ICD9", "Self-report", "Death")
+)
+
+# Compare case counts across source definitions
 comparison <- compare_data_sources(ukb_data, diseases)
 ```
+
+### Why separate sources for prevalent vs outcome?
+
+| Aspect | Prevalent (History) | Outcome (Incident) |
+|:-------|:-------------------|:-------------------|
+| **Purpose** | Exclude baseline cases | Define endpoint |
+| **Self-report** | ✅ Include (captures pre-existing) | ❌ Exclude (imprecise dates) |
+| **Date precision** | Less critical | Critical for survival time |
+| **Validation** | Lower bar acceptable | Higher bar required |
 
 ## UKB Data Fields
 

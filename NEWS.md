@@ -5,6 +5,7 @@
 ### Major changes
 - Refactored the primary analysis interface to return a cohort-retaining **wide-format** dataset by default.
 - Added a `primary_disease` argument to compute `outcome_status` and `outcome_surv_time` for a single primary endpoint.
+- Added `prevalent_sources` and `outcome_sources` argument into `build_survival_dataset` function to manage self-report bias.
 
 ### New features
 - Multi-source phenotyping support with configurable `sources` (ICD-10, ICD-9, self-report, death).

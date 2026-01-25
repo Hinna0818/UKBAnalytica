@@ -142,7 +142,7 @@ parse_death_records <- function(dt) {
 #'
 #' @return A data.table with filtered records and added \code{disease} column.
 #'
-#' @export
+#' @keywords internal
 filter_death_codes <- function(death_long, pattern, disease_label) {
   if (!data.table::is.data.table(death_long)) {
     death_long <- data.table::as.data.table(death_long)
@@ -163,7 +163,7 @@ filter_death_codes <- function(death_long, pattern, disease_label) {
 #' @return A data.table with columns: \code{eid}, \code{disease},
 #'   \code{earliest_date}, \code{source}.
 #'
-#' @export
+#' @keywords internal
 aggregate_death_as_diagnosis <- function(death_filtered) {
   if (!data.table::is.data.table(death_filtered)) {
     death_filtered <- data.table::as.data.table(death_filtered)

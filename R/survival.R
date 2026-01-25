@@ -13,8 +13,14 @@ if(getRversion() >= "2.15.1") utils::globalVariables(c(
 #'
 #' @param dt A data.table or data.frame containing complete UKB data.
 #' @param disease_definitions Named list of disease definitions (see \code{\link{create_disease_definition}}).
-#' @param sources Character vector specifying data sources to include.
-#'   Options: "ICD10", "ICD9", "Self-report", "Death".
+#' @param prevalent_sources Character vector specifying data sources for identifying
+#'   prevalent (baseline) cases. Self-report is recommended here since participants
+#'   reporting a disease at baseline clearly had it before enrollment. Default includes
+#'   all sources: "ICD10", "ICD9", "Self-report", "Death".
+#' @param outcome_sources Character vector specifying data sources for defining
+#'   incident outcomes. Self-report is typically excluded here because self-reported
+#'   diagnosis dates are imprecise (year only) and less reliable for prospective
+#'   endpoint ascertainment. Default: "ICD10", "ICD9", "Death".
 #' @param censor_date Administrative censoring date (default: "2023-10-31").
 #' @param baseline_col Column name for baseline assessment date (default: "p53_i0").
 #' @param primary_disease Disease key used to compute follow-up time and event
@@ -28,35 +34,47 @@ if(getRversion() >= "2.15.1") utils::globalVariables(c(
 #' @return A data.table with columns:
 #'   \describe{
 #'     \item{eid}{Participant identifier}
-#'     \item{<Disease>_history}{1 if prevalent case, 0 otherwise}
-#'     \item{<Disease>_incident}{1 if incident case, 0 otherwise}
-#'     \item{outcome_status}{Event indicator for primary disease}
+#'     \item{<Disease>_history}{1 if prevalent case (from prevalent_sources), 0 otherwise}
+#'     \item{<Disease>_incident}{1 if incident case (from outcome_sources), 0 otherwise}
+#'     \item{outcome_status}{Event indicator for primary disease (from outcome_sources)}
 #'     \item{outcome_surv_time}{Follow-up time in years for primary disease}
 #'   }
 #'
 #' @details
+#' This function supports separate source definitions for prevalent case exclusion
+#' and outcome ascertainment. This is important because:
+#' \itemize{
+#'   \item Self-reported conditions at baseline clearly indicate pre-existing disease
+#'     and should be used for prevalent case identification.
+#'   \item However, self-reported incident events during follow-up have imprecise dates
+#'     (year only) and lower validity, making them unsuitable for outcome definition.
+#' }
+#'
 #' Case classification logic:
 #' \itemize{
-#'   \item \strong{Prevalent case}: Earliest diagnosis date <= baseline date
-#'   \item \strong{Incident case}: Earliest diagnosis date > baseline date (status = 1)
+#'   \item \strong{Prevalent case}: Earliest diagnosis date (from prevalent_sources) <= baseline date
+#'   \item \strong{Incident case}: Earliest diagnosis date (from outcome_sources) > baseline date
 #'   \item \strong{Censored}: No diagnosis by end of follow-up (status = 0)
 #' }
 #'
 #' Follow-up time calculation:
 #' \itemize{
 #'   \item Incident case: (diagnosis_date - baseline_date) / 365.25
-#'   \item Censored: min(death_date, censor_date) - baseline_date) / 365.25
+#'   \item Censored: (min(death_date, censor_date) - baseline_date) / 365.25
 #' }
 #'
 #' @examples
 #' \dontrun{
 #' ukb_data <- data.table::fread("ukb_data.csv")
 #' diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
+#'
+#' # Use self-report for prevalent exclusion, but not for outcome
 #' surv_data <- build_survival_dataset(
 #'   ukb_data,
 #'   diseases,
-#'   sources = "ICD10",
-#'   primary_disease = "Hypertension"
+#'   prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+#'   outcome_sources = c("ICD10", "Death"),
+#'   primary_disease = "AA"
 #' )
 #' }
 #'
@@ -64,7 +82,8 @@ if(getRversion() >= "2.15.1") utils::globalVariables(c(
 #' @export
 build_survival_dataset <- function(dt,
                                     disease_definitions,
-                                    sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                                    prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                                    outcome_sources = c("ICD10", "ICD9", "Death"),
                                     censor_date = as.Date("2023-10-31"),
                                     baseline_col = "p53_i0",
                                     primary_disease = NULL,
@@ -82,18 +101,30 @@ build_survival_dataset <- function(dt,
   }
 
   message("[build_survival_dataset] Extracting diagnosis records...")
+  message(sprintf("  Prevalent sources: %s", paste(prevalent_sources, collapse = ", ")))
+  message(sprintf("  Outcome sources: %s", paste(outcome_sources, collapse = ", ")))
 
-  cases_dt <- extract_cases_by_source(
+  # Extract cases for prevalent identification (includes self-report)
+  prevalent_cases_dt <- extract_cases_by_source(
     dt = dt,
     disease_definitions = disease_definitions,
-    sources = sources,
+    sources = prevalent_sources,
+    censor_date = censor_date,
+    baseline_col = baseline_col
+  )
+
+  # Extract cases for outcome (excludes self-report by default)
+  outcome_cases_dt <- extract_cases_by_source(
+    dt = dt,
+    disease_definitions = disease_definitions,
+    sources = outcome_sources,
     censor_date = censor_date,
     baseline_col = baseline_col
   )
 
   if (output == "long" && !include_all) {
     message("[build_survival_dataset] Complete")
-    return(cases_dt[, .(eid, disease, status, surv_time, prevalent_case, earliest_date, diagnosis_source)])
+    return(outcome_cases_dt[, .(eid, disease, status, surv_time, prevalent_case, earliest_date, diagnosis_source)])
   }
 
   message("[build_survival_dataset] Calculating survival times...")
@@ -120,7 +151,9 @@ build_survival_dataset <- function(dt,
 
   if (output == "long") {
     full_list <- lapply(diseases, function(d) {
-      d_cases <- cases_dt[disease == d]
+      # Use prevalent_sources for history, outcome_sources for incident
+      d_prevalent <- prevalent_cases_dt[disease == d]
+      d_outcome <- outcome_cases_dt[disease == d]
 
       cohort <- data.table::copy(all_eids)
       cohort[, `:=`(
@@ -132,11 +165,17 @@ build_survival_dataset <- function(dt,
         surv_time = default_surv_time
       )]
 
-      if (nrow(d_cases) > 0) {
-        cohort[d_cases,
+      # Mark prevalent cases (from prevalent_sources including self-report)
+      if (nrow(d_prevalent) > 0) {
+        prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
+        cohort[eid %in% prevalent_eids, prevalent_case := TRUE]
+      }
+
+      # Mark incident cases and update survival time (from outcome_sources)
+      if (nrow(d_outcome) > 0) {
+        cohort[d_outcome,
           `:=`(
             status = i.status,
-            prevalent_case = i.prevalent_case,
             earliest_date = i.earliest_date,
             diagnosis_source = i.diagnosis_source,
             surv_time = i.surv_time
@@ -158,30 +197,44 @@ build_survival_dataset <- function(dt,
     return(full_cohort[, .(eid, disease, status, surv_time, prevalent_case, earliest_date, diagnosis_source)])
   }
 
-  wide_dt <- generate_wide_format(
+  # Generate wide format: history from prevalent_sources, incident from outcome_sources
+  wide_dt <- generate_wide_format_dual_source(
     dt,
     disease_definitions,
-    sources = sources,
+    prevalent_sources = prevalent_sources,
+    outcome_sources = outcome_sources,
     censor_date = censor_date,
-    baseline_col = baseline_col,
-    include_dates = FALSE
+    baseline_col = baseline_col
   )
 
-  primary_cases <- cases_dt[disease == primary_disease]
+  primary_outcome_cases <- outcome_cases_dt[disease == primary_disease]
+  primary_prevalent_cases <- prevalent_cases_dt[disease == primary_disease & prevalent_case == TRUE]
+  
   outcome_dt <- data.table::copy(all_eids)
   outcome_dt[, `:=`(
     outcome_status = 0L,
     outcome_surv_time = default_surv_time
   )]
 
-  if (nrow(primary_cases) > 0) {
-    outcome_dt[primary_cases,
-      `:=`(
-        outcome_status = i.status,
-        outcome_surv_time = i.surv_time
-      ),
-      on = "eid"
-    ]
+  # Set outcome status and time from outcome_sources only
+  if (nrow(primary_outcome_cases) > 0) {
+    # Only set outcome for cases that are NOT prevalent (from prevalent_sources)
+    prevalent_eids <- character(0)
+    if (nrow(primary_prevalent_cases) > 0) {
+      prevalent_eids <- primary_prevalent_cases$eid
+    }
+    
+    non_prevalent_outcomes <- primary_outcome_cases[!eid %in% prevalent_eids]
+    
+    if (nrow(non_prevalent_outcomes) > 0) {
+      outcome_dt[non_prevalent_outcomes,
+        `:=`(
+          outcome_status = i.status,
+          outcome_surv_time = i.surv_time
+        ),
+        on = "eid"
+      ]
+    }
   }
 
   outcome_dt[, c("baseline_date", "death_date", "end_date", "default_surv_time") := NULL]
@@ -212,10 +265,11 @@ build_survival_dataset <- function(dt,
 #'
 #' @return A data.table with complete cohort survival data.
 #'
-#' @export
+#' @keywords internal
 build_full_cohort <- function(dt,
                                disease_definitions,
-                               sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                               prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                               outcome_sources = c("ICD10", "ICD9", "Death"),
                                censor_date = as.Date("2023-10-31"),
                                baseline_col = "p53_i0",
                                primary_disease = NULL,
@@ -228,7 +282,8 @@ build_full_cohort <- function(dt,
   full_cohort <- build_survival_dataset(
     dt,
     disease_definitions,
-    sources = sources,
+    prevalent_sources = prevalent_sources,
+    outcome_sources = outcome_sources,
     censor_date = censor_date,
     baseline_col = baseline_col,
     primary_disease = primary_disease,

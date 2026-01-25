@@ -119,7 +119,7 @@ parse_icd9_diagnoses <- function(dt) {
 #'
 #' @return A data.table with filtered records and added \code{disease} column.
 #'
-#' @export
+#' @keywords internal
 filter_icd9_codes <- function(icd9_long, pattern, disease_label) {
   if (!data.table::is.data.table(icd9_long)) {
     icd9_long <- data.table::as.data.table(icd9_long)
@@ -140,7 +140,7 @@ filter_icd9_codes <- function(icd9_long, pattern, disease_label) {
 #' @return A data.table with columns: \code{eid}, \code{disease},
 #'   \code{earliest_date}, \code{source}.
 #'
-#' @export
+#' @keywords internal
 aggregate_icd9_earliest <- function(icd9_filtered) {
   if (!data.table::is.data.table(icd9_filtered)) {
     icd9_filtered <- data.table::as.data.table(icd9_filtered)

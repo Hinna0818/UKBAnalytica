@@ -153,7 +153,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
 #'   \item 1076: Heart failure
 #' }
 #'
-#' @export
+#' @keywords internal
 filter_self_report_codes <- function(sr_long, codes, disease_label) {
   if (!data.table::is.data.table(sr_long)) {
     sr_long <- data.table::as.data.table(sr_long)
@@ -174,7 +174,7 @@ filter_self_report_codes <- function(sr_long, codes, disease_label) {
 #' @return A data.table with columns: \code{eid}, \code{disease},
 #'   \code{earliest_date}, \code{source}.
 #'
-#' @export
+#' @keywords internal
 aggregate_self_report_earliest <- function(sr_filtered) {
   if (!data.table::is.data.table(sr_filtered)) {
     sr_filtered <- data.table::as.data.table(sr_filtered)
