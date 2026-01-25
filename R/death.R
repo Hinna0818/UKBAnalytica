@@ -3,7 +3,7 @@
 #' @description
 #' Extracts death registry data from UK Biobank linked mortality records.
 #' Parses both primary (p40001) and contributing (p40002) causes of death
-#' along with death dates (p40000).
+#' along with death dates (p40000). Caution: Death records only contain ICD-10 codes.
 #'
 #' @param dt A data.table or data.frame containing UKB data with columns:
 #'   \code{eid}, \code{p40001_i*}, \code{p40002_i*_a*}, and \code{p40000_i*}.

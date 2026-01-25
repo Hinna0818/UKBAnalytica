@@ -8,6 +8,12 @@
 
 **UKBAnalytica** is a high-performance R package for processing UK Biobank (UKB) Research Analysis Platform (RAP) data exports. It provides efficient extraction of diagnosis records from multiple sources and generates Cox regression-ready survival datasets.
 
+## Author
+
+Nan He  
+Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University  
+Email: nanh302311@gmail.com
+
 ## Features
 
 - 🚀 **High Performance**: Built on `data.table` for efficient processing of large-scale biobank data
