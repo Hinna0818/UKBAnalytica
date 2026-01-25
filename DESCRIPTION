@@ -19,3 +19,4 @@ Suggests:
     testthat (>= 3.0.0),
     survival
 Config/testthat/edition: 3
+Config/Needs/bioc: FALSE

@@ -69,7 +69,7 @@ get_predefined_diseases <- function() {
     # Aortic diseases
     AA = create_disease_definition(
       name = "Aortic Aneurysm",
-      icd10_pattern = "^(I71)",
+      icd10_pattern = "^I71",
       icd9_pattern = "^441"
     ),
     TAA = create_disease_definition(
