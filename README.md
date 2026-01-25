@@ -23,30 +23,47 @@ devtools::install_github("Hinna0818/UKBAnalytica")
 
 ## Quick Start
 
+### 1. Data Download (RAP Platform)
+
+First, download data from UK Biobank RAP using the included Python scripts:
+
+```bash
+# Download demographic/phenotype data
+python ukb_data_loader.py demographic --id-file field_ids_demographic.txt -o population.csv
+
+# Download metabolites (non-ratio subset recommended)
+python ukb_data_loader.py metabolites --non-ratio -o metabolites.csv
+
+# Download proteomics data
+python protein_loader.py -o ./protein_data
+```
+
+### 2. Analysis in R
+
+Load your downloaded data and run survival analysis:
+
 ```r
 library(UKBAnalytica)
 library(data.table)
 
-# Load UKB data
-ukb_data <- fread("ukb_data.csv")
+# Load downloaded UKB data
+ukb_data <- fread("population.csv")
 
 # Define diseases of interest
-diseases <- get_predefined_diseases()[c("AA", "Hypertension", "Diabetes")]
+diseases <- get_predefined_diseases()[c("Hypertension", "Diabetes")]
 
-# Generate analysis-ready dataset (wide output by default)
-# Hypertension as primary outcome, adjusting for diabetes history
+# Generate survival dataset
 analysis_dt <- build_survival_dataset(
   dt = ukb_data,
   disease_definitions = diseases,
-  sources = "ICD10",          # Main analysis with hospital diagnoses only
+  sources = "ICD10",
   primary_disease = "Hypertension"
 )
 
-# Run Cox regression
+# Cox regression
 library(survival)
 cox_model <- coxph(
-  Surv(outcome_surv_time, outcome_status) ~ 
-    Diabetes_history,
+  Surv(outcome_surv_time, outcome_status) ~ Diabetes_history,
   data = analysis_dt
 )
 summary(cox_model)
@@ -105,21 +122,14 @@ Each disease generates two columns for flexible use, plus outcome columns:
 ## Sensitivity Analysis
 
 ```r
-# Main analysis: ICD-10 only
-main_result <- extract_cases_by_source(ukb_data, diseases, sources = "ICD10")
+# Main analysis: Hospital diagnoses only
+main_dt <- build_survival_dataset(ukb_data, diseases, sources = "ICD10")
 
-# Sensitivity 1: Hospital records (ICD-10 + ICD-9)
-sens1_result <- extract_cases_by_source(ukb_data, diseases, sources = c("ICD10", "ICD9"))
+# Sensitivity: Include self-reported data
+sens_dt <- build_survival_dataset(ukb_data, diseases, sources = c("ICD10", "Self-report"))
 
-# Sensitivity 2: All sources
-sens2_result <- extract_cases_by_source(
-  ukb_data, diseases, 
-  sources = c("ICD10", "ICD9", "Self-report")
-)
-
-# Compare case counts across sources
+# Compare case counts
 comparison <- compare_data_sources(ukb_data, diseases)
-print(comparison)
 ```
 
 ## UKB Data Fields
@@ -134,3 +144,163 @@ print(comparison)
 ## License
 
 MIT License © 2024 Nan He
+
+---
+
+## Python Data Loaders (RAP Platform)
+
+This package includes Python scripts for downloading data from UK Biobank Research Analysis Platform (RAP).
+
+### Installation
+
+The Python scripts are located in `inst/python/` after installing the R package. On RAP JupyterLab:
+
+```python
+import sys
+sys.path.append('/path/to/UKBAnalytica/inst/python')
+```
+
+## UK Biobank Data Download Usage Summary
+
+### File Structure
+```
+inst/
+├── python/
+│   ├── ukb_data_loader.py          # Demographic & Metabolites downloader (Spark)
+│   ├── protein_loader.py           # Proteomics downloader (dx commands)
+│   └── field_ids_demographic.txt   # Example demographic field IDs
+└── extdata/
+    └── metabolites_non_ratio.txt   # Non-ratio metabolites reference (170 fields)
+```
+
+### 1. Demographic Data
+
+**Purpose**: Download any UKB fields by specifying field IDs  
+**Method**: Spark-based (dxdata)  
+**Flexibility**: High - can download any combination of fields
+
+```bash
+# Method 1: Specify IDs directly
+python ukb_data_loader.py demographic --ids 31,53,21022,21001 -o population.csv
+
+# Method 2: Read IDs from file (recommended for many fields)
+python ukb_data_loader.py demographic --id-file field_ids_demographic.txt -o population.csv
+
+# Method 3: Custom ID file
+python ukb_data_loader.py demographic --id-file my_custom_ids.txt -o my_data.csv
+```
+
+**ID file format** (supports multiple formats):
+```txt
+# Comments start with #
+31      # Sex
+53      # Date of assessment
+21022   # Age at recruitment
+
+# Comma separated
+20116, 20117, 1289
+
+# Space separated  
+1299 1309 1319
+```
+
+### 2. Metabolites Data (NMR)
+
+**Purpose**: Download NMR metabolomics data  
+**Method**: Spark-based (dxdata)  
+**Options**: All fields or non-ratio subset
+
+```bash
+# All metabolites (251 fields: 20280-20281, 23400-23648)
+python ukb_data_loader.py metabolites -o metabolites_all.csv
+
+# Non-ratio metabolites only (170 curated fields)
+python ukb_data_loader.py metabolites --non-ratio -o metabolites_non_ratio.csv
+```
+
+### 3. Proteomics Data (Olink)
+
+**Purpose**: Download Olink protein expression data  
+**Method**: dx extract_dataset commands  
+**Features**: Automatic batching, merging, progress tracking
+
+```bash
+# Download all proteins (default)
+python protein_loader.py -o ./protein_data
+
+# Custom batch size and delay
+python protein_loader.py -o ./protein_data --batch-size 100 --delay 3
+
+# Skip merging batch files
+python protein_loader.py -o ./protein_data --no-merge
+
+# Different output directory
+python protein_loader.py -o /path/to/output
+```
+
+## Complete Usage Examples
+
+### Example 1: Basic Demographics + Metabolites + Proteins
+```bash
+# Download key demographics
+python ukb_data_loader.py demographic --ids 31,53,21022,21001 -o demographics.csv
+
+# Download non-ratio metabolites
+python ukb_data_loader.py metabolites --non-ratio -o metabolites.csv
+
+# Download proteins
+python protein_loader.py -o ./proteins
+```
+
+### Example 2: Cardiovascular Study
+```bash
+# Download CVD-related fields
+echo "31,21022,21001,93,94,30870,30780,30760,41270,41280" > cvd_fields.txt
+python ukb_data_loader.py demographic --ids "$(cat cvd_fields.txt)" -o cvd_data.csv
+
+# Download metabolites
+python ukb_data_loader.py metabolites --non-ratio -o cvd_metabolites.csv
+```
+
+## Output Files Summary
+
+| Data Type | Typical Output | Size | Rows | Columns |
+|:----------|:---------------|:-----|:-----|:---------|
+| Demographics | population.csv | 10-500 MB | ~500K | Variable |
+| Metabolites (all) | metabolites.csv | ~300 MB | ~120K | 251 |
+| Metabolites (non-ratio) | metabolites_non_ratio.csv | ~200 MB | ~120K | 170 |
+| Proteomics | protein_all_merged.csv | ~800 MB | ~50K | ~3000 |
+
+### Python Scripts Summary
+
+| Script | Data Source | Download Method | Best For |
+|:-------|:------------|:----------------|:---------|
+| `ukb_data_loader.py demographic` | Any UKB field | Spark (fast) | Phenotype data, covariates |
+| `ukb_data_loader.py metabolites` | NMR metabolomics | Spark (fast) | Metabolomics studies |
+| `protein_loader.py` | Olink proteomics | dx commands | Proteomics studies |
+
+### Common UKB Field IDs Reference
+
+| Category | Field IDs | Description |
+|:---------|:----------|:------------|
+| **Basic Demographics** | 31, 53, 21022, 21001 | Sex, assessment date, age, BMI |
+| **Lifestyle** | 20116, 20117, 1160 | Smoking, alcohol, sleep |
+| **Blood Pressure** | 93, 94, 4079, 4080 | Systolic/diastolic BP |
+| **Biomarkers** | 30870, 30780, 30760, 30750 | Triglycerides, LDL, HDL, glucose |
+| **Hospital Records** | 41270, 41280, 41271, 41281 | ICD-10/9 diagnoses and dates |
+| **Death Registry** | 40000, 40001, 40002 | Death date, primary/secondary causes |
+| **Brain Imaging** | 24016-24019, 24003-24008 | Brain volumes |
+
+## Troubleshooting
+
+### Common Issues
+1. **Spark initialization fails**: Ensure running in RAP JupyterLab
+2. **Field not found**: Check field ID format (some need `_i0`, `_a0` suffixes)  
+3. **Memory issues**: Use smaller batches for protein download
+4. **Timeout**: Increase `--delay` parameter
+
+### Performance Tips
+- Use `--non-ratio` for metabolites if you don't need all fields
+- Reduce `--batch-size` if protein download fails
+- Run downloads during off-peak hours for better performance
+

@@ -1,0 +1,80 @@
+# UK Biobank Field IDs for demographic data
+# Lines starting with # are comments
+
+# Basic demographics
+31      # Sex
+53      # Date of attending assessment centre
+21022   # Age at recruitment
+21001   # BMI
+
+# Lifestyle
+20116   # Smoking status
+20117   # Alcohol intake frequency
+1289    # Cooked vegetable intake
+1299    # Salad/raw vegetable intake
+1309    # Fresh fruit intake
+1319    # Dried fruit intake
+1329    # Oily fish intake
+1339    # Non-oily fish intake
+1349    # Processed meat intake
+1359    # Poultry intake
+1369    # Beef intake
+1379    # Lamb/mutton intake
+1389    # Pork intake
+1418    # Cheese intake
+1438    # Bread intake
+1448    # Cereal intake
+1458    # Salt added to food
+1468    # Tea intake
+6144    # Never eat eggs, dairy, wheat, sugar
+
+# Blood pressure
+93      # Systolic blood pressure
+94      # Diastolic blood pressure
+4079    # Diastolic blood pressure (automated)
+4080    # Systolic blood pressure (automated)
+
+# Education and socioeconomic
+6138    # Qualifications
+738     # Household income
+22032   # Season when attended assessment centre
+
+# Sleep
+1160    # Sleep duration
+
+# Medication
+6177    # Medication for cholesterol, blood pressure, diabetes
+6153    # Medication for cholesterol, blood pressure or diabetes (female)
+
+# Ethnicity
+21000   # Ethnic background
+
+# Blood biomarkers
+30870   # Triglycerides
+30780   # LDL direct
+30760   # HDL cholesterol
+30750   # Glucose
+
+# Hospital diagnoses (ICD-10)
+41270   # Diagnoses - ICD10
+41280   # Date of first in-patient diagnosis - ICD10
+
+# Death data
+40000   # Date of death
+40001   # Underlying (primary) cause of death
+40002   # Contributory (secondary) causes of death
+
+# Hospital diagnoses (ICD-9)
+41272   # Diagnoses - ICD9
+41282   # Date of first in-patient diagnosis - ICD9
+
+# Brain imaging
+24016   # Volume of brain (grey+white matter)
+24017   # Volume of grey matter
+24018   # Volume of white matter
+24003   # Volume of peripheral cortical grey matter
+24004   # Volume of ventricular cerebrospinal fluid
+24006   # Volume of brain stem
+24019   # Volume of hippocampus (left)
+24005   # Volume of hippocampus (right)
+24008   # Volume of thalamus

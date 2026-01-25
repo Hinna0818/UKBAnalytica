@@ -1,0 +1,17 @@
+# UK Biobank RAP Data Downloaders Requirements
+# Install with: pip install -r requirements.txt (all of the packages below are installed in RAP JUpyterLab)
+
+# Core dependencies for RAP platform
+pyspark>=3.0.0
+dxpy>=0.300.0
+dxdata>=1.0.0
+
+# Data processing
+pandas>=1.3.0
+numpy>=1.20.0
+
+# Version handling
+packaging>=20.0
+
+# Standard library (usually pre-installed)
+# re, os, glob, time, argparse, subprocess
