@@ -1,5 +1,9 @@
 # UKBAnalytica News
 
+## UKBAnalytica 0.3.0 (2026-01-26)
+
+Add `variable_preprocess.R` module for preprocessing baseline variables.
+
 ## UKBAnalytica 0.2.0 (2026-01-25)
 
 ### Major changes
