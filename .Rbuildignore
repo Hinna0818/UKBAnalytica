@@ -11,3 +11,5 @@
 ^\.git$
 ^\.gitignore$
 ^README\.html$
+^examples$
+^xxx\.Rmd$

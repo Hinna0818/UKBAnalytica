@@ -108,6 +108,59 @@ summary(cox_model)
 | `get_predefined_diseases()` | Get predefined disease library |
 | `combine_disease_definitions()` | Create composite endpoints (e.g., MACE) |
 
+### Variable Preprocessing
+
+| Function | Description |
+|:---------|:------------|
+| `preprocess_baseline()` | Preprocess baseline characteristics (demographics, lifestyle, etc.) |
+| `calculate_blood_pressure()` | Calculate BP from multiple readings |
+| `extract_medications()` | Extract medication use (cholesterol, BP, insulin) |
+| `calculate_air_pollution()` | Calculate averaged air pollution exposures |
+| `get_variable_info()` | View available variables for preprocessing |
+
+## Variable Preprocessing
+
+The package provides standardized preprocessing for common UKB baseline variables:
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+# Load UKB data
+ukb_data <- fread("population.csv")
+
+# View available variables
+get_variable_info("demographics")
+get_variable_info("lifestyle")
+
+# Preprocess baseline characteristics
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "ethnicity", "bmi", "smoking", "education"),
+  missing_action = "keep"  # or "drop" to remove rows with NA
+)
+
+# Calculate blood pressure (combines manual/auto readings)
+processed <- calculate_blood_pressure(processed, type = "sbp")
+processed <- calculate_blood_pressure(processed, type = "dbp")
+
+# Extract medication use
+processed <- extract_medications(processed, c("cholesterol", "blood_pressure"))
+
+# Calculate air pollution exposure
+processed <- calculate_air_pollution(processed, c("NO2", "PM2.5"))
+
+# Use custom variable mapping for unlisted fields
+custom_mapping <- list(
+  my_biomarker = list(ukb_col = "p30000_i0", description = "Custom biomarker")
+)
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "my_biomarker"),
+  custom_mapping = custom_mapping
+)
+```
+
 ## Output Format
 
 ### Wide Format Table
