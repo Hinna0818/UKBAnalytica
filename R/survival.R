@@ -36,8 +36,8 @@ if(getRversion() >= "2.15.1") utils::globalVariables(c(
 #'     \item{eid}{Participant identifier}
 #'     \item{<Disease>_history}{1 if prevalent case (from prevalent_sources), 0 otherwise}
 #'     \item{<Disease>_incident}{1 if incident case (from outcome_sources), 0 otherwise}
-#'     \item{outcome_status}{Event indicator for primary disease (from outcome_sources)}
-#'     \item{outcome_surv_time}{Follow-up time in years for primary disease}
+#'     \item{outcome_status}{Event indicator for primary disease (1=event, 0=censored, NA=prevalent case)}
+#'     \item{outcome_surv_time}{Follow-up time in years for primary disease (NA for prevalent cases)}
 #'   }
 #'
 #' @details
@@ -52,13 +52,16 @@ if(getRversion() >= "2.15.1") utils::globalVariables(c(
 #'
 #' Case classification logic:
 #' \itemize{
-#'   \item \strong{Prevalent case}: Earliest diagnosis date (from prevalent_sources) <= baseline date
+#'   \item \strong{Prevalent case}: Earliest diagnosis date (from prevalent_sources) <= baseline date.
+#'     These participants have \code{outcome_status = NA} and \code{outcome_surv_time = NA}
+#'     because they are not at risk for incident disease.
 #'   \item \strong{Incident case}: Earliest diagnosis date (from outcome_sources) > baseline date
 #'   \item \strong{Censored}: No diagnosis by end of follow-up (status = 0)
 #' }
 #'
-#' Follow-up time calculation:
+#' Follow-up time calculation (controlled by primary_disease):
 #' \itemize{
+#'   \item Prevalent case (primary disease): NA (not at risk)
 #'   \item Incident case: (diagnosis_date - baseline_date) / 365.25
 #'   \item Censored: (min(death_date, censor_date) - baseline_date) / 365.25
 #' }
@@ -210,6 +213,12 @@ build_survival_dataset <- function(dt,
   primary_outcome_cases <- outcome_cases_dt[disease == primary_disease]
   primary_prevalent_cases <- prevalent_cases_dt[disease == primary_disease & prevalent_case == TRUE]
   
+  # Get all prevalent eids for primary disease
+  prevalent_eids <- character(0)
+  if (nrow(primary_prevalent_cases) > 0) {
+    prevalent_eids <- primary_prevalent_cases$eid
+  }
+  
   outcome_dt <- data.table::copy(all_eids)
   outcome_dt[, `:=`(
     outcome_status = 0L,
@@ -217,13 +226,8 @@ build_survival_dataset <- function(dt,
   )]
 
   # Set outcome status and time from outcome_sources only
+  # Only for participants who are NOT prevalent cases
   if (nrow(primary_outcome_cases) > 0) {
-    # Only set outcome for cases that are NOT prevalent (from prevalent_sources)
-    prevalent_eids <- character(0)
-    if (nrow(primary_prevalent_cases) > 0) {
-      prevalent_eids <- primary_prevalent_cases$eid
-    }
-    
     non_prevalent_outcomes <- primary_outcome_cases[!eid %in% prevalent_eids]
     
     if (nrow(non_prevalent_outcomes) > 0) {
@@ -235,6 +239,17 @@ build_survival_dataset <- function(dt,
         on = "eid"
       ]
     }
+  }
+  
+  # CRITICAL: Set outcome_status = NA and outcome_surv_time = NA for prevalent cases
+  # These participants had the primary disease at or before baseline, 
+
+  # so they are not at risk for incident disease and should be excluded from survival analysis
+  if (length(prevalent_eids) > 0) {
+    outcome_dt[eid %in% prevalent_eids, `:=`(
+      outcome_status = NA_integer_,
+      outcome_surv_time = NA_real_
+    )]
   }
 
   outcome_dt[, c("baseline_date", "death_date", "end_date", "default_surv_time") := NULL]

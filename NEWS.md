@@ -1,5 +1,8 @@
 # UKBAnalytica News
 
+## UKBAnalytica 0.4.0 (2026-02-05)
+Fix bug in `survival.R`: person who has primary disease before initial time will be set `NA` in survival time (in order to distinguish it from person who has primary disease after initial time, with `non-NA` survival time). 
+
 ## UKBAnalytica 0.3.0 (2026-01-26)
 
 Add `variable_preprocess.R` module for preprocessing baseline variables.

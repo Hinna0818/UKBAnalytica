@@ -29,7 +29,8 @@ test_that("build_survival_dataset with real demo data works correctly", {
                     "outcome_status", "outcome_surv_time") %in% names(result1)))
   expect_true(all(result1$Hypertension_history %in% c(0, 1)))
   expect_true(all(result1$Hypertension_incident %in% c(0, 1)))
-  expect_true(all(result1$outcome_status %in% c(0, 1)))
+  # outcome_status can be NA for prevalent cases of primary disease
+  expect_true(all(result1$outcome_status %in% c(0, 1, NA)))
   expect_true(all(result1$outcome_surv_time >= 0, na.rm = TRUE))
   
   # Test 2: Hospital records only (strictest)
@@ -67,10 +68,10 @@ test_that("build_survival_dataset with real demo data works correctly", {
   expect_equal(nrow(result2), n)
   expect_equal(nrow(result3), n)
   
-  # Outcome status should be binary
-  expect_true(all(result1$outcome_status %in% c(0, 1)))
-  expect_true(all(result2$outcome_status %in% c(0, 1)))
-  expect_true(all(result3$outcome_status %in% c(0, 1)))
+  # Outcome status should be binary or NA (NA for prevalent cases)
+  expect_true(all(result1$outcome_status %in% c(0, 1, NA)))
+  expect_true(all(result2$outcome_status %in% c(0, 1, NA)))
+  expect_true(all(result3$outcome_status %in% c(0, 1, NA)))
   
   # Test 5: Long format output
   long_result <- suppressMessages(build_survival_dataset(
@@ -148,13 +149,13 @@ test_that("prevalent_sources and outcome_sources work independently", {
     sum(result_strict$Hypertension_history)
   )
   
-  # Both should produce valid binary outcomes
-  expect_true(all(result_default$outcome_status %in% c(0, 1)))
-  expect_true(all(result_strict$outcome_status %in% c(0, 1)))
+  # Both should produce valid binary outcomes or NA (for prevalent cases)
+  expect_true(all(result_default$outcome_status %in% c(0, 1, NA)))
+  expect_true(all(result_strict$outcome_status %in% c(0, 1, NA)))
 })
 
 
-test_that("prevalent cases are excluded from outcome_status", {
+test_that("prevalent cases have NA for outcome_status and outcome_surv_time", {
   skip_if_not_installed("data.table")
   
   test_data_path <- test_path("testdata", "raw_demo.csv")
@@ -170,10 +171,23 @@ test_that("prevalent cases are excluded from outcome_status", {
     censor_date = as.Date("2023-12-31")
   ))
   
-  # Participants with history=1 should have outcome_status=0
-  # (prevalent cases should not be counted as incident outcomes)
-  prevalent_outcomes <- result[Hypertension_history == 1 & outcome_status == 1]
-  expect_equal(nrow(prevalent_outcomes), 0)
+  # Participants with history=1 (prevalent cases for primary disease) should have:
+  # - outcome_status = NA (not at risk for incident disease)
+  # - outcome_surv_time = NA (no follow-up time calculated)
+  prevalent_cases <- result[Hypertension_history == 1]
+  
+  if (nrow(prevalent_cases) > 0) {
+    expect_true(all(is.na(prevalent_cases$outcome_status)))
+    expect_true(all(is.na(prevalent_cases$outcome_surv_time)))
+  }
+  
+  # Non-prevalent cases should have valid outcome_status (0 or 1) and surv_time
+  non_prevalent_cases <- result[Hypertension_history == 0]
+  if (nrow(non_prevalent_cases) > 0) {
+    expect_true(all(non_prevalent_cases$outcome_status %in% c(0, 1)))
+    expect_true(all(!is.na(non_prevalent_cases$outcome_surv_time)))
+    expect_true(all(non_prevalent_cases$outcome_surv_time >= 0))
+  }
 })
 
 
