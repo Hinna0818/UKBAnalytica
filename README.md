@@ -1,4 +1,4 @@
-# UKBAnalytica
+# UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for UK Biobank RAP Data
 
 <!-- badges: start -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -15,7 +15,7 @@
 Research Analysis Platform (RAP) data exports. It focuses on standardized
 phenotyping, survival-ready datasets, and scalable preprocessing.
 
-**Documentation**: <https://hinna0818.github.io/UKBAnalytica/>
+**For details, please visit**: <https://hinna0818.github.io/UKBAnalytica/>
 
 ## Installation
 
