@@ -1,0 +1,17 @@
+<svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UKBAnalytica">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f77b4" />
+      <stop offset="100%" stop-color="#0b4f6c" />
+    </linearGradient>
+  </defs>
+  <polygon
+    points="160,12 292,88 292,232 160,308 28,232 28,88"
+    fill="url(#bg)"
+    stroke="#0a3d62"
+    stroke-width="6"
+  />
+  <circle cx="160" cy="160" r="86" fill="#ffffff" fill-opacity="0.1" />
+  <text x="160" y="150" text-anchor="middle" font-size="48" fill="#ffffff" font-family="Arial, sans-serif" font-weight="700">UKB</text>
+  <text x="160" y="188" text-anchor="middle" font-size="24" fill="#ffffff" font-family="Arial, sans-serif" font-weight="600">Analytica</text>
+</svg>
