@@ -1,0 +1,64 @@
+--- 
+title: "UKBAnalytica: A Guide to UK Biobank Data Analysis"
+author: "Nan He, Department of Bioinformatics, Southern Medical University"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: []
+description: |
+  A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+  Research Analysis Platform (RAP) data, including data download, preprocessing,
+  disease phenotyping, survival analysis, and multiple imputation.
+link-citations: yes
+github-repo: Hinna0818/UKBAnalytica
+---
+
+# Introduction {#intro}
+
+**UKBAnalytica** is a high-performance R package for processing UK Biobank (UKB)
+Research Analysis Platform (RAP) data exports. It provides efficient extraction
+of diagnosis records from multiple sources and generates Cox regression-ready
+survival datasets.
+
+## Key features
+
+- Built on `data.table` for efficient processing of large-scale biobank data.
+- Supports ICD-10, ICD-9, self-reported illness, and death registry data.
+- Flexible dual-source case definitions for main and sensitivity analyses.
+- Generates survival datasets with proper prevalent/incident case handling.
+- Includes predefined definitions for common cardiovascular and metabolic diseases.
+- Provides standardized preprocessing for common UKB baseline variables.
+
+## Installation
+
+Install the development version from GitHub:
+
+```r
+# install.packages("devtools")
+devtools::install_github("Hinna0818/UKBAnalytica")
+```
+
+## Package overview
+
+The package covers the following workflow:
+
+1. **Data download** -- Python scripts for downloading data from the RAP platform.
+2. **Variable preprocessing** -- Standardized cleaning and recoding of baseline characteristics.
+3. **Disease phenotyping** -- Predefined and custom disease definitions from multiple coding systems.
+4. **Survival analysis** -- Build Cox-ready datasets with proper prevalent/incident classification.
+5. **Baseline tables** -- Create Table 1 summaries stratified by case/control status.
+6. **Multiple imputation** -- Impute missing covariates and merge results back to the full dataset.
+
+The remaining chapters walk through each step with code examples.
+
+## Core functions
+
+| Function | Description |
+|:---------|:------------|
+| `build_survival_dataset()` | Build wide-format survival dataset |
+| `extract_cases_by_source()` | Extract cases from specified data sources |
+| `get_predefined_diseases()` | Get predefined disease definitions |
+| `create_disease_definition()` | Create a custom disease definition |
+| `preprocess_baseline()` | Preprocess baseline characteristics |
+| `create_baseline_table()` | Create a Table 1 (via `tableone`) |
+| `run_imputation()` | Multiple imputation with `mice` |

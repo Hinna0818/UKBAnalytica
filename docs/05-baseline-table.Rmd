@@ -1,0 +1,72 @@
+# Baseline Table {#baseline-table}
+
+A Table 1 summarising baseline characteristics stratified by case/control
+status is standard in epidemiological papers. UKBAnalytica wraps the
+[tableone](https://github.com/kaz-yos/tableone) package for this purpose.
+
+## Basic usage
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+# Assume `analysis_dt` was produced by build_survival_dataset()
+table1 <- create_baseline_table(
+  data = analysis_dt,
+  case_col = "outcome_status",
+  factor_cols = c(
+    "sex", "smoking", "drinking",
+    "ethnicity", "education"
+  ),
+  continuous_cols = c(
+    "age", "bmi", "sbp", "dbp",
+    "ldl", "hdl", "hba1c"
+  ),
+  test = TRUE
+)
+
+print(table1, smd = TRUE)
+```
+
+## Exporting to CSV
+
+The `tableone` print method returns a character matrix that can be written
+directly to CSV:
+
+```r
+tab_mat <- print(
+  table1,
+  quote  = TRUE,
+  noSpaces = TRUE
+)
+write.csv(tab_mat, file = "baseline_table1.csv")
+```
+
+## Using with the `survival` package example data
+
+If you do not have UKB data at hand, you can test the function with the
+`pbc` dataset bundled in the `survival` package:
+
+```r
+data(pbc, package = "survival")
+
+table1 <- create_baseline_table(
+  data       = pbc,
+  case_col   = "trt",
+  factor_cols = c("status", "edema", "stage"),
+  continuous_cols = c("age", "bili", "albumin"),
+  test       = TRUE
+)
+
+print(table1)
+```
+
+## Parameters
+
+| Argument | Description |
+|:---------|:------------|
+| `data` | A data.frame or data.table with the cohort |
+| `case_col` | Column name for the stratification variable |
+| `factor_cols` | Variables to treat as categorical |
+| `continuous_cols` | Variables to treat as continuous |
+| `test` | Whether to run statistical tests (default `FALSE`) |

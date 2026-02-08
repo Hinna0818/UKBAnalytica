@@ -1,0 +1,109 @@
+# Downloading Data from RAP {#rap-download}
+
+The UKBAnalytica package ships Python helper scripts for downloading data from the
+UK Biobank Research Analysis Platform (RAP). These scripts live in `inst/python/`
+after package installation.
+
+## File structure
+
+```
+inst/
+  python/
+    ukb_data_loader.py          # Demographics & metabolites (Spark)
+    protein_loader.py           # Proteomics (dx commands)
+    field_ids_demographic.txt   # Example demographic field IDs
+  extdata/
+    metabolites_non_ratio.txt   # Non-ratio metabolite reference (170 fields)
+```
+
+## Demographic data
+
+Download any combination of UKB fields by specifying their field IDs.
+The loader uses Spark via `dxdata` under the hood.
+
+```bash
+# Pass IDs directly
+python ukb_data_loader.py demographic \
+  --ids 31,53,21022,21001 \
+  -o population.csv
+
+# Or read IDs from a file (recommended for many fields)
+python ukb_data_loader.py demographic \
+  --id-file field_ids_demographic.txt \
+  -o population.csv
+```
+
+The ID file supports comments (`#`), comma-separated and space-separated formats:
+
+```txt
+# Demographics
+31      # Sex
+53      # Date of assessment
+21022   # Age at recruitment
+
+# Comma separated
+20116, 20117, 1289
+```
+
+## Metabolomics data (NMR)
+
+Download NMR metabolomics data. You can retrieve all 251 metabolite fields
+or restrict to the curated non-ratio subset of 170 fields.
+
+```bash
+# All metabolite fields
+python ukb_data_loader.py metabolites -o metabolites_all.csv
+
+# Non-ratio subset only
+python ukb_data_loader.py metabolites \
+  --non-ratio \
+  -o metabolites_non_ratio.csv
+```
+
+## Proteomics data (Olink)
+
+Download Olink protein expression data via `dx` commands.
+The loader handles batching, merging, and progress tracking automatically.
+
+```bash
+# Default settings
+python protein_loader.py -o ./protein_data
+
+# Custom batch size and delay
+python protein_loader.py \
+  -o ./protein_data \
+  --batch-size 100 \
+  --delay 3
+
+# Skip merging batch files
+python protein_loader.py -o ./protein_data --no-merge
+```
+
+## Common UKB field IDs
+
+The table below lists commonly used field IDs for reference:
+
+| Category | Field IDs | Description |
+|:---------|:----------|:------------|
+| Basic demographics | 31, 53, 21022, 21001 | Sex, assessment date, age, BMI |
+| Lifestyle | 20116, 20117, 1160 | Smoking, alcohol, sleep |
+| Blood pressure | 93, 94, 4079, 4080 | Systolic/diastolic BP |
+| Biomarkers | 30870, 30780, 30760, 30750 | Triglycerides, LDL, HDL, glucose |
+| Hospital records | 41270, 41280, 41271, 41281 | ICD-10/9 diagnoses + dates |
+| Death registry | 40000, 40001, 40002 | Death date, causes |
+
+## Typical output sizes
+
+| Data type | File | Approx. size | Rows | Columns |
+|:----------|:-----|:-------------|:-----|:--------|
+| Demographics | population.csv | 10--500 MB | ~500 K | variable |
+| Metabolites (all) | metabolites.csv | ~300 MB | ~120 K | 251 |
+| Metabolites (non-ratio) | metabolites_non_ratio.csv | ~200 MB | ~120 K | 170 |
+| Proteomics | protein_all_merged.csv | ~800 MB | ~50 K | ~3000 |
+
+## Troubleshooting
+
+- **Spark initialisation fails**: make sure you are running inside a RAP JupyterLab session.
+- **Field not found**: some fields require instance/array suffixes (e.g., `_i0`, `_a0`).
+- **Memory issues**: reduce `--batch-size` for protein downloads.
+- **Timeout**: increase `--delay`.

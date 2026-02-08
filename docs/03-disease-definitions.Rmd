@@ -1,0 +1,99 @@
+# Disease Definitions {#disease-definitions}
+
+UKBAnalytica identifies disease cases from up to four data sources:
+
+| Source | Code field | Date field |
+|:-------|:-----------|:-----------|
+| ICD-10 (hospital) | `p41270` | `p41280_a*` |
+| ICD-9 (hospital) | `p41271` | `p41281_a*` |
+| Self-report | `p20002_i*_a*` | `p20008_i*_a*` |
+| Death registry | `p40001`, `p40002` | `p40000` |
+
+## Predefined diseases
+
+The package ships a curated library of definitions for common cardiovascular
+and metabolic conditions. Retrieve them with `get_predefined_diseases()`:
+
+```r
+library(UKBAnalytica)
+
+diseases <- get_predefined_diseases()
+names(diseases)
+```
+
+Select a subset by name:
+
+```r
+my_diseases <- get_predefined_diseases()[
+  c("AA", "Hypertension", "Diabetes")
+]
+```
+
+Each definition is a list specifying ICD-10 codes, ICD-9 codes, self-report
+codes, and death-cause codes.
+
+## Inspecting a definition
+
+```r
+diseases <- get_predefined_diseases()
+str(diseases[["Hypertension"]])
+```
+
+A definition typically contains:
+
+- `icd10` -- character vector of ICD-10 codes (prefix-matched).
+- `icd9` -- character vector of ICD-9 codes.
+- `self_report` -- integer vector of self-report coding IDs.
+- `death_icd10` -- character vector of death-cause ICD-10 codes.
+
+## Creating custom definitions
+
+Use `create_disease_definition()` to define a new disease:
+
+```r
+my_disease <- create_disease_definition(
+  icd10       = c("K70", "K71", "K72", "K73", "K74"),
+  icd9        = c("571"),
+  self_report = c(1604),
+  death_icd10 = c("K70", "K74")
+)
+```
+
+You can combine it with predefined diseases:
+
+```r
+all_diseases <- c(
+  get_predefined_diseases()[c("Hypertension", "Diabetes")],
+  list(LiverDisease = my_disease)
+)
+```
+
+## Composite endpoints
+
+Create composite endpoints by merging multiple definitions:
+
+```r
+mace <- combine_disease_definitions(
+  get_predefined_diseases()[c("MI", "Stroke", "HF")]
+)
+```
+
+This merges ICD-10, ICD-9, self-report, and death codes from all input
+definitions into a single combined definition.
+
+## Comparing data sources
+
+To check how many cases each source contributes, use
+`compare_data_sources()`:
+
+```r
+library(data.table)
+ukb_data <- fread("population.csv")
+diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
+
+comparison <- compare_data_sources(ukb_data, diseases)
+comparison
+```
+
+This returns a summary table showing case counts per source per disease,
+which is useful for justifying source selection in your manuscript.

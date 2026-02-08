@@ -1,0 +1,150 @@
+# Survival Analysis {#survival-analysis}
+
+The main function for building a Cox-regression-ready dataset is
+`build_survival_dataset()`. It handles prevalent/incident classification,
+follow-up time calculation, and supports separate source definitions for
+baseline exclusion and outcome ascertainment.
+
+## Quick start
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+ukb_data <- fread("population.csv")
+
+diseases <- get_predefined_diseases()[
+  c("AA", "Hypertension", "Diabetes")
+]
+
+analysis_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = diseases,
+  primary_disease = "AA",
+  censor_date = as.Date("2023-12-31")
+)
+
+head(analysis_dt[, .(eid, AA_history, AA_incident,
+                      Hypertension_history, Diabetes_history,
+                      outcome_status, outcome_surv_time)])
+```
+
+## Output columns
+
+The wide-format output contains the following columns for each disease:
+
+| Column | Description |
+|:-------|:------------|
+| `{Disease}_history` | 1 if prevalent (diagnosed at or before baseline) |
+| `{Disease}_incident` | 1 if incident (diagnosed after baseline) |
+| `outcome_status` | Primary disease event indicator (1 = event, 0 = censored, NA = prevalent) |
+| `outcome_surv_time` | Follow-up time in years (NA for prevalent cases) |
+
+Prevalent cases of the **primary disease** receive `NA` for both
+`outcome_status` and `outcome_surv_time` because they are not at risk for
+incident disease. In a Cox model you should exclude or handle them explicitly.
+
+## Case classification logic
+
+The function classifies each participant as follows:
+
+1. **Prevalent case** -- earliest diagnosis date (from `prevalent_sources`) is
+   on or before the baseline date. The participant already had the disease at
+   enrollment.
+2. **Incident case** -- earliest diagnosis date (from `outcome_sources`) is
+   after the baseline date. This is a new event during follow-up.
+3. **Censored** -- no diagnosis by the end of follow-up (death or
+   administrative censor date, whichever comes first).
+
+## Follow-up time
+
+Follow-up time for the primary disease is calculated as:
+
+- **Prevalent case**: `NA` (not at risk).
+- **Incident case**: `(diagnosis_date - baseline_date) / 365.25`.
+- **Censored**: `(min(death_date, censor_date) - baseline_date) / 365.25`.
+
+## Dual-source design
+
+The `prevalent_sources` and `outcome_sources` arguments let you use different
+data sources for baseline exclusion versus outcome ascertainment. This is
+recommended because:
+
+| Aspect | Prevalent (history) | Outcome (incident) |
+|:-------|:--------------------|:-------------------|
+| Purpose | Exclude baseline cases | Define endpoint |
+| Self-report | Include (captures pre-existing) | Exclude (imprecise dates) |
+| Date precision | Less critical | Critical for survival time |
+
+Default settings reflect this design:
+
+```r
+# prevalent_sources includes Self-report
+# outcome_sources  excludes Self-report
+analysis_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = diseases,
+  prevalent_sources = c("ICD10", "ICD9",
+                        "Self-report", "Death"),
+  outcome_sources = c("ICD10", "ICD9", "Death"),
+  primary_disease = "AA"
+)
+```
+
+## Running a Cox model
+
+After building the survival dataset, exclude prevalent primary-disease cases
+and fit a Cox model:
+
+```r
+library(survival)
+
+# Exclude prevalent AA cases (they have NA outcome)
+cox_data <- analysis_dt[!is.na(outcome_status)]
+
+cox_model <- coxph(
+  Surv(outcome_surv_time, outcome_status) ~
+    Hypertension_history + Diabetes_history,
+  data = cox_data
+)
+summary(cox_model)
+```
+
+## Sensitivity analyses
+
+You can run sensitivity analyses by varying the source definitions:
+
+```r
+# Sensitivity 1: hospital records only (strictest)
+strict_dt <- build_survival_dataset(
+  ukb_data, diseases,
+  prevalent_sources = c("ICD10", "ICD9"),
+  outcome_sources   = c("ICD10", "ICD9"),
+  primary_disease   = "AA"
+)
+
+# Sensitivity 2: all sources including self-report for outcome
+broad_dt <- build_survival_dataset(
+  ukb_data, diseases,
+  prevalent_sources = c("ICD10", "ICD9",
+                        "Self-report", "Death"),
+  outcome_sources   = c("ICD10", "ICD9",
+                        "Self-report", "Death"),
+  primary_disease   = "AA"
+)
+```
+
+## Long format output
+
+If you need a case-level (long) table instead of the wide cohort table,
+set `output = "long"`:
+
+```r
+long_dt <- build_survival_dataset(
+  ukb_data, diseases,
+  primary_disease = "AA",
+  output = "long",
+  include_all = TRUE
+)
+head(long_dt)
+```

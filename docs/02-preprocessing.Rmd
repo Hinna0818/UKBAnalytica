@@ -1,0 +1,142 @@
+# Variable Preprocessing {#preprocessing}
+
+After downloading data from RAP, the next step is to clean and recode baseline
+variables. UKBAnalytica provides `preprocess_baseline()` and several helper
+functions to handle this in a standardised way.
+
+## Available variables
+
+Use `get_variable_info()` to inspect the built-in variable catalogue:
+
+```r
+library(UKBAnalytica)
+
+# View all variables in a category
+get_variable_info("demographics")
+get_variable_info("lifestyle")
+get_variable_info("biomarkers")
+```
+
+Each entry maps a human-readable name (e.g., `"bmi"`) to the corresponding UKB
+field column (e.g., `p21001_i0`).
+
+## Basic usage
+
+`preprocess_baseline()` selects, renames, and recodes the requested variables:
+  
+```r
+library(UKBAnalytica)
+library(data.table)
+
+ukb_data <- fread("population.csv")
+
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "ethnicity", "bmi",
+                "smoking", "education"),
+  missing_action = "keep"
+)
+head(processed)
+```
+
+Set `missing_action = "drop"` to remove any row that has `NA` in the selected
+variables.
+
+## Blood pressure
+
+UKB records automated and manual BP readings. The helper
+`calculate_blood_pressure()` averages available readings per participant:
+
+```r
+processed <- calculate_blood_pressure(processed, type = "sbp")
+processed <- calculate_blood_pressure(processed, type = "dbp")
+```
+
+This will create columns `sbp` and `dbp` from whichever readings are present
+(automated preferred, manual as fallback).
+
+## Medication use
+
+Extract binary indicators for medication use at baseline:
+
+```r
+processed <- extract_medications(
+  processed,
+  c("cholesterol", "blood_pressure", "insulin")
+)
+```
+
+The resulting columns are named `anti_cho`, `antihypertensive`, and `insulin`
+(1 = taking medication, 0 = not).
+
+## Air pollution exposure
+
+Calculate averaged air pollution exposures from the UKB environmental data:
+
+```r
+processed <- calculate_air_pollution(
+  processed,
+  c("NO2", "PM2.5", "PM10", "NOx")
+)
+```
+
+## Custom variable mapping
+
+If you need a UKB field that is not in the built-in catalogue, pass a
+`custom_mapping` list:
+
+```r
+custom <- list(
+  my_biomarker = list(
+    ukb_col = "p30000_i0",
+    description = "Custom biomarker"
+  )
+)
+
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "my_biomarker"),
+  custom_mapping = custom
+)
+```
+
+The custom entry will be treated like any built-in variable -- the column is
+renamed and included in the output.
+
+## Complete preprocessing example
+
+A typical preprocessing pipeline for a cardiovascular study might look like
+this:
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+dt <- fread("population.csv")
+
+# Step 1: demographics + lifestyle + biomarkers
+dt <- preprocess_baseline(
+  dt,
+  variables = c(
+    "sex", "age", "ethnicity", "bmi",
+    "smoking", "drinking",
+    "sleep_duration", "exercise_intensity",
+    "education", "income",
+    "triglycerides", "ldl", "hdl", "hba1c"
+  )
+)
+
+# Step 2: blood pressure
+dt <- calculate_blood_pressure(dt, "sbp")
+dt <- calculate_blood_pressure(dt, "dbp")
+
+# Step 3: medications
+dt <- extract_medications(
+  dt, c("cholesterol", "blood_pressure", "insulin")
+)
+
+# Step 4: air pollution
+dt <- calculate_air_pollution(dt, c("NO2", "PM2.5"))
+
+str(dt)
+```

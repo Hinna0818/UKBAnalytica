@@ -1,0 +1,14 @@
+book_filename: "UKBAnalytica"
+delete_merged_file: true
+language:
+  ui:
+    chapter_name: "Chapter "
+rmd_files:
+  - index.Rmd
+  - 01-rap-download.Rmd
+  - 02-preprocessing.Rmd
+  - 03-disease-definitions.Rmd
+  - 04-survival-analysis.Rmd
+  - 05-baseline-table.Rmd
+  - 06-imputation.Rmd
+output_dir: "_book"

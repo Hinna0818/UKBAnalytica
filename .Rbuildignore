@@ -13,3 +13,6 @@
 ^README\.html$
 ^examples$
 ^xxx\.Rmd$
+^docs$
+^\.github$
+^_site$

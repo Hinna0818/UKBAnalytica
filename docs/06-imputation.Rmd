@@ -1,0 +1,171 @@
+# Multiple Imputation {#imputation}
+
+Missing data are common in large cohort studies. UKBAnalytica provides
+`run_imputation()`, a wrapper around the
+[mice](https://github.com/amices/mice) package that handles the
+subset-impute-merge workflow in a single call.
+
+## Motivation
+
+A typical imputation pipeline for UKB data involves:
+
+1. Selecting the covariates to impute.
+2. Running `mice::mice()`.
+3. Extracting each completed dataset.
+4. Merging the imputed covariates back to the full data (exposures, outcomes, etc.).
+5. Optionally joining additional omics datasets (proteomics, metabolomics).
+
+`run_imputation()` automates all five steps.
+
+## Basic usage
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+dt <- fread("population.csv")
+
+# Variables to impute
+imp_vars <- c(
+  "sex", "age", "bmi",
+  "smoking", "drinking",
+  "education", "income",
+  "exercise_intensity", "sleep_duration",
+  "ethnicity",
+  "ldl", "hdl", "hba1c",
+  "sbp", "dbp"
+)
+
+# Categorical variables (will be coerced to factor)
+cat_vars <- c(
+  "sex", "smoking", "drinking",
+  "education", "income", "ethnicity",
+  "exercise_intensity"
+)
+
+res <- run_imputation(
+  data        = dt,
+  id_col      = "eid",
+  vars        = imp_vars,
+  factor_vars = cat_vars,
+  method      = "pmm",
+  m           = 5,
+  maxit       = 10,
+  seed        = 1234,
+  print       = FALSE
+)
+```
+
+## Working with the output
+
+`run_imputation()` returns a list with two elements:
+
+| Element | Description |
+|:--------|:------------|
+| `imp` | The `mice` `mids` object (for diagnostics, pooling, etc.) |
+| `data_list` | A list of `m` completed datasets with imputed covariates merged back |
+
+Access individual datasets:
+
+```r
+# First completed dataset
+imputed_dt1 <- res$data_list[[1]]
+dim(imputed_dt1)
+
+# Second completed dataset
+imputed_dt2 <- res$data_list[[2]]
+```
+
+All columns that were *not* in `vars` (exposures, outcomes, follow-up time,
+etc.) are preserved as-is.
+
+## Merging additional datasets
+
+If you have separate omics datasets (e.g., proteomics, metabolomics), you can
+merge them automatically:
+
+```r
+pro_df  <- fread("protein_imputed.csv")
+meta_df <- fread("metabolomics_imputed.csv")
+
+res <- run_imputation(
+  data        = dt,
+  id_col      = "eid",
+  vars        = imp_vars,
+  factor_vars = cat_vars,
+  m           = 5,
+  seed        = 1234,
+  print       = FALSE,
+  additional_data = list(
+    protein      = pro_df,
+    metabolomics = meta_df
+  ),
+  additional_join = "inner"
+)
+
+# Each element of data_list now includes the
+# omics columns as well
+dim(res$data_list[[1]])
+```
+
+Set `additional_join = "left"` if you want to keep all participants even when
+they are missing from the omics data.
+
+## Diagnostics
+
+Because the raw `mids` object is returned, you can use standard `mice`
+diagnostics:
+
+```r
+library(mice)
+
+# Convergence plots
+plot(res$imp)
+
+# Strip plots for a specific variable
+stripplot(res$imp, bmi ~ .imp)
+
+# Density plots
+densityplot(res$imp, ~ bmi)
+```
+
+## Pooled analysis
+
+For analyses that account for imputation uncertainty, use `mice::with()` and
+`mice::pool()`:
+
+```r
+library(mice)
+library(survival)
+
+fit <- with(res$imp, lm(bmi ~ age + sex))
+pooled <- pool(fit)
+summary(pooled)
+```
+
+## Saving completed datasets
+
+```r
+for (i in seq_along(res$data_list)) {
+  saveRDS(
+    res$data_list[[i]],
+    file = sprintf("imputed_dataset_%d.rds", i)
+  )
+}
+```
+
+## Parameters
+
+| Argument | Default | Description |
+|:---------|:--------|:------------|
+| `data` | -- | Input data.frame or data.table |
+| `id_col` | `"eid"` | Name of the ID column |
+| `vars` | -- | Variables to impute |
+| `factor_vars` | `NULL` | Subset of `vars` to treat as factors |
+| `method` | `"pmm"` | Imputation method (passed to `mice`) |
+| `m` | `5` | Number of imputations |
+| `maxit` | `10` | Maximum iterations |
+| `seed` | `1234` | Random seed |
+| `print` | `TRUE` | Show iteration logs |
+| `additional_data` | `NULL` | Named list of extra datasets to merge |
+| `additional_join` | `"inner"` | Join type for additional datasets |
