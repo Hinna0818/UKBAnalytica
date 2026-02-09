@@ -1,6 +1,10 @@
 --- 
 title: "UKBAnalytica: A Guide to UK Biobank Data Analysis"
-author: "Nan He, Department of Bioinformatics, Southern Medical University"
+author:
+- name: "Nan He"
+  email: "hinna@i.smu.edu.cn"
+  affiliation: "Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University"
+
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 documentclass: book
