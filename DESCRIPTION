@@ -15,7 +15,8 @@ URL: https://github.com/Hinna0818/UKBAnalytica,
 BugReports: https://github.com/Hinna0818/UKBAnalytica/issues
 Imports: 
     data.table,
-    stringi
+    stringi,
+    ggplot2
 Suggests:
     testthat,
     survival,
