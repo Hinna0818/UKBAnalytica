@@ -1,0 +1,365 @@
+# Main Analysis {#main-analysis}
+
+This chapter demonstrates how to perform statistical analyses using **UKBAnalytica**, including pre-analysis correlation checks and three types of regression models: linear regression, logistic regression, and Cox proportional hazards regression.
+
+## Pre-Analysis: Correlation Check {#correlation}
+
+Before running regression models, it's important to examine correlations between variables to identify potential multicollinearity issues and understand relationships in your data.
+
+### Calculate Correlation Matrix
+
+The `run_correlation()` function computes pairwise correlations and highlights values above a specified threshold:
+
+```{r correlation-basic, eval=FALSE}
+library(UKBAnalytica)
+library(data.table)
+
+# Example data
+dt <- data.table(
+  age = rnorm(500, 55, 10),
+  bmi = rnorm(500, 26, 4),
+  sbp = rnorm(500, 130, 15),
+  glucose = rnorm(500, 5.5, 1.2),
+  cholesterol = rnorm(500, 5.2, 1.0)
+)
+
+# Add some correlations to make it more realistic
+dt[, sbp := sbp + 0.4 * age + 0.3 * bmi + rnorm(500, 0, 8)]
+dt[, glucose := glucose + 0.2 * bmi + rnorm(500, 0, 0.8)]
+
+# Calculate correlation matrix
+corr_mat <- run_correlation(
+  dt,
+  vars = c("age", "bmi", "sbp", "glucose", "cholesterol"),
+  method = "pearson",
+  threshold = 0.3
+)
+
+print(corr_mat)
+```
+
+**Parameters:**
+
+- `df`: A data.frame or data.table containing variables
+- `vars`: Character vector of variable names to correlate
+- `method`: Correlation method (`"pearson"`, `"spearman"`, or `"kendall"`)
+- `threshold`: Numeric threshold (0-1) to highlight strong correlations
+
+The function will print correlations exceeding the threshold and return the correlation matrix.
+
+### Visualize Correlation Heatmap
+
+Use `plot_correlation()` to create a customizable heatmap:
+
+```{r correlation-viz, eval=FALSE}
+# Basic heatmap with values
+p1 <- plot_correlation(
+  corr_mat,
+  title = "Variable Correlations",
+  show_values = TRUE,
+  digits = 2
+)
+print(p1)
+
+# Upper triangle only (cleaner view)
+p2 <- plot_correlation(
+  corr_mat,
+  title = "Correlation Heatmap (Upper Triangle)",
+  show_values = TRUE,
+  upper_triangle = TRUE,
+  text_size = 3.5
+)
+print(p2)
+
+# Custom color scheme
+p3 <- plot_correlation(
+  corr_mat,
+  title = "Custom Color Correlation Plot",
+  color_low = "#2166AC",   # Blue for negative
+  color_mid = "#F7F7F7",   # Light gray for zero
+  color_high = "#B2182B",  # Red for positive
+  show_values = TRUE
+)
+print(p3)
+```
+
+**Key Features:**
+
+- `show_values`: Display correlation coefficients on tiles
+- `digits`: Control decimal precision (1-4)
+- `text_size`: Adjust label font size
+- `color_low/mid/high`: Customize color gradient
+- `upper_triangle`: Show only upper half to reduce redundancy
+
+The function automatically adjusts text color (white on strong correlations, black on weak) for optimal readability.
+
+---
+
+## Regression Analysis {#regression}
+
+**UKBAnalytica** provides three regression functions with a unified interface for testing multiple variables:
+
+- `runmulti_lm()`: Linear regression
+- `runmulti_logit()`: Logistic regression  
+- `runmulti_cox()`: Cox proportional hazards
+
+All functions support both **univariate** (no covariates) and **multivariate** (adjusted) analyses.
+
+### Linear Regression {#lm}
+
+Use `runmulti_lm()` for continuous outcomes:
+
+```{r lm-example, eval=FALSE}
+# Create example dataset
+set.seed(123)
+dt <- data.table(
+  sbp = rnorm(500, 130, 15),
+  age = rnorm(500, 55, 10),
+  bmi = rnorm(500, 26, 4),
+  sex = sample(0:1, 500, replace = TRUE),
+  smoking = sample(0:1, 500, replace = TRUE)
+)
+
+# Add realistic relationships
+dt[, sbp := 100 + 0.5 * age + 0.8 * bmi + 3 * smoking + rnorm(500, 0, 8)]
+
+# Univariate linear regression
+# Test each variable's association with SBP without adjustment
+results_uni <- runmulti_lm(
+  data = dt,
+  main_var = c("age", "bmi", "sex", "smoking"),
+  outcome = "sbp"
+)
+print(results_uni)
+
+# Multivariate linear regression
+# Test each variable adjusting for age and sex
+results_multi <- runmulti_lm(
+  data = dt,
+  main_var = c("bmi", "smoking"),
+  covariates = c("age", "sex"),
+  outcome = "sbp"
+)
+print(results_multi)
+```
+
+**Output columns:**
+
+- `variable`: Name of the tested variable
+- `beta`: Regression coefficient (unit change in outcome per unit change in predictor)
+- `lower95`, `upper95`: 95% confidence interval bounds
+- `pvalue`: Statistical significance
+
+**Interpretation example:**  
+If `beta = 0.8` for BMI, a 1-unit increase in BMI is associated with a 0.8 mmHg increase in systolic blood pressure.
+
+---
+
+### Logistic Regression {#logistic}
+
+Use `runmulti_logit()` for binary (0/1) outcomes:
+
+```{r logit-example, eval=FALSE}
+# Create example dataset with binary outcome
+set.seed(456)
+dt <- data.table(
+  diabetes = sample(0:1, 500, replace = TRUE, prob = c(0.85, 0.15)),
+  age = rnorm(500, 55, 10),
+  bmi = rnorm(500, 26, 4),
+  sex = sample(0:1, 500, replace = TRUE),
+  family_history = sample(0:1, 500, replace = TRUE, prob = c(0.7, 0.3))
+)
+
+# Add realistic risk relationships
+dt[, diabetes := rbinom(
+  500, 1, 
+  plogis(-5 + 0.05 * age + 0.1 * bmi + 0.8 * family_history)
+)]
+
+# Univariate logistic regression
+results_uni <- runmulti_logit(
+  data = dt,
+  main_var = c("age", "bmi", "sex", "family_history"),
+  outcome = "diabetes"
+)
+print(results_uni)
+
+# Multivariate logistic regression  
+results_multi <- runmulti_logit(
+  data = dt,
+  main_var = c("bmi", "family_history"),
+  covariates = c("age", "sex"),
+  outcome = "diabetes"
+)
+print(results_multi)
+```
+
+**Output columns:**
+
+- `variable`: Name of the tested variable
+- `OR`: Odds ratio (exponentiated coefficient)
+- `lower95`, `upper95`: 95% confidence interval for OR
+- `pvalue`: Statistical significance
+
+**Interpretation example:**  
+If `OR = 1.5` for family history, individuals with a family history have 1.5 times the odds of diabetes compared to those without.
+
+**Important:** The outcome variable must be binary (0/1). The function will throw an error if other values are detected.
+
+---
+
+### Cox Proportional Hazards Regression {#cox}
+
+Use `runmulti_cox()` for time-to-event (survival) outcomes:
+
+```{r cox-example, eval=FALSE}
+library(survival)  # Required for Cox models
+
+# Load example survival data
+data(lung)
+dt <- as.data.table(lung)
+
+# Clean data
+dt <- dt[complete.cases(dt[, .(time, status, age, sex, ph.ecog, wt.loss)])]
+
+# Univariate Cox regression
+# Test each variable's effect on survival without adjustment
+results_uni <- runmulti_cox(
+  data = dt,
+  main_var = c("age", "sex", "ph.ecog", "wt.loss"),
+  endpoint = c("time", "status")
+)
+print(results_uni)
+
+# Multivariate Cox regression
+# Test variables adjusting for age and sex
+results_multi <- runmulti_cox(
+  data = dt,
+  main_var = c("ph.ecog", "wt.loss"),
+  covariates = c("age", "sex"),
+  endpoint = c("time", "status")
+)
+print(results_multi)
+```
+
+**Output columns:**
+
+- `variable`: Name of the tested variable
+- `HR`: Hazard ratio (instantaneous risk ratio)
+- `lower95`, `upper95`: 95% confidence interval for HR
+- `pvalue`: Statistical significance
+
+**Interpretation example:**  
+If `HR = 1.3` for ECOG performance score, each 1-point increase in ECOG is associated with a 30% increase in the instantaneous hazard (risk) of death.
+
+**Parameters:**
+
+- `endpoint`: A length-2 vector `c("time_var", "status_var")` where:
+  - `time_var`: Follow-up time (continuous)
+  - `status_var`: Event indicator (1 = event occurred, 0 = censored)
+
+**Note:** The `survival` package must be installed to use `runmulti_cox()`.
+
+---
+
+## Unified Interface Across Models {#unified-interface}
+
+All three regression functions share the same parameter structure:
+
+```{r unified-interface, eval=FALSE}
+# General syntax
+results <- runmulti_*(
+  data = your_data,              # data.frame or data.table
+  main_var = c("var1", "var2"),  # Variables to test (one at a time)
+  covariates = c("age", "sex"),  # Adjustment variables (NULL = univariate)
+  outcome = "y",                 # For lm/logit: outcome variable
+  endpoint = c("time", "event")  # For cox: time-to-event variables
+)
+```
+
+**Key design principles:**
+
+1. **One model per main variable:** Each variable in `main_var` is tested separately
+2. **Univariate vs. Multivariate:**  
+   - `covariates = NULL` → Univariate analysis (no adjustment)
+   - `covariates = c(...)` → Multivariate analysis (adjusted for covariates)
+3. **Consistent output:** All functions return a data.frame with effect estimates, confidence intervals, and p-values
+
+---
+
+## Best Practices {#best-practices}
+
+### 1. Check Correlations First
+
+```{r best-practice-1, eval=FALSE}
+# Identify multicollinearity before regression
+corr_mat <- run_correlation(
+  dt, 
+  vars = c("var1", "var2", "var3", "var4"),
+  threshold = 0.7
+)
+
+# If two variables have |r| > 0.8, consider removing one
+```
+
+### 2. Start with Univariate, Then Multivariate
+
+```{r best-practice-2, eval=FALSE}
+# Step 1: Screen all variables without adjustment
+uni_results <- runmulti_lm(
+  dt, 
+  main_var = c("var1", "var2", "var3"),
+  outcome = "y"
+)
+
+# Step 2: Test significant variables with adjustment
+sig_vars <- uni_results$variable[uni_results$pvalue < 0.05]
+multi_results <- runmulti_lm(
+  dt,
+  main_var = sig_vars,
+  covariates = c("age", "sex"),
+  outcome = "y"
+)
+```
+
+### 3. Validate Model Assumptions
+
+```{r best-practice-3, eval=FALSE}
+# For linear models: check residuals
+model <- lm(y ~ x + age + sex, data = dt)
+plot(model)  # Diagnostic plots
+
+# For logistic models: check for complete separation
+table(dt$outcome, dt$predictor)
+
+# For Cox models: check proportional hazards assumption
+library(survival)
+model <- coxph(Surv(time, status) ~ x + age, data = dt)
+cox.zph(model)  # Test PH assumption
+```
+
+### 4. Handle Missing Data Appropriately
+
+```{r best-practice-4, eval=FALSE}
+# Check missingness
+colSums(is.na(dt))
+
+# Complete case analysis (default in regression functions)
+dt_complete <- dt[complete.cases(dt[, .(outcome, var1, var2, age, sex)])]
+
+# Or use multiple imputation (see Chapter 6)
+```
+
+---
+
+## Summary
+
+This chapter covered:
+
+- **Pre-analysis:** Using `run_correlation()` and `plot_correlation()` to examine variable relationships
+- **Linear regression:** `runmulti_lm()` for continuous outcomes
+- **Logistic regression:** `runmulti_logit()` for binary outcomes  
+- **Cox regression:** `runmulti_cox()` for survival outcomes
+- **Best practices:** Workflow recommendations for robust analyses
+
+All functions follow a consistent interface, making it easy to switch between analysis types while maintaining reproducible code.

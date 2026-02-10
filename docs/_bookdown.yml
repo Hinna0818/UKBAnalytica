@@ -11,4 +11,5 @@ rmd_files:
   - 04-survival-analysis.Rmd
   - 05-baseline-table.Rmd
   - 06-imputation.Rmd
+  - 07-main-analysis.Rmd
 output_dir: "_book"
