@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 8 Main Analysis | UKBAnalytica: A Guide to UK Biobank Data Analysis</title>
+  <meta name="description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 8 Main Analysis | UKBAnalytica: A Guide to UK Biobank Data Analysis" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  <meta name="github-repo" content="Hinna0818/UKBAnalytica" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 8 Main Analysis | UKBAnalytica: A Guide to UK Biobank Data Analysis" />
+  
+  <meta name="twitter:description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  
+
+
+
+<meta name="date" content="2026-02-13" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="imputation.html"/>
+
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">UKBAnalytica</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#key-features"><i class="fa fa-check"></i><b>1.1</b> Key features</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#installation"><i class="fa fa-check"></i><b>1.2</b> Installation</a></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#package-overview"><i class="fa fa-check"></i><b>1.3</b> Package overview</a></li>
+<li class="chapter" data-level="1.4" data-path="index.html"><a href="index.html#core-functions"><i class="fa fa-check"></i><b>1.4</b> Core functions</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="rap-download.html"><a href="rap-download.html"><i class="fa fa-check"></i><b>2</b> Downloading Data from RAP</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="rap-download.html"><a href="rap-download.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
+<li class="chapter" data-level="2.2" data-path="rap-download.html"><a href="rap-download.html#demographic-data"><i class="fa fa-check"></i><b>2.2</b> Demographic data</a></li>
+<li class="chapter" data-level="2.3" data-path="rap-download.html"><a href="rap-download.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3</b> Metabolomics data (NMR)</a></li>
+<li class="chapter" data-level="2.4" data-path="rap-download.html"><a href="rap-download.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.4</b> Proteomics data (Olink)</a></li>
+<li class="chapter" data-level="2.5" data-path="rap-download.html"><a href="rap-download.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.5</b> Common UKB field IDs</a></li>
+<li class="chapter" data-level="2.6" data-path="rap-download.html"><a href="rap-download.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.6</b> Typical output sizes</a></li>
+<li class="chapter" data-level="2.7" data-path="rap-download.html"><a href="rap-download.html#troubleshooting"><i class="fa fa-check"></i><b>2.7</b> Troubleshooting</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="preprocessing.html"><a href="preprocessing.html"><i class="fa fa-check"></i><b>3</b> Variable Preprocessing</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="preprocessing.html"><a href="preprocessing.html#available-variables"><i class="fa fa-check"></i><b>3.1</b> Available variables</a></li>
+<li class="chapter" data-level="3.2" data-path="preprocessing.html"><a href="preprocessing.html#basic-usage"><i class="fa fa-check"></i><b>3.2</b> Basic usage</a></li>
+<li class="chapter" data-level="3.3" data-path="preprocessing.html"><a href="preprocessing.html#blood-pressure"><i class="fa fa-check"></i><b>3.3</b> Blood pressure</a></li>
+<li class="chapter" data-level="3.4" data-path="preprocessing.html"><a href="preprocessing.html#medication-use"><i class="fa fa-check"></i><b>3.4</b> Medication use</a></li>
+<li class="chapter" data-level="3.5" data-path="preprocessing.html"><a href="preprocessing.html#air-pollution-exposure"><i class="fa fa-check"></i><b>3.5</b> Air pollution exposure</a></li>
+<li class="chapter" data-level="3.6" data-path="preprocessing.html"><a href="preprocessing.html#custom-variable-mapping"><i class="fa fa-check"></i><b>3.6</b> Custom variable mapping</a></li>
+<li class="chapter" data-level="3.7" data-path="preprocessing.html"><a href="preprocessing.html#complete-preprocessing-example"><i class="fa fa-check"></i><b>3.7</b> Complete preprocessing example</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="disease-definitions.html"><a href="disease-definitions.html"><i class="fa fa-check"></i><b>4</b> Disease Definitions</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="disease-definitions.html"><a href="disease-definitions.html#predefined-diseases"><i class="fa fa-check"></i><b>4.1</b> Predefined diseases</a></li>
+<li class="chapter" data-level="4.2" data-path="disease-definitions.html"><a href="disease-definitions.html#inspecting-a-definition"><i class="fa fa-check"></i><b>4.2</b> Inspecting a definition</a></li>
+<li class="chapter" data-level="4.3" data-path="disease-definitions.html"><a href="disease-definitions.html#creating-custom-definitions"><i class="fa fa-check"></i><b>4.3</b> Creating custom definitions</a></li>
+<li class="chapter" data-level="4.4" data-path="disease-definitions.html"><a href="disease-definitions.html#composite-endpoints"><i class="fa fa-check"></i><b>4.4</b> Composite endpoints</a></li>
+<li class="chapter" data-level="4.5" data-path="disease-definitions.html"><a href="disease-definitions.html#comparing-data-sources"><i class="fa fa-check"></i><b>4.5</b> Comparing data sources</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="survival-analysis.html"><a href="survival-analysis.html"><i class="fa fa-check"></i><b>5</b> Survival Analysis</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="survival-analysis.html"><a href="survival-analysis.html#quick-start"><i class="fa fa-check"></i><b>5.1</b> Quick start</a></li>
+<li class="chapter" data-level="5.2" data-path="survival-analysis.html"><a href="survival-analysis.html#output-columns"><i class="fa fa-check"></i><b>5.2</b> Output columns</a></li>
+<li class="chapter" data-level="5.3" data-path="survival-analysis.html"><a href="survival-analysis.html#case-classification-logic"><i class="fa fa-check"></i><b>5.3</b> Case classification logic</a></li>
+<li class="chapter" data-level="5.4" data-path="survival-analysis.html"><a href="survival-analysis.html#follow-up-time"><i class="fa fa-check"></i><b>5.4</b> Follow-up time</a></li>
+<li class="chapter" data-level="5.5" data-path="survival-analysis.html"><a href="survival-analysis.html#dual-source-design"><i class="fa fa-check"></i><b>5.5</b> Dual-source design</a></li>
+<li class="chapter" data-level="5.6" data-path="survival-analysis.html"><a href="survival-analysis.html#running-a-cox-model"><i class="fa fa-check"></i><b>5.6</b> Running a Cox model</a></li>
+<li class="chapter" data-level="5.7" data-path="survival-analysis.html"><a href="survival-analysis.html#sensitivity-analyses"><i class="fa fa-check"></i><b>5.7</b> Sensitivity analyses</a></li>
+<li class="chapter" data-level="5.8" data-path="survival-analysis.html"><a href="survival-analysis.html#long-format-output"><i class="fa fa-check"></i><b>5.8</b> Long format output</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="baseline-table.html"><a href="baseline-table.html"><i class="fa fa-check"></i><b>6</b> Baseline Table</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="baseline-table.html"><a href="baseline-table.html#basic-usage-1"><i class="fa fa-check"></i><b>6.1</b> Basic usage</a></li>
+<li class="chapter" data-level="6.2" data-path="baseline-table.html"><a href="baseline-table.html#exporting-to-csv"><i class="fa fa-check"></i><b>6.2</b> Exporting to CSV</a></li>
+<li class="chapter" data-level="6.3" data-path="baseline-table.html"><a href="baseline-table.html#using-with-the-survival-package-example-data"><i class="fa fa-check"></i><b>6.3</b> Using with the <code>survival</code> package example data</a></li>
+<li class="chapter" data-level="6.4" data-path="baseline-table.html"><a href="baseline-table.html#parameters"><i class="fa fa-check"></i><b>6.4</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="imputation.html"><a href="imputation.html"><i class="fa fa-check"></i><b>7</b> Multiple Imputation</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="imputation.html"><a href="imputation.html#motivation"><i class="fa fa-check"></i><b>7.1</b> Motivation</a></li>
+<li class="chapter" data-level="7.2" data-path="imputation.html"><a href="imputation.html#basic-usage-2"><i class="fa fa-check"></i><b>7.2</b> Basic usage</a></li>
+<li class="chapter" data-level="7.3" data-path="imputation.html"><a href="imputation.html#working-with-the-output"><i class="fa fa-check"></i><b>7.3</b> Working with the output</a></li>
+<li class="chapter" data-level="7.4" data-path="imputation.html"><a href="imputation.html#merging-additional-datasets"><i class="fa fa-check"></i><b>7.4</b> Merging additional datasets</a></li>
+<li class="chapter" data-level="7.5" data-path="imputation.html"><a href="imputation.html#diagnostics"><i class="fa fa-check"></i><b>7.5</b> Diagnostics</a></li>
+<li class="chapter" data-level="7.6" data-path="imputation.html"><a href="imputation.html#pooled-analysis"><i class="fa fa-check"></i><b>7.6</b> Pooled analysis</a></li>
+<li class="chapter" data-level="7.7" data-path="imputation.html"><a href="imputation.html#saving-completed-datasets"><i class="fa fa-check"></i><b>7.7</b> Saving completed datasets</a></li>
+<li class="chapter" data-level="7.8" data-path="imputation.html"><a href="imputation.html#parameters-1"><i class="fa fa-check"></i><b>7.8</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="8" data-path="main-analysis.html"><a href="main-analysis.html"><i class="fa fa-check"></i><b>8</b> Main Analysis</a>
+<ul>
+<li class="chapter" data-level="8.1" data-path="main-analysis.html"><a href="main-analysis.html#correlation"><i class="fa fa-check"></i><b>8.1</b> Pre-Analysis: Correlation Check</a>
+<ul>
+<li class="chapter" data-level="8.1.1" data-path="main-analysis.html"><a href="main-analysis.html#calculate-correlation-matrix"><i class="fa fa-check"></i><b>8.1.1</b> Calculate Correlation Matrix</a></li>
+<li class="chapter" data-level="8.1.2" data-path="main-analysis.html"><a href="main-analysis.html#visualize-correlation-heatmap"><i class="fa fa-check"></i><b>8.1.2</b> Visualize Correlation Heatmap</a></li>
+</ul></li>
+<li class="chapter" data-level="8.2" data-path="main-analysis.html"><a href="main-analysis.html#regression"><i class="fa fa-check"></i><b>8.2</b> Regression Analysis</a>
+<ul>
+<li class="chapter" data-level="8.2.1" data-path="main-analysis.html"><a href="main-analysis.html#lm"><i class="fa fa-check"></i><b>8.2.1</b> Linear Regression</a></li>
+<li class="chapter" data-level="8.2.2" data-path="main-analysis.html"><a href="main-analysis.html#logistic"><i class="fa fa-check"></i><b>8.2.2</b> Logistic Regression</a></li>
+<li class="chapter" data-level="8.2.3" data-path="main-analysis.html"><a href="main-analysis.html#cox"><i class="fa fa-check"></i><b>8.2.3</b> Cox Proportional Hazards Regression</a></li>
+</ul></li>
+<li class="chapter" data-level="8.3" data-path="main-analysis.html"><a href="main-analysis.html#unified-interface"><i class="fa fa-check"></i><b>8.3</b> Unified Interface Across Models</a></li>
+<li class="chapter" data-level="8.4" data-path="main-analysis.html"><a href="main-analysis.html#best-practices"><i class="fa fa-check"></i><b>8.4</b> Best Practices</a>
+<ul>
+<li class="chapter" data-level="8.4.1" data-path="main-analysis.html"><a href="main-analysis.html#check-correlations-first"><i class="fa fa-check"></i><b>8.4.1</b> 1. Check Correlations First</a></li>
+<li class="chapter" data-level="8.4.2" data-path="main-analysis.html"><a href="main-analysis.html#start-with-univariate-then-multivariate"><i class="fa fa-check"></i><b>8.4.2</b> 2. Start with Univariate, Then Multivariate</a></li>
+<li class="chapter" data-level="8.4.3" data-path="main-analysis.html"><a href="main-analysis.html#validate-model-assumptions"><i class="fa fa-check"></i><b>8.4.3</b> 3. Validate Model Assumptions</a></li>
+<li class="chapter" data-level="8.4.4" data-path="main-analysis.html"><a href="main-analysis.html#handle-missing-data-appropriately"><i class="fa fa-check"></i><b>8.4.4</b> 4. Handle Missing Data Appropriately</a></li>
+</ul></li>
+<li class="chapter" data-level="8.5" data-path="main-analysis.html"><a href="main-analysis.html#summary"><i class="fa fa-check"></i><b>8.5</b> Summary</a></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/Hinna0818/UKBAnalytica" target="_blank">GitHub</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">UKBAnalytica: A Guide to UK Biobank Data Analysis</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="main-analysis" class="section level1 hasAnchor" number="8">
+<h1><span class="header-section-number">Chapter 8</span> Main Analysis<a href="main-analysis.html#main-analysis" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>This chapter demonstrates how to perform statistical analyses using <strong>UKBAnalytica</strong>, including pre-analysis correlation checks and three types of regression models: linear regression, logistic regression, and Cox proportional hazards regression.</p>
+<div id="correlation" class="section level2 hasAnchor" number="8.1">
+<h2><span class="header-section-number">8.1</span> Pre-Analysis: Correlation Check<a href="main-analysis.html#correlation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Before running regression models, it’s important to examine correlations between variables to identify potential multicollinearity issues and understand relationships in your data.</p>
+<div id="calculate-correlation-matrix" class="section level3 hasAnchor" number="8.1.1">
+<h3><span class="header-section-number">8.1.1</span> Calculate Correlation Matrix<a href="main-analysis.html#calculate-correlation-matrix" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>The <code>run_correlation()</code> function computes pairwise correlations and highlights values above a specified threshold:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="main-analysis.html#cb35-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb35-2"><a href="main-analysis.html#cb35-2" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb35-3"><a href="main-analysis.html#cb35-3" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="main-analysis.html#cb35-4" tabindex="-1"></a><span class="co"># Example data</span></span>
+<span id="cb35-5"><a href="main-analysis.html#cb35-5" tabindex="-1"></a>dt <span class="ot">&lt;-</span> <span class="fu">data.table</span>(</span>
+<span id="cb35-6"><a href="main-analysis.html#cb35-6" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">55</span>, <span class="dv">10</span>),</span>
+<span id="cb35-7"><a href="main-analysis.html#cb35-7" tabindex="-1"></a>  <span class="at">bmi =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">26</span>, <span class="dv">4</span>),</span>
+<span id="cb35-8"><a href="main-analysis.html#cb35-8" tabindex="-1"></a>  <span class="at">sbp =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">130</span>, <span class="dv">15</span>),</span>
+<span id="cb35-9"><a href="main-analysis.html#cb35-9" tabindex="-1"></a>  <span class="at">glucose =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="fl">5.5</span>, <span class="fl">1.2</span>),</span>
+<span id="cb35-10"><a href="main-analysis.html#cb35-10" tabindex="-1"></a>  <span class="at">cholesterol =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="fl">5.2</span>, <span class="fl">1.0</span>)</span>
+<span id="cb35-11"><a href="main-analysis.html#cb35-11" tabindex="-1"></a>)</span>
+<span id="cb35-12"><a href="main-analysis.html#cb35-12" tabindex="-1"></a></span>
+<span id="cb35-13"><a href="main-analysis.html#cb35-13" tabindex="-1"></a><span class="co"># Add some correlations to make it more realistic</span></span>
+<span id="cb35-14"><a href="main-analysis.html#cb35-14" tabindex="-1"></a>dt[, sbp <span class="sc">:=</span> sbp <span class="sc">+</span> <span class="fl">0.4</span> <span class="sc">*</span> age <span class="sc">+</span> <span class="fl">0.3</span> <span class="sc">*</span> bmi <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">0</span>, <span class="dv">8</span>)]</span>
+<span id="cb35-15"><a href="main-analysis.html#cb35-15" tabindex="-1"></a>dt[, glucose <span class="sc">:=</span> glucose <span class="sc">+</span> <span class="fl">0.2</span> <span class="sc">*</span> bmi <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">0</span>, <span class="fl">0.8</span>)]</span>
+<span id="cb35-16"><a href="main-analysis.html#cb35-16" tabindex="-1"></a></span>
+<span id="cb35-17"><a href="main-analysis.html#cb35-17" tabindex="-1"></a><span class="co"># Calculate correlation matrix</span></span>
+<span id="cb35-18"><a href="main-analysis.html#cb35-18" tabindex="-1"></a>corr_mat <span class="ot">&lt;-</span> <span class="fu">run_correlation</span>(</span>
+<span id="cb35-19"><a href="main-analysis.html#cb35-19" tabindex="-1"></a>  dt,</span>
+<span id="cb35-20"><a href="main-analysis.html#cb35-20" tabindex="-1"></a>  <span class="at">vars =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;sbp&quot;</span>, <span class="st">&quot;glucose&quot;</span>, <span class="st">&quot;cholesterol&quot;</span>),</span>
+<span id="cb35-21"><a href="main-analysis.html#cb35-21" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">&quot;pearson&quot;</span>,</span>
+<span id="cb35-22"><a href="main-analysis.html#cb35-22" tabindex="-1"></a>  <span class="at">threshold =</span> <span class="fl">0.3</span></span>
+<span id="cb35-23"><a href="main-analysis.html#cb35-23" tabindex="-1"></a>)</span>
+<span id="cb35-24"><a href="main-analysis.html#cb35-24" tabindex="-1"></a></span>
+<span id="cb35-25"><a href="main-analysis.html#cb35-25" tabindex="-1"></a><span class="fu">print</span>(corr_mat)</span></code></pre></div>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>df</code>: A data.frame or data.table containing variables</li>
+<li><code>vars</code>: Character vector of variable names to correlate</li>
+<li><code>method</code>: Correlation method (<code>"pearson"</code>, <code>"spearman"</code>, or <code>"kendall"</code>)</li>
+<li><code>threshold</code>: Numeric threshold (0-1) to highlight strong correlations</li>
+</ul>
+<p>The function will print correlations exceeding the threshold and return the correlation matrix.</p>
+</div>
+<div id="visualize-correlation-heatmap" class="section level3 hasAnchor" number="8.1.2">
+<h3><span class="header-section-number">8.1.2</span> Visualize Correlation Heatmap<a href="main-analysis.html#visualize-correlation-heatmap" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>plot_correlation()</code> to create a customizable heatmap:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="main-analysis.html#cb36-1" tabindex="-1"></a><span class="co"># Basic heatmap with values</span></span>
+<span id="cb36-2"><a href="main-analysis.html#cb36-2" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">plot_correlation</span>(</span>
+<span id="cb36-3"><a href="main-analysis.html#cb36-3" tabindex="-1"></a>  corr_mat,</span>
+<span id="cb36-4"><a href="main-analysis.html#cb36-4" tabindex="-1"></a>  <span class="at">title =</span> <span class="st">&quot;Variable Correlations&quot;</span>,</span>
+<span id="cb36-5"><a href="main-analysis.html#cb36-5" tabindex="-1"></a>  <span class="at">show_values =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-6"><a href="main-analysis.html#cb36-6" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">2</span></span>
+<span id="cb36-7"><a href="main-analysis.html#cb36-7" tabindex="-1"></a>)</span>
+<span id="cb36-8"><a href="main-analysis.html#cb36-8" tabindex="-1"></a><span class="fu">print</span>(p1)</span>
+<span id="cb36-9"><a href="main-analysis.html#cb36-9" tabindex="-1"></a></span>
+<span id="cb36-10"><a href="main-analysis.html#cb36-10" tabindex="-1"></a><span class="co"># Upper triangle only (cleaner view)</span></span>
+<span id="cb36-11"><a href="main-analysis.html#cb36-11" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">plot_correlation</span>(</span>
+<span id="cb36-12"><a href="main-analysis.html#cb36-12" tabindex="-1"></a>  corr_mat,</span>
+<span id="cb36-13"><a href="main-analysis.html#cb36-13" tabindex="-1"></a>  <span class="at">title =</span> <span class="st">&quot;Correlation Heatmap (Upper Triangle)&quot;</span>,</span>
+<span id="cb36-14"><a href="main-analysis.html#cb36-14" tabindex="-1"></a>  <span class="at">show_values =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-15"><a href="main-analysis.html#cb36-15" tabindex="-1"></a>  <span class="at">upper_triangle =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb36-16"><a href="main-analysis.html#cb36-16" tabindex="-1"></a>  <span class="at">text_size =</span> <span class="fl">3.5</span></span>
+<span id="cb36-17"><a href="main-analysis.html#cb36-17" tabindex="-1"></a>)</span>
+<span id="cb36-18"><a href="main-analysis.html#cb36-18" tabindex="-1"></a><span class="fu">print</span>(p2)</span>
+<span id="cb36-19"><a href="main-analysis.html#cb36-19" tabindex="-1"></a></span>
+<span id="cb36-20"><a href="main-analysis.html#cb36-20" tabindex="-1"></a><span class="co"># Custom color scheme</span></span>
+<span id="cb36-21"><a href="main-analysis.html#cb36-21" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> <span class="fu">plot_correlation</span>(</span>
+<span id="cb36-22"><a href="main-analysis.html#cb36-22" tabindex="-1"></a>  corr_mat,</span>
+<span id="cb36-23"><a href="main-analysis.html#cb36-23" tabindex="-1"></a>  <span class="at">title =</span> <span class="st">&quot;Custom Color Correlation Plot&quot;</span>,</span>
+<span id="cb36-24"><a href="main-analysis.html#cb36-24" tabindex="-1"></a>  <span class="at">color_low =</span> <span class="st">&quot;#2166AC&quot;</span>,   <span class="co"># Blue for negative</span></span>
+<span id="cb36-25"><a href="main-analysis.html#cb36-25" tabindex="-1"></a>  <span class="at">color_mid =</span> <span class="st">&quot;#F7F7F7&quot;</span>,   <span class="co"># Light gray for zero</span></span>
+<span id="cb36-26"><a href="main-analysis.html#cb36-26" tabindex="-1"></a>  <span class="at">color_high =</span> <span class="st">&quot;#B2182B&quot;</span>,  <span class="co"># Red for positive</span></span>
+<span id="cb36-27"><a href="main-analysis.html#cb36-27" tabindex="-1"></a>  <span class="at">show_values =</span> <span class="cn">TRUE</span></span>
+<span id="cb36-28"><a href="main-analysis.html#cb36-28" tabindex="-1"></a>)</span>
+<span id="cb36-29"><a href="main-analysis.html#cb36-29" tabindex="-1"></a><span class="fu">print</span>(p3)</span></code></pre></div>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li><code>show_values</code>: Display correlation coefficients on tiles</li>
+<li><code>digits</code>: Control decimal precision (1-4)</li>
+<li><code>text_size</code>: Adjust label font size</li>
+<li><code>color_low/mid/high</code>: Customize color gradient</li>
+<li><code>upper_triangle</code>: Show only upper half to reduce redundancy</li>
+</ul>
+<p>The function automatically adjusts text color (white on strong correlations, black on weak) for optimal readability.</p>
+<hr />
+</div>
+</div>
+<div id="regression" class="section level2 hasAnchor" number="8.2">
+<h2><span class="header-section-number">8.2</span> Regression Analysis<a href="main-analysis.html#regression" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><strong>UKBAnalytica</strong> provides three regression functions with a unified interface for testing multiple variables:</p>
+<ul>
+<li><code>runmulti_lm()</code>: Linear regression</li>
+<li><code>runmulti_logit()</code>: Logistic regression<br />
+</li>
+<li><code>runmulti_cox()</code>: Cox proportional hazards</li>
+</ul>
+<p>All functions support both <strong>univariate</strong> (no covariates) and <strong>multivariate</strong> (adjusted) analyses.</p>
+<div id="lm" class="section level3 hasAnchor" number="8.2.1">
+<h3><span class="header-section-number">8.2.1</span> Linear Regression<a href="main-analysis.html#lm" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>runmulti_lm()</code> for continuous outcomes:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="main-analysis.html#cb37-1" tabindex="-1"></a><span class="co"># Create example dataset</span></span>
+<span id="cb37-2"><a href="main-analysis.html#cb37-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb37-3"><a href="main-analysis.html#cb37-3" tabindex="-1"></a>dt <span class="ot">&lt;-</span> <span class="fu">data.table</span>(</span>
+<span id="cb37-4"><a href="main-analysis.html#cb37-4" tabindex="-1"></a>  <span class="at">sbp =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">130</span>, <span class="dv">15</span>),</span>
+<span id="cb37-5"><a href="main-analysis.html#cb37-5" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">55</span>, <span class="dv">10</span>),</span>
+<span id="cb37-6"><a href="main-analysis.html#cb37-6" tabindex="-1"></a>  <span class="at">bmi =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">26</span>, <span class="dv">4</span>),</span>
+<span id="cb37-7"><a href="main-analysis.html#cb37-7" tabindex="-1"></a>  <span class="at">sex =</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">500</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb37-8"><a href="main-analysis.html#cb37-8" tabindex="-1"></a>  <span class="at">smoking =</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">500</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb37-9"><a href="main-analysis.html#cb37-9" tabindex="-1"></a>)</span>
+<span id="cb37-10"><a href="main-analysis.html#cb37-10" tabindex="-1"></a></span>
+<span id="cb37-11"><a href="main-analysis.html#cb37-11" tabindex="-1"></a><span class="co"># Add realistic relationships</span></span>
+<span id="cb37-12"><a href="main-analysis.html#cb37-12" tabindex="-1"></a>dt[, sbp <span class="sc">:=</span> <span class="dv">100</span> <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> age <span class="sc">+</span> <span class="fl">0.8</span> <span class="sc">*</span> bmi <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> smoking <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">0</span>, <span class="dv">8</span>)]</span>
+<span id="cb37-13"><a href="main-analysis.html#cb37-13" tabindex="-1"></a></span>
+<span id="cb37-14"><a href="main-analysis.html#cb37-14" tabindex="-1"></a><span class="co"># Univariate linear regression</span></span>
+<span id="cb37-15"><a href="main-analysis.html#cb37-15" tabindex="-1"></a><span class="co"># Test each variable&#39;s association with SBP without adjustment</span></span>
+<span id="cb37-16"><a href="main-analysis.html#cb37-16" tabindex="-1"></a>results_uni <span class="ot">&lt;-</span> <span class="fu">runmulti_lm</span>(</span>
+<span id="cb37-17"><a href="main-analysis.html#cb37-17" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb37-18"><a href="main-analysis.html#cb37-18" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;smoking&quot;</span>),</span>
+<span id="cb37-19"><a href="main-analysis.html#cb37-19" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;sbp&quot;</span></span>
+<span id="cb37-20"><a href="main-analysis.html#cb37-20" tabindex="-1"></a>)</span>
+<span id="cb37-21"><a href="main-analysis.html#cb37-21" tabindex="-1"></a><span class="fu">print</span>(results_uni)</span>
+<span id="cb37-22"><a href="main-analysis.html#cb37-22" tabindex="-1"></a></span>
+<span id="cb37-23"><a href="main-analysis.html#cb37-23" tabindex="-1"></a><span class="co"># Multivariate linear regression</span></span>
+<span id="cb37-24"><a href="main-analysis.html#cb37-24" tabindex="-1"></a><span class="co"># Test each variable adjusting for age and sex</span></span>
+<span id="cb37-25"><a href="main-analysis.html#cb37-25" tabindex="-1"></a>results_multi <span class="ot">&lt;-</span> <span class="fu">runmulti_lm</span>(</span>
+<span id="cb37-26"><a href="main-analysis.html#cb37-26" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb37-27"><a href="main-analysis.html#cb37-27" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;smoking&quot;</span>),</span>
+<span id="cb37-28"><a href="main-analysis.html#cb37-28" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>),</span>
+<span id="cb37-29"><a href="main-analysis.html#cb37-29" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;sbp&quot;</span></span>
+<span id="cb37-30"><a href="main-analysis.html#cb37-30" tabindex="-1"></a>)</span>
+<span id="cb37-31"><a href="main-analysis.html#cb37-31" tabindex="-1"></a><span class="fu">print</span>(results_multi)</span></code></pre></div>
+<p><strong>Output columns:</strong></p>
+<ul>
+<li><code>variable</code>: Name of the tested variable</li>
+<li><code>beta</code>: Regression coefficient (unit change in outcome per unit change in predictor)</li>
+<li><code>lower95</code>, <code>upper95</code>: 95% confidence interval bounds</li>
+<li><code>pvalue</code>: Statistical significance</li>
+</ul>
+<p><strong>Interpretation example:</strong><br />
+If <code>beta = 0.8</code> for BMI, a 1-unit increase in BMI is associated with a 0.8 mmHg increase in systolic blood pressure.</p>
+<hr />
+</div>
+<div id="logistic" class="section level3 hasAnchor" number="8.2.2">
+<h3><span class="header-section-number">8.2.2</span> Logistic Regression<a href="main-analysis.html#logistic" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>runmulti_logit()</code> for binary (0/1) outcomes:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="main-analysis.html#cb38-1" tabindex="-1"></a><span class="co"># Create example dataset with binary outcome</span></span>
+<span id="cb38-2"><a href="main-analysis.html#cb38-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb38-3"><a href="main-analysis.html#cb38-3" tabindex="-1"></a>dt <span class="ot">&lt;-</span> <span class="fu">data.table</span>(</span>
+<span id="cb38-4"><a href="main-analysis.html#cb38-4" tabindex="-1"></a>  <span class="at">diabetes =</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">500</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.85</span>, <span class="fl">0.15</span>)),</span>
+<span id="cb38-5"><a href="main-analysis.html#cb38-5" tabindex="-1"></a>  <span class="at">age =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">55</span>, <span class="dv">10</span>),</span>
+<span id="cb38-6"><a href="main-analysis.html#cb38-6" tabindex="-1"></a>  <span class="at">bmi =</span> <span class="fu">rnorm</span>(<span class="dv">500</span>, <span class="dv">26</span>, <span class="dv">4</span>),</span>
+<span id="cb38-7"><a href="main-analysis.html#cb38-7" tabindex="-1"></a>  <span class="at">sex =</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">500</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb38-8"><a href="main-analysis.html#cb38-8" tabindex="-1"></a>  <span class="at">family_history =</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">500</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.7</span>, <span class="fl">0.3</span>))</span>
+<span id="cb38-9"><a href="main-analysis.html#cb38-9" tabindex="-1"></a>)</span>
+<span id="cb38-10"><a href="main-analysis.html#cb38-10" tabindex="-1"></a></span>
+<span id="cb38-11"><a href="main-analysis.html#cb38-11" tabindex="-1"></a><span class="co"># Add realistic risk relationships</span></span>
+<span id="cb38-12"><a href="main-analysis.html#cb38-12" tabindex="-1"></a>dt[, diabetes <span class="sc">:=</span> <span class="fu">rbinom</span>(</span>
+<span id="cb38-13"><a href="main-analysis.html#cb38-13" tabindex="-1"></a>  <span class="dv">500</span>, <span class="dv">1</span>, </span>
+<span id="cb38-14"><a href="main-analysis.html#cb38-14" tabindex="-1"></a>  <span class="fu">plogis</span>(<span class="sc">-</span><span class="dv">5</span> <span class="sc">+</span> <span class="fl">0.05</span> <span class="sc">*</span> age <span class="sc">+</span> <span class="fl">0.1</span> <span class="sc">*</span> bmi <span class="sc">+</span> <span class="fl">0.8</span> <span class="sc">*</span> family_history)</span>
+<span id="cb38-15"><a href="main-analysis.html#cb38-15" tabindex="-1"></a>)]</span>
+<span id="cb38-16"><a href="main-analysis.html#cb38-16" tabindex="-1"></a></span>
+<span id="cb38-17"><a href="main-analysis.html#cb38-17" tabindex="-1"></a><span class="co"># Univariate logistic regression</span></span>
+<span id="cb38-18"><a href="main-analysis.html#cb38-18" tabindex="-1"></a>results_uni <span class="ot">&lt;-</span> <span class="fu">runmulti_logit</span>(</span>
+<span id="cb38-19"><a href="main-analysis.html#cb38-19" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb38-20"><a href="main-analysis.html#cb38-20" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;family_history&quot;</span>),</span>
+<span id="cb38-21"><a href="main-analysis.html#cb38-21" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;diabetes&quot;</span></span>
+<span id="cb38-22"><a href="main-analysis.html#cb38-22" tabindex="-1"></a>)</span>
+<span id="cb38-23"><a href="main-analysis.html#cb38-23" tabindex="-1"></a><span class="fu">print</span>(results_uni)</span>
+<span id="cb38-24"><a href="main-analysis.html#cb38-24" tabindex="-1"></a></span>
+<span id="cb38-25"><a href="main-analysis.html#cb38-25" tabindex="-1"></a><span class="co"># Multivariate logistic regression  </span></span>
+<span id="cb38-26"><a href="main-analysis.html#cb38-26" tabindex="-1"></a>results_multi <span class="ot">&lt;-</span> <span class="fu">runmulti_logit</span>(</span>
+<span id="cb38-27"><a href="main-analysis.html#cb38-27" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb38-28"><a href="main-analysis.html#cb38-28" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;family_history&quot;</span>),</span>
+<span id="cb38-29"><a href="main-analysis.html#cb38-29" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>),</span>
+<span id="cb38-30"><a href="main-analysis.html#cb38-30" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;diabetes&quot;</span></span>
+<span id="cb38-31"><a href="main-analysis.html#cb38-31" tabindex="-1"></a>)</span>
+<span id="cb38-32"><a href="main-analysis.html#cb38-32" tabindex="-1"></a><span class="fu">print</span>(results_multi)</span></code></pre></div>
+<p><strong>Output columns:</strong></p>
+<ul>
+<li><code>variable</code>: Name of the tested variable</li>
+<li><code>OR</code>: Odds ratio (exponentiated coefficient)</li>
+<li><code>lower95</code>, <code>upper95</code>: 95% confidence interval for OR</li>
+<li><code>pvalue</code>: Statistical significance</li>
+</ul>
+<p><strong>Interpretation example:</strong><br />
+If <code>OR = 1.5</code> for family history, individuals with a family history have 1.5 times the odds of diabetes compared to those without.</p>
+<p><strong>Important:</strong> The outcome variable must be binary (0/1). The function will throw an error if other values are detected.</p>
+<hr />
+</div>
+<div id="cox" class="section level3 hasAnchor" number="8.2.3">
+<h3><span class="header-section-number">8.2.3</span> Cox Proportional Hazards Regression<a href="main-analysis.html#cox" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>runmulti_cox()</code> for time-to-event (survival) outcomes:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="main-analysis.html#cb39-1" tabindex="-1"></a><span class="fu">library</span>(survival)  <span class="co"># Required for Cox models</span></span>
+<span id="cb39-2"><a href="main-analysis.html#cb39-2" tabindex="-1"></a></span>
+<span id="cb39-3"><a href="main-analysis.html#cb39-3" tabindex="-1"></a><span class="co"># Load example survival data</span></span>
+<span id="cb39-4"><a href="main-analysis.html#cb39-4" tabindex="-1"></a><span class="fu">data</span>(lung)</span>
+<span id="cb39-5"><a href="main-analysis.html#cb39-5" tabindex="-1"></a>dt <span class="ot">&lt;-</span> <span class="fu">as.data.table</span>(lung)</span>
+<span id="cb39-6"><a href="main-analysis.html#cb39-6" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="main-analysis.html#cb39-7" tabindex="-1"></a><span class="co"># Clean data</span></span>
+<span id="cb39-8"><a href="main-analysis.html#cb39-8" tabindex="-1"></a>dt <span class="ot">&lt;-</span> dt[<span class="fu">complete.cases</span>(dt[, .(time, status, age, sex, ph.ecog, wt.loss)])]</span>
+<span id="cb39-9"><a href="main-analysis.html#cb39-9" tabindex="-1"></a></span>
+<span id="cb39-10"><a href="main-analysis.html#cb39-10" tabindex="-1"></a><span class="co"># Univariate Cox regression</span></span>
+<span id="cb39-11"><a href="main-analysis.html#cb39-11" tabindex="-1"></a><span class="co"># Test each variable&#39;s effect on survival without adjustment</span></span>
+<span id="cb39-12"><a href="main-analysis.html#cb39-12" tabindex="-1"></a>results_uni <span class="ot">&lt;-</span> <span class="fu">runmulti_cox</span>(</span>
+<span id="cb39-13"><a href="main-analysis.html#cb39-13" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb39-14"><a href="main-analysis.html#cb39-14" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;ph.ecog&quot;</span>, <span class="st">&quot;wt.loss&quot;</span>),</span>
+<span id="cb39-15"><a href="main-analysis.html#cb39-15" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">&quot;time&quot;</span>, <span class="st">&quot;status&quot;</span>)</span>
+<span id="cb39-16"><a href="main-analysis.html#cb39-16" tabindex="-1"></a>)</span>
+<span id="cb39-17"><a href="main-analysis.html#cb39-17" tabindex="-1"></a><span class="fu">print</span>(results_uni)</span>
+<span id="cb39-18"><a href="main-analysis.html#cb39-18" tabindex="-1"></a></span>
+<span id="cb39-19"><a href="main-analysis.html#cb39-19" tabindex="-1"></a><span class="co"># Multivariate Cox regression</span></span>
+<span id="cb39-20"><a href="main-analysis.html#cb39-20" tabindex="-1"></a><span class="co"># Test variables adjusting for age and sex</span></span>
+<span id="cb39-21"><a href="main-analysis.html#cb39-21" tabindex="-1"></a>results_multi <span class="ot">&lt;-</span> <span class="fu">runmulti_cox</span>(</span>
+<span id="cb39-22"><a href="main-analysis.html#cb39-22" tabindex="-1"></a>  <span class="at">data =</span> dt,</span>
+<span id="cb39-23"><a href="main-analysis.html#cb39-23" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;ph.ecog&quot;</span>, <span class="st">&quot;wt.loss&quot;</span>),</span>
+<span id="cb39-24"><a href="main-analysis.html#cb39-24" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>),</span>
+<span id="cb39-25"><a href="main-analysis.html#cb39-25" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">&quot;time&quot;</span>, <span class="st">&quot;status&quot;</span>)</span>
+<span id="cb39-26"><a href="main-analysis.html#cb39-26" tabindex="-1"></a>)</span>
+<span id="cb39-27"><a href="main-analysis.html#cb39-27" tabindex="-1"></a><span class="fu">print</span>(results_multi)</span></code></pre></div>
+<p><strong>Output columns:</strong></p>
+<ul>
+<li><code>variable</code>: Name of the tested variable</li>
+<li><code>HR</code>: Hazard ratio (instantaneous risk ratio)</li>
+<li><code>lower95</code>, <code>upper95</code>: 95% confidence interval for HR</li>
+<li><code>pvalue</code>: Statistical significance</li>
+</ul>
+<p><strong>Interpretation example:</strong><br />
+If <code>HR = 1.3</code> for ECOG performance score, each 1-point increase in ECOG is associated with a 30% increase in the instantaneous hazard (risk) of death.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>endpoint</code>: A length-2 vector <code>c("time_var", "status_var")</code> where:
+<ul>
+<li><code>time_var</code>: Follow-up time (continuous)</li>
+<li><code>status_var</code>: Event indicator (1 = event occurred, 0 = censored)</li>
+</ul></li>
+</ul>
+<p><strong>Note:</strong> The <code>survival</code> package must be installed to use <code>runmulti_cox()</code>.</p>
+<hr />
+</div>
+</div>
+<div id="unified-interface" class="section level2 hasAnchor" number="8.3">
+<h2><span class="header-section-number">8.3</span> Unified Interface Across Models<a href="main-analysis.html#unified-interface" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>All three regression functions share the same parameter structure:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="main-analysis.html#cb40-1" tabindex="-1"></a><span class="co"># General syntax</span></span>
+<span id="cb40-2"><a href="main-analysis.html#cb40-2" tabindex="-1"></a>results <span class="ot">&lt;-</span> runmulti_<span class="sc">*</span>(</span>
+<span id="cb40-3"><a href="main-analysis.html#cb40-3" tabindex="-1"></a>  <span class="at">data =</span> your_data,              <span class="co"># data.frame or data.table</span></span>
+<span id="cb40-4"><a href="main-analysis.html#cb40-4" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;var1&quot;</span>, <span class="st">&quot;var2&quot;</span>),  <span class="co"># Variables to test (one at a time)</span></span>
+<span id="cb40-5"><a href="main-analysis.html#cb40-5" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>),  <span class="co"># Adjustment variables (NULL = univariate)</span></span>
+<span id="cb40-6"><a href="main-analysis.html#cb40-6" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;y&quot;</span>,                 <span class="co"># For lm/logit: outcome variable</span></span>
+<span id="cb40-7"><a href="main-analysis.html#cb40-7" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">&quot;time&quot;</span>, <span class="st">&quot;event&quot;</span>)  <span class="co"># For cox: time-to-event variables</span></span>
+<span id="cb40-8"><a href="main-analysis.html#cb40-8" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>Key design principles:</strong></p>
+<ol style="list-style-type: decimal">
+<li><strong>One model per main variable:</strong> Each variable in <code>main_var</code> is tested separately</li>
+<li><strong>Univariate vs. Multivariate:</strong>
+<ul>
+<li><code>covariates = NULL</code> → Univariate analysis (no adjustment)</li>
+<li><code>covariates = c(...)</code> → Multivariate analysis (adjusted for covariates)</li>
+</ul></li>
+<li><strong>Consistent output:</strong> All functions return a data.frame with effect estimates, confidence intervals, and p-values</li>
+</ol>
+<hr />
+</div>
+<div id="best-practices" class="section level2 hasAnchor" number="8.4">
+<h2><span class="header-section-number">8.4</span> Best Practices<a href="main-analysis.html#best-practices" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="check-correlations-first" class="section level3 hasAnchor" number="8.4.1">
+<h3><span class="header-section-number">8.4.1</span> 1. Check Correlations First<a href="main-analysis.html#check-correlations-first" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="main-analysis.html#cb41-1" tabindex="-1"></a><span class="co"># Identify multicollinearity before regression</span></span>
+<span id="cb41-2"><a href="main-analysis.html#cb41-2" tabindex="-1"></a>corr_mat <span class="ot">&lt;-</span> <span class="fu">run_correlation</span>(</span>
+<span id="cb41-3"><a href="main-analysis.html#cb41-3" tabindex="-1"></a>  dt, </span>
+<span id="cb41-4"><a href="main-analysis.html#cb41-4" tabindex="-1"></a>  <span class="at">vars =</span> <span class="fu">c</span>(<span class="st">&quot;var1&quot;</span>, <span class="st">&quot;var2&quot;</span>, <span class="st">&quot;var3&quot;</span>, <span class="st">&quot;var4&quot;</span>),</span>
+<span id="cb41-5"><a href="main-analysis.html#cb41-5" tabindex="-1"></a>  <span class="at">threshold =</span> <span class="fl">0.7</span></span>
+<span id="cb41-6"><a href="main-analysis.html#cb41-6" tabindex="-1"></a>)</span>
+<span id="cb41-7"><a href="main-analysis.html#cb41-7" tabindex="-1"></a></span>
+<span id="cb41-8"><a href="main-analysis.html#cb41-8" tabindex="-1"></a><span class="co"># If two variables have |r| &gt; 0.8, consider removing one</span></span></code></pre></div>
+</div>
+<div id="start-with-univariate-then-multivariate" class="section level3 hasAnchor" number="8.4.2">
+<h3><span class="header-section-number">8.4.2</span> 2. Start with Univariate, Then Multivariate<a href="main-analysis.html#start-with-univariate-then-multivariate" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="main-analysis.html#cb42-1" tabindex="-1"></a><span class="co"># Step 1: Screen all variables without adjustment</span></span>
+<span id="cb42-2"><a href="main-analysis.html#cb42-2" tabindex="-1"></a>uni_results <span class="ot">&lt;-</span> <span class="fu">runmulti_lm</span>(</span>
+<span id="cb42-3"><a href="main-analysis.html#cb42-3" tabindex="-1"></a>  dt, </span>
+<span id="cb42-4"><a href="main-analysis.html#cb42-4" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">&quot;var1&quot;</span>, <span class="st">&quot;var2&quot;</span>, <span class="st">&quot;var3&quot;</span>),</span>
+<span id="cb42-5"><a href="main-analysis.html#cb42-5" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;y&quot;</span></span>
+<span id="cb42-6"><a href="main-analysis.html#cb42-6" tabindex="-1"></a>)</span>
+<span id="cb42-7"><a href="main-analysis.html#cb42-7" tabindex="-1"></a></span>
+<span id="cb42-8"><a href="main-analysis.html#cb42-8" tabindex="-1"></a><span class="co"># Step 2: Test significant variables with adjustment</span></span>
+<span id="cb42-9"><a href="main-analysis.html#cb42-9" tabindex="-1"></a>sig_vars <span class="ot">&lt;-</span> uni_results<span class="sc">$</span>variable[uni_results<span class="sc">$</span>pvalue <span class="sc">&lt;</span> <span class="fl">0.05</span>]</span>
+<span id="cb42-10"><a href="main-analysis.html#cb42-10" tabindex="-1"></a>multi_results <span class="ot">&lt;-</span> <span class="fu">runmulti_lm</span>(</span>
+<span id="cb42-11"><a href="main-analysis.html#cb42-11" tabindex="-1"></a>  dt,</span>
+<span id="cb42-12"><a href="main-analysis.html#cb42-12" tabindex="-1"></a>  <span class="at">main_var =</span> sig_vars,</span>
+<span id="cb42-13"><a href="main-analysis.html#cb42-13" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">&quot;age&quot;</span>, <span class="st">&quot;sex&quot;</span>),</span>
+<span id="cb42-14"><a href="main-analysis.html#cb42-14" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">&quot;y&quot;</span></span>
+<span id="cb42-15"><a href="main-analysis.html#cb42-15" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="validate-model-assumptions" class="section level3 hasAnchor" number="8.4.3">
+<h3><span class="header-section-number">8.4.3</span> 3. Validate Model Assumptions<a href="main-analysis.html#validate-model-assumptions" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="main-analysis.html#cb43-1" tabindex="-1"></a><span class="co"># For linear models: check residuals</span></span>
+<span id="cb43-2"><a href="main-analysis.html#cb43-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x <span class="sc">+</span> age <span class="sc">+</span> sex, <span class="at">data =</span> dt)</span>
+<span id="cb43-3"><a href="main-analysis.html#cb43-3" tabindex="-1"></a><span class="fu">plot</span>(model)  <span class="co"># Diagnostic plots</span></span>
+<span id="cb43-4"><a href="main-analysis.html#cb43-4" tabindex="-1"></a></span>
+<span id="cb43-5"><a href="main-analysis.html#cb43-5" tabindex="-1"></a><span class="co"># For logistic models: check for complete separation</span></span>
+<span id="cb43-6"><a href="main-analysis.html#cb43-6" tabindex="-1"></a><span class="fu">table</span>(dt<span class="sc">$</span>outcome, dt<span class="sc">$</span>predictor)</span>
+<span id="cb43-7"><a href="main-analysis.html#cb43-7" tabindex="-1"></a></span>
+<span id="cb43-8"><a href="main-analysis.html#cb43-8" tabindex="-1"></a><span class="co"># For Cox models: check proportional hazards assumption</span></span>
+<span id="cb43-9"><a href="main-analysis.html#cb43-9" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb43-10"><a href="main-analysis.html#cb43-10" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(time, status) <span class="sc">~</span> x <span class="sc">+</span> age, <span class="at">data =</span> dt)</span>
+<span id="cb43-11"><a href="main-analysis.html#cb43-11" tabindex="-1"></a><span class="fu">cox.zph</span>(model)  <span class="co"># Test PH assumption</span></span></code></pre></div>
+</div>
+<div id="handle-missing-data-appropriately" class="section level3 hasAnchor" number="8.4.4">
+<h3><span class="header-section-number">8.4.4</span> 4. Handle Missing Data Appropriately<a href="main-analysis.html#handle-missing-data-appropriately" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="main-analysis.html#cb44-1" tabindex="-1"></a><span class="co"># Check missingness</span></span>
+<span id="cb44-2"><a href="main-analysis.html#cb44-2" tabindex="-1"></a><span class="fu">colSums</span>(<span class="fu">is.na</span>(dt))</span>
+<span id="cb44-3"><a href="main-analysis.html#cb44-3" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="main-analysis.html#cb44-4" tabindex="-1"></a><span class="co"># Complete case analysis (default in regression functions)</span></span>
+<span id="cb44-5"><a href="main-analysis.html#cb44-5" tabindex="-1"></a>dt_complete <span class="ot">&lt;-</span> dt[<span class="fu">complete.cases</span>(dt[, .(outcome, var1, var2, age, sex)])]</span>
+<span id="cb44-6"><a href="main-analysis.html#cb44-6" tabindex="-1"></a></span>
+<span id="cb44-7"><a href="main-analysis.html#cb44-7" tabindex="-1"></a><span class="co"># Or use multiple imputation (see Chapter 6)</span></span></code></pre></div>
+<hr />
+</div>
+</div>
+<div id="summary" class="section level2 hasAnchor" number="8.5">
+<h2><span class="header-section-number">8.5</span> Summary<a href="main-analysis.html#summary" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>This chapter covered:</p>
+<ul>
+<li><strong>Pre-analysis:</strong> Using <code>run_correlation()</code> and <code>plot_correlation()</code> to examine variable relationships</li>
+<li><strong>Linear regression:</strong> <code>runmulti_lm()</code> for continuous outcomes</li>
+<li><strong>Logistic regression:</strong> <code>runmulti_logit()</code> for binary outcomes<br />
+</li>
+<li><strong>Cox regression:</strong> <code>runmulti_cox()</code> for survival outcomes</li>
+<li><strong>Best practices:</strong> Workflow recommendations for robust analyses</li>
+</ul>
+<p>All functions follow a consistent interface, making it easy to switch between analysis types while maintaining reproducible code.</p>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="imputation.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": true,
+    "facebook": false,
+    "twitter": false,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": null,
+    "text": null
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["UKBAnalytica.pdf", "UKBAnalytica.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

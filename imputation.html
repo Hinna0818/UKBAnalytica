@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 7 Multiple Imputation | UKBAnalytica: A Guide to UK Biobank Data Analysis</title>
+  <meta name="description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 7 Multiple Imputation | UKBAnalytica: A Guide to UK Biobank Data Analysis" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  <meta name="github-repo" content="Hinna0818/UKBAnalytica" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 7 Multiple Imputation | UKBAnalytica: A Guide to UK Biobank Data Analysis" />
+  
+  <meta name="twitter:description" content="<p>A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, and multiple imputation.</p>" />
+  
+
+
+
+<meta name="date" content="2026-02-13" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="baseline-table.html"/>
+<link rel="next" href="main-analysis.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">UKBAnalytica</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#key-features"><i class="fa fa-check"></i><b>1.1</b> Key features</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#installation"><i class="fa fa-check"></i><b>1.2</b> Installation</a></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#package-overview"><i class="fa fa-check"></i><b>1.3</b> Package overview</a></li>
+<li class="chapter" data-level="1.4" data-path="index.html"><a href="index.html#core-functions"><i class="fa fa-check"></i><b>1.4</b> Core functions</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="rap-download.html"><a href="rap-download.html"><i class="fa fa-check"></i><b>2</b> Downloading Data from RAP</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="rap-download.html"><a href="rap-download.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
+<li class="chapter" data-level="2.2" data-path="rap-download.html"><a href="rap-download.html#demographic-data"><i class="fa fa-check"></i><b>2.2</b> Demographic data</a></li>
+<li class="chapter" data-level="2.3" data-path="rap-download.html"><a href="rap-download.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3</b> Metabolomics data (NMR)</a></li>
+<li class="chapter" data-level="2.4" data-path="rap-download.html"><a href="rap-download.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.4</b> Proteomics data (Olink)</a></li>
+<li class="chapter" data-level="2.5" data-path="rap-download.html"><a href="rap-download.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.5</b> Common UKB field IDs</a></li>
+<li class="chapter" data-level="2.6" data-path="rap-download.html"><a href="rap-download.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.6</b> Typical output sizes</a></li>
+<li class="chapter" data-level="2.7" data-path="rap-download.html"><a href="rap-download.html#troubleshooting"><i class="fa fa-check"></i><b>2.7</b> Troubleshooting</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="preprocessing.html"><a href="preprocessing.html"><i class="fa fa-check"></i><b>3</b> Variable Preprocessing</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="preprocessing.html"><a href="preprocessing.html#available-variables"><i class="fa fa-check"></i><b>3.1</b> Available variables</a></li>
+<li class="chapter" data-level="3.2" data-path="preprocessing.html"><a href="preprocessing.html#basic-usage"><i class="fa fa-check"></i><b>3.2</b> Basic usage</a></li>
+<li class="chapter" data-level="3.3" data-path="preprocessing.html"><a href="preprocessing.html#blood-pressure"><i class="fa fa-check"></i><b>3.3</b> Blood pressure</a></li>
+<li class="chapter" data-level="3.4" data-path="preprocessing.html"><a href="preprocessing.html#medication-use"><i class="fa fa-check"></i><b>3.4</b> Medication use</a></li>
+<li class="chapter" data-level="3.5" data-path="preprocessing.html"><a href="preprocessing.html#air-pollution-exposure"><i class="fa fa-check"></i><b>3.5</b> Air pollution exposure</a></li>
+<li class="chapter" data-level="3.6" data-path="preprocessing.html"><a href="preprocessing.html#custom-variable-mapping"><i class="fa fa-check"></i><b>3.6</b> Custom variable mapping</a></li>
+<li class="chapter" data-level="3.7" data-path="preprocessing.html"><a href="preprocessing.html#complete-preprocessing-example"><i class="fa fa-check"></i><b>3.7</b> Complete preprocessing example</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="disease-definitions.html"><a href="disease-definitions.html"><i class="fa fa-check"></i><b>4</b> Disease Definitions</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="disease-definitions.html"><a href="disease-definitions.html#predefined-diseases"><i class="fa fa-check"></i><b>4.1</b> Predefined diseases</a></li>
+<li class="chapter" data-level="4.2" data-path="disease-definitions.html"><a href="disease-definitions.html#inspecting-a-definition"><i class="fa fa-check"></i><b>4.2</b> Inspecting a definition</a></li>
+<li class="chapter" data-level="4.3" data-path="disease-definitions.html"><a href="disease-definitions.html#creating-custom-definitions"><i class="fa fa-check"></i><b>4.3</b> Creating custom definitions</a></li>
+<li class="chapter" data-level="4.4" data-path="disease-definitions.html"><a href="disease-definitions.html#composite-endpoints"><i class="fa fa-check"></i><b>4.4</b> Composite endpoints</a></li>
+<li class="chapter" data-level="4.5" data-path="disease-definitions.html"><a href="disease-definitions.html#comparing-data-sources"><i class="fa fa-check"></i><b>4.5</b> Comparing data sources</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="survival-analysis.html"><a href="survival-analysis.html"><i class="fa fa-check"></i><b>5</b> Survival Analysis</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="survival-analysis.html"><a href="survival-analysis.html#quick-start"><i class="fa fa-check"></i><b>5.1</b> Quick start</a></li>
+<li class="chapter" data-level="5.2" data-path="survival-analysis.html"><a href="survival-analysis.html#output-columns"><i class="fa fa-check"></i><b>5.2</b> Output columns</a></li>
+<li class="chapter" data-level="5.3" data-path="survival-analysis.html"><a href="survival-analysis.html#case-classification-logic"><i class="fa fa-check"></i><b>5.3</b> Case classification logic</a></li>
+<li class="chapter" data-level="5.4" data-path="survival-analysis.html"><a href="survival-analysis.html#follow-up-time"><i class="fa fa-check"></i><b>5.4</b> Follow-up time</a></li>
+<li class="chapter" data-level="5.5" data-path="survival-analysis.html"><a href="survival-analysis.html#dual-source-design"><i class="fa fa-check"></i><b>5.5</b> Dual-source design</a></li>
+<li class="chapter" data-level="5.6" data-path="survival-analysis.html"><a href="survival-analysis.html#running-a-cox-model"><i class="fa fa-check"></i><b>5.6</b> Running a Cox model</a></li>
+<li class="chapter" data-level="5.7" data-path="survival-analysis.html"><a href="survival-analysis.html#sensitivity-analyses"><i class="fa fa-check"></i><b>5.7</b> Sensitivity analyses</a></li>
+<li class="chapter" data-level="5.8" data-path="survival-analysis.html"><a href="survival-analysis.html#long-format-output"><i class="fa fa-check"></i><b>5.8</b> Long format output</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="baseline-table.html"><a href="baseline-table.html"><i class="fa fa-check"></i><b>6</b> Baseline Table</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="baseline-table.html"><a href="baseline-table.html#basic-usage-1"><i class="fa fa-check"></i><b>6.1</b> Basic usage</a></li>
+<li class="chapter" data-level="6.2" data-path="baseline-table.html"><a href="baseline-table.html#exporting-to-csv"><i class="fa fa-check"></i><b>6.2</b> Exporting to CSV</a></li>
+<li class="chapter" data-level="6.3" data-path="baseline-table.html"><a href="baseline-table.html#using-with-the-survival-package-example-data"><i class="fa fa-check"></i><b>6.3</b> Using with the <code>survival</code> package example data</a></li>
+<li class="chapter" data-level="6.4" data-path="baseline-table.html"><a href="baseline-table.html#parameters"><i class="fa fa-check"></i><b>6.4</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="imputation.html"><a href="imputation.html"><i class="fa fa-check"></i><b>7</b> Multiple Imputation</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="imputation.html"><a href="imputation.html#motivation"><i class="fa fa-check"></i><b>7.1</b> Motivation</a></li>
+<li class="chapter" data-level="7.2" data-path="imputation.html"><a href="imputation.html#basic-usage-2"><i class="fa fa-check"></i><b>7.2</b> Basic usage</a></li>
+<li class="chapter" data-level="7.3" data-path="imputation.html"><a href="imputation.html#working-with-the-output"><i class="fa fa-check"></i><b>7.3</b> Working with the output</a></li>
+<li class="chapter" data-level="7.4" data-path="imputation.html"><a href="imputation.html#merging-additional-datasets"><i class="fa fa-check"></i><b>7.4</b> Merging additional datasets</a></li>
+<li class="chapter" data-level="7.5" data-path="imputation.html"><a href="imputation.html#diagnostics"><i class="fa fa-check"></i><b>7.5</b> Diagnostics</a></li>
+<li class="chapter" data-level="7.6" data-path="imputation.html"><a href="imputation.html#pooled-analysis"><i class="fa fa-check"></i><b>7.6</b> Pooled analysis</a></li>
+<li class="chapter" data-level="7.7" data-path="imputation.html"><a href="imputation.html#saving-completed-datasets"><i class="fa fa-check"></i><b>7.7</b> Saving completed datasets</a></li>
+<li class="chapter" data-level="7.8" data-path="imputation.html"><a href="imputation.html#parameters-1"><i class="fa fa-check"></i><b>7.8</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="8" data-path="main-analysis.html"><a href="main-analysis.html"><i class="fa fa-check"></i><b>8</b> Main Analysis</a>
+<ul>
+<li class="chapter" data-level="8.1" data-path="main-analysis.html"><a href="main-analysis.html#correlation"><i class="fa fa-check"></i><b>8.1</b> Pre-Analysis: Correlation Check</a>
+<ul>
+<li class="chapter" data-level="8.1.1" data-path="main-analysis.html"><a href="main-analysis.html#calculate-correlation-matrix"><i class="fa fa-check"></i><b>8.1.1</b> Calculate Correlation Matrix</a></li>
+<li class="chapter" data-level="8.1.2" data-path="main-analysis.html"><a href="main-analysis.html#visualize-correlation-heatmap"><i class="fa fa-check"></i><b>8.1.2</b> Visualize Correlation Heatmap</a></li>
+</ul></li>
+<li class="chapter" data-level="8.2" data-path="main-analysis.html"><a href="main-analysis.html#regression"><i class="fa fa-check"></i><b>8.2</b> Regression Analysis</a>
+<ul>
+<li class="chapter" data-level="8.2.1" data-path="main-analysis.html"><a href="main-analysis.html#lm"><i class="fa fa-check"></i><b>8.2.1</b> Linear Regression</a></li>
+<li class="chapter" data-level="8.2.2" data-path="main-analysis.html"><a href="main-analysis.html#logistic"><i class="fa fa-check"></i><b>8.2.2</b> Logistic Regression</a></li>
+<li class="chapter" data-level="8.2.3" data-path="main-analysis.html"><a href="main-analysis.html#cox"><i class="fa fa-check"></i><b>8.2.3</b> Cox Proportional Hazards Regression</a></li>
+</ul></li>
+<li class="chapter" data-level="8.3" data-path="main-analysis.html"><a href="main-analysis.html#unified-interface"><i class="fa fa-check"></i><b>8.3</b> Unified Interface Across Models</a></li>
+<li class="chapter" data-level="8.4" data-path="main-analysis.html"><a href="main-analysis.html#best-practices"><i class="fa fa-check"></i><b>8.4</b> Best Practices</a>
+<ul>
+<li class="chapter" data-level="8.4.1" data-path="main-analysis.html"><a href="main-analysis.html#check-correlations-first"><i class="fa fa-check"></i><b>8.4.1</b> 1. Check Correlations First</a></li>
+<li class="chapter" data-level="8.4.2" data-path="main-analysis.html"><a href="main-analysis.html#start-with-univariate-then-multivariate"><i class="fa fa-check"></i><b>8.4.2</b> 2. Start with Univariate, Then Multivariate</a></li>
+<li class="chapter" data-level="8.4.3" data-path="main-analysis.html"><a href="main-analysis.html#validate-model-assumptions"><i class="fa fa-check"></i><b>8.4.3</b> 3. Validate Model Assumptions</a></li>
+<li class="chapter" data-level="8.4.4" data-path="main-analysis.html"><a href="main-analysis.html#handle-missing-data-appropriately"><i class="fa fa-check"></i><b>8.4.4</b> 4. Handle Missing Data Appropriately</a></li>
+</ul></li>
+<li class="chapter" data-level="8.5" data-path="main-analysis.html"><a href="main-analysis.html#summary"><i class="fa fa-check"></i><b>8.5</b> Summary</a></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/Hinna0818/UKBAnalytica" target="_blank">GitHub</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">UKBAnalytica: A Guide to UK Biobank Data Analysis</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="imputation" class="section level1 hasAnchor" number="7">
+<h1><span class="header-section-number">Chapter 7</span> Multiple Imputation<a href="imputation.html#imputation" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Missing data are common in large cohort studies. UKBAnalytica provides
+<code>run_imputation()</code>, a wrapper around the
+<a href="https://github.com/amices/mice">mice</a> package that handles the
+subset-impute-merge workflow in a single call.</p>
+<div id="motivation" class="section level2 hasAnchor" number="7.1">
+<h2><span class="header-section-number">7.1</span> Motivation<a href="imputation.html#motivation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>A typical imputation pipeline for UKB data involves:</p>
+<ol style="list-style-type: decimal">
+<li>Selecting the covariates to impute.</li>
+<li>Running <code>mice::mice()</code>.</li>
+<li>Extracting each completed dataset.</li>
+<li>Merging the imputed covariates back to the full data (exposures, outcomes, etc.).</li>
+<li>Optionally joining additional omics datasets (proteomics, metabolomics).</li>
+</ol>
+<p><code>run_imputation()</code> automates all five steps.</p>
+</div>
+<div id="basic-usage-2" class="section level2 hasAnchor" number="7.2">
+<h2><span class="header-section-number">7.2</span> Basic usage<a href="imputation.html#basic-usage-2" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="imputation.html#cb29-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb29-2"><a href="imputation.html#cb29-2" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb29-3"><a href="imputation.html#cb29-3" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="imputation.html#cb29-4" tabindex="-1"></a>dt <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">&quot;population.csv&quot;</span>)</span>
+<span id="cb29-5"><a href="imputation.html#cb29-5" tabindex="-1"></a></span>
+<span id="cb29-6"><a href="imputation.html#cb29-6" tabindex="-1"></a><span class="co"># Variables to impute</span></span>
+<span id="cb29-7"><a href="imputation.html#cb29-7" tabindex="-1"></a>imp_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb29-8"><a href="imputation.html#cb29-8" tabindex="-1"></a>  <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>,</span>
+<span id="cb29-9"><a href="imputation.html#cb29-9" tabindex="-1"></a>  <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb29-10"><a href="imputation.html#cb29-10" tabindex="-1"></a>  <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>,</span>
+<span id="cb29-11"><a href="imputation.html#cb29-11" tabindex="-1"></a>  <span class="st">&quot;exercise_intensity&quot;</span>, <span class="st">&quot;sleep_duration&quot;</span>,</span>
+<span id="cb29-12"><a href="imputation.html#cb29-12" tabindex="-1"></a>  <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb29-13"><a href="imputation.html#cb29-13" tabindex="-1"></a>  <span class="st">&quot;ldl&quot;</span>, <span class="st">&quot;hdl&quot;</span>, <span class="st">&quot;hba1c&quot;</span>,</span>
+<span id="cb29-14"><a href="imputation.html#cb29-14" tabindex="-1"></a>  <span class="st">&quot;sbp&quot;</span>, <span class="st">&quot;dbp&quot;</span></span>
+<span id="cb29-15"><a href="imputation.html#cb29-15" tabindex="-1"></a>)</span>
+<span id="cb29-16"><a href="imputation.html#cb29-16" tabindex="-1"></a></span>
+<span id="cb29-17"><a href="imputation.html#cb29-17" tabindex="-1"></a><span class="co"># Categorical variables (will be coerced to factor)</span></span>
+<span id="cb29-18"><a href="imputation.html#cb29-18" tabindex="-1"></a>cat_vars <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb29-19"><a href="imputation.html#cb29-19" tabindex="-1"></a>  <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb29-20"><a href="imputation.html#cb29-20" tabindex="-1"></a>  <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb29-21"><a href="imputation.html#cb29-21" tabindex="-1"></a>  <span class="st">&quot;exercise_intensity&quot;</span></span>
+<span id="cb29-22"><a href="imputation.html#cb29-22" tabindex="-1"></a>)</span>
+<span id="cb29-23"><a href="imputation.html#cb29-23" tabindex="-1"></a></span>
+<span id="cb29-24"><a href="imputation.html#cb29-24" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">run_imputation</span>(</span>
+<span id="cb29-25"><a href="imputation.html#cb29-25" tabindex="-1"></a>  <span class="at">data        =</span> dt,</span>
+<span id="cb29-26"><a href="imputation.html#cb29-26" tabindex="-1"></a>  <span class="at">id_col      =</span> <span class="st">&quot;eid&quot;</span>,</span>
+<span id="cb29-27"><a href="imputation.html#cb29-27" tabindex="-1"></a>  <span class="at">vars        =</span> imp_vars,</span>
+<span id="cb29-28"><a href="imputation.html#cb29-28" tabindex="-1"></a>  <span class="at">factor_vars =</span> cat_vars,</span>
+<span id="cb29-29"><a href="imputation.html#cb29-29" tabindex="-1"></a>  <span class="at">method      =</span> <span class="st">&quot;pmm&quot;</span>,</span>
+<span id="cb29-30"><a href="imputation.html#cb29-30" tabindex="-1"></a>  <span class="at">m           =</span> <span class="dv">5</span>,</span>
+<span id="cb29-31"><a href="imputation.html#cb29-31" tabindex="-1"></a>  <span class="at">maxit       =</span> <span class="dv">10</span>,</span>
+<span id="cb29-32"><a href="imputation.html#cb29-32" tabindex="-1"></a>  <span class="at">seed        =</span> <span class="dv">1234</span>,</span>
+<span id="cb29-33"><a href="imputation.html#cb29-33" tabindex="-1"></a>  <span class="at">print       =</span> <span class="cn">FALSE</span></span>
+<span id="cb29-34"><a href="imputation.html#cb29-34" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="working-with-the-output" class="section level2 hasAnchor" number="7.3">
+<h2><span class="header-section-number">7.3</span> Working with the output<a href="imputation.html#working-with-the-output" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p><code>run_imputation()</code> returns a list with two elements:</p>
+<table>
+<colgroup>
+<col width="40%" />
+<col width="59%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Element</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>imp</code></td>
+<td align="left">The <code>mice</code> <code>mids</code> object (for diagnostics, pooling, etc.)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>data_list</code></td>
+<td align="left">A list of <code>m</code> completed datasets with imputed covariates merged back</td>
+</tr>
+</tbody>
+</table>
+<p>Access individual datasets:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="imputation.html#cb30-1" tabindex="-1"></a><span class="co"># First completed dataset</span></span>
+<span id="cb30-2"><a href="imputation.html#cb30-2" tabindex="-1"></a>imputed_dt1 <span class="ot">&lt;-</span> res<span class="sc">$</span>data_list[[<span class="dv">1</span>]]</span>
+<span id="cb30-3"><a href="imputation.html#cb30-3" tabindex="-1"></a><span class="fu">dim</span>(imputed_dt1)</span>
+<span id="cb30-4"><a href="imputation.html#cb30-4" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="imputation.html#cb30-5" tabindex="-1"></a><span class="co"># Second completed dataset</span></span>
+<span id="cb30-6"><a href="imputation.html#cb30-6" tabindex="-1"></a>imputed_dt2 <span class="ot">&lt;-</span> res<span class="sc">$</span>data_list[[<span class="dv">2</span>]]</span></code></pre></div>
+<p>All columns that were <em>not</em> in <code>vars</code> (exposures, outcomes, follow-up time,
+etc.) are preserved as-is.</p>
+</div>
+<div id="merging-additional-datasets" class="section level2 hasAnchor" number="7.4">
+<h2><span class="header-section-number">7.4</span> Merging additional datasets<a href="imputation.html#merging-additional-datasets" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>If you have separate omics datasets (e.g., proteomics, metabolomics), you can
+merge them automatically:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="imputation.html#cb31-1" tabindex="-1"></a>pro_df  <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">&quot;protein_imputed.csv&quot;</span>)</span>
+<span id="cb31-2"><a href="imputation.html#cb31-2" tabindex="-1"></a>meta_df <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">&quot;metabolomics_imputed.csv&quot;</span>)</span>
+<span id="cb31-3"><a href="imputation.html#cb31-3" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="imputation.html#cb31-4" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">run_imputation</span>(</span>
+<span id="cb31-5"><a href="imputation.html#cb31-5" tabindex="-1"></a>  <span class="at">data        =</span> dt,</span>
+<span id="cb31-6"><a href="imputation.html#cb31-6" tabindex="-1"></a>  <span class="at">id_col      =</span> <span class="st">&quot;eid&quot;</span>,</span>
+<span id="cb31-7"><a href="imputation.html#cb31-7" tabindex="-1"></a>  <span class="at">vars        =</span> imp_vars,</span>
+<span id="cb31-8"><a href="imputation.html#cb31-8" tabindex="-1"></a>  <span class="at">factor_vars =</span> cat_vars,</span>
+<span id="cb31-9"><a href="imputation.html#cb31-9" tabindex="-1"></a>  <span class="at">m           =</span> <span class="dv">5</span>,</span>
+<span id="cb31-10"><a href="imputation.html#cb31-10" tabindex="-1"></a>  <span class="at">seed        =</span> <span class="dv">1234</span>,</span>
+<span id="cb31-11"><a href="imputation.html#cb31-11" tabindex="-1"></a>  <span class="at">print       =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb31-12"><a href="imputation.html#cb31-12" tabindex="-1"></a>  <span class="at">additional_data =</span> <span class="fu">list</span>(</span>
+<span id="cb31-13"><a href="imputation.html#cb31-13" tabindex="-1"></a>    <span class="at">protein      =</span> pro_df,</span>
+<span id="cb31-14"><a href="imputation.html#cb31-14" tabindex="-1"></a>    <span class="at">metabolomics =</span> meta_df</span>
+<span id="cb31-15"><a href="imputation.html#cb31-15" tabindex="-1"></a>  ),</span>
+<span id="cb31-16"><a href="imputation.html#cb31-16" tabindex="-1"></a>  <span class="at">additional_join =</span> <span class="st">&quot;inner&quot;</span></span>
+<span id="cb31-17"><a href="imputation.html#cb31-17" tabindex="-1"></a>)</span>
+<span id="cb31-18"><a href="imputation.html#cb31-18" tabindex="-1"></a></span>
+<span id="cb31-19"><a href="imputation.html#cb31-19" tabindex="-1"></a><span class="co"># Each element of data_list now includes the</span></span>
+<span id="cb31-20"><a href="imputation.html#cb31-20" tabindex="-1"></a><span class="co"># omics columns as well</span></span>
+<span id="cb31-21"><a href="imputation.html#cb31-21" tabindex="-1"></a><span class="fu">dim</span>(res<span class="sc">$</span>data_list[[<span class="dv">1</span>]])</span></code></pre></div>
+<p>Set <code>additional_join = "left"</code> if you want to keep all participants even when
+they are missing from the omics data.</p>
+</div>
+<div id="diagnostics" class="section level2 hasAnchor" number="7.5">
+<h2><span class="header-section-number">7.5</span> Diagnostics<a href="imputation.html#diagnostics" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Because the raw <code>mids</code> object is returned, you can use standard <code>mice</code>
+diagnostics:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="imputation.html#cb32-1" tabindex="-1"></a><span class="fu">library</span>(mice)</span>
+<span id="cb32-2"><a href="imputation.html#cb32-2" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="imputation.html#cb32-3" tabindex="-1"></a><span class="co"># Convergence plots</span></span>
+<span id="cb32-4"><a href="imputation.html#cb32-4" tabindex="-1"></a><span class="fu">plot</span>(res<span class="sc">$</span>imp)</span>
+<span id="cb32-5"><a href="imputation.html#cb32-5" tabindex="-1"></a></span>
+<span id="cb32-6"><a href="imputation.html#cb32-6" tabindex="-1"></a><span class="co"># Strip plots for a specific variable</span></span>
+<span id="cb32-7"><a href="imputation.html#cb32-7" tabindex="-1"></a><span class="fu">stripplot</span>(res<span class="sc">$</span>imp, bmi <span class="sc">~</span> .imp)</span>
+<span id="cb32-8"><a href="imputation.html#cb32-8" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="imputation.html#cb32-9" tabindex="-1"></a><span class="co"># Density plots</span></span>
+<span id="cb32-10"><a href="imputation.html#cb32-10" tabindex="-1"></a><span class="fu">densityplot</span>(res<span class="sc">$</span>imp, <span class="sc">~</span> bmi)</span></code></pre></div>
+</div>
+<div id="pooled-analysis" class="section level2 hasAnchor" number="7.6">
+<h2><span class="header-section-number">7.6</span> Pooled analysis<a href="imputation.html#pooled-analysis" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>For analyses that account for imputation uncertainty, use <code>mice::with()</code> and
+<code>mice::pool()</code>:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="imputation.html#cb33-1" tabindex="-1"></a><span class="fu">library</span>(mice)</span>
+<span id="cb33-2"><a href="imputation.html#cb33-2" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb33-3"><a href="imputation.html#cb33-3" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="imputation.html#cb33-4" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">with</span>(res<span class="sc">$</span>imp, <span class="fu">lm</span>(bmi <span class="sc">~</span> age <span class="sc">+</span> sex))</span>
+<span id="cb33-5"><a href="imputation.html#cb33-5" tabindex="-1"></a>pooled <span class="ot">&lt;-</span> <span class="fu">pool</span>(fit)</span>
+<span id="cb33-6"><a href="imputation.html#cb33-6" tabindex="-1"></a><span class="fu">summary</span>(pooled)</span></code></pre></div>
+</div>
+<div id="saving-completed-datasets" class="section level2 hasAnchor" number="7.7">
+<h2><span class="header-section-number">7.7</span> Saving completed datasets<a href="imputation.html#saving-completed-datasets" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="imputation.html#cb34-1" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(res<span class="sc">$</span>data_list)) {</span>
+<span id="cb34-2"><a href="imputation.html#cb34-2" tabindex="-1"></a>  <span class="fu">saveRDS</span>(</span>
+<span id="cb34-3"><a href="imputation.html#cb34-3" tabindex="-1"></a>    res<span class="sc">$</span>data_list[[i]],</span>
+<span id="cb34-4"><a href="imputation.html#cb34-4" tabindex="-1"></a>    <span class="at">file =</span> <span class="fu">sprintf</span>(<span class="st">&quot;imputed_dataset_%d.rds&quot;</span>, i)</span>
+<span id="cb34-5"><a href="imputation.html#cb34-5" tabindex="-1"></a>  )</span>
+<span id="cb34-6"><a href="imputation.html#cb34-6" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="parameters-1" class="section level2 hasAnchor" number="7.8">
+<h2><span class="header-section-number">7.8</span> Parameters<a href="imputation.html#parameters-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Argument</th>
+<th align="left">Default</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>data</code></td>
+<td align="left">–</td>
+<td align="left">Input data.frame or data.table</td>
+</tr>
+<tr class="even">
+<td align="left"><code>id_col</code></td>
+<td align="left"><code>"eid"</code></td>
+<td align="left">Name of the ID column</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>vars</code></td>
+<td align="left">–</td>
+<td align="left">Variables to impute</td>
+</tr>
+<tr class="even">
+<td align="left"><code>factor_vars</code></td>
+<td align="left"><code>NULL</code></td>
+<td align="left">Subset of <code>vars</code> to treat as factors</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>method</code></td>
+<td align="left"><code>"pmm"</code></td>
+<td align="left">Imputation method (passed to <code>mice</code>)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>m</code></td>
+<td align="left"><code>5</code></td>
+<td align="left">Number of imputations</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>maxit</code></td>
+<td align="left"><code>10</code></td>
+<td align="left">Maximum iterations</td>
+</tr>
+<tr class="even">
+<td align="left"><code>seed</code></td>
+<td align="left"><code>1234</code></td>
+<td align="left">Random seed</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>print</code></td>
+<td align="left"><code>TRUE</code></td>
+<td align="left">Show iteration logs</td>
+</tr>
+<tr class="even">
+<td align="left"><code>additional_data</code></td>
+<td align="left"><code>NULL</code></td>
+<td align="left">Named list of extra datasets to merge</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>additional_join</code></td>
+<td align="left"><code>"inner"</code></td>
+<td align="left">Join type for additional datasets</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="baseline-table.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="main-analysis.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": true,
+    "facebook": false,
+    "twitter": false,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": null,
+    "text": null
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["UKBAnalytica.pdf", "UKBAnalytica.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>
