@@ -28,6 +28,12 @@ Included diseases:
 \item{T1DM}{Type 1 Diabetes Mellitus}
 \item{T2DM}{Type 2 Diabetes Mellitus}
 \item{Vascular_Disease}{Peripheral vascular disease}
+\item{Arrhythmia}{Broad cardiac arrhythmia endpoint including OPCS4 procedures}
+\item{Atrial_Fibrillation}{Atrial arrhythmia / atrial fibrillation-flutter}
+\item{Ventricular_Arrhythmia}{Ventricular arrhythmia endpoint}
+\item{AV_Block}{Atrioventricular conduction block}
+\item{Intraventricular_Block}{Intraventricular conduction block}
+\item{SVT}{Supraventricular tachycardia}
 }
 }
 \examples{

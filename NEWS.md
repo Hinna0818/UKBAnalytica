@@ -1,7 +1,17 @@
 # UKBAnalytica News
 
 ## UKBAnalytica 0.6.2.1（2026-04-24）
-Fix bugs in disease definition.
+
+### Disease definition and phenotyping updates
+- Added `OPCS4` operative procedure support for hospital summary operations via `p41272` + `p41282_a*`.
+- Added `opcs4_pattern` to `create_disease_definition()` so procedure evidence is opt-in and ignored by default when unspecified.
+- Extended case extraction and survival workflows to accept `OPCS4` in `sources`, `prevalent_sources`, and `outcome_sources`.
+- Added predefined arrhythmia endpoints combining ICD-10 and OPCS4 where appropriate: `Arrhythmia`, `Ventricular_Arrhythmia`, `AV_Block`, `Intraventricular_Block`, and `SVT`.
+- Extended predefined `Atrial_Fibrillation` with OPCS4 support for procedure-augmented atrial arrhythmia ascertainment.
+
+### Documentation
+- Updated disease definition chapter and main vignette examples to document `opcs4_pattern` and arrhythmia phenotyping with `ICD10 + OPCS4`.
+- Updated `README.md` with an ICD-10 + OPCS4 phenotyping example and clarified the default opt-in behavior for procedure data.
 
 
 ## UKBAnalytica 0.6.2 (2026-04-18)

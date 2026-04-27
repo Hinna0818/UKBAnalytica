@@ -10,6 +10,7 @@ create_disease_definition(
   icd9_pattern = NULL,
   sr_codes = NULL,
   death_icd10 = NULL,
+  opcs4_pattern = NULL,
   algo_date_field = NULL,
   algo_source_field = NULL,
   icd10 = NULL,
@@ -29,6 +30,10 @@ defaults to "Custom disease".}
 
 \item{death_icd10}{Optional regular expression pattern (or code vector) for
 death-cause ICD-10 matching. If NULL, defaults to \code{icd10_pattern}.}
+
+\item{opcs4_pattern}{Optional regular expression pattern (or code vector) for
+OPCS4 operative procedure matching. If NULL, operative procedures are not
+used in case ascertainment.}
 
 \item{algo_date_field}{Integer. UKB field ID for the algorithmically-defined
 outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
@@ -50,8 +55,9 @@ A list containing the disease definition parameters.
 }
 \description{
 Helper function to create a standardized disease definition object
-containing ICD-10/ICD-9 patterns, self-report codes, and optionally
-a UK Biobank algorithmically-defined outcome date field.
+containing ICD-10/ICD-9 patterns, self-report codes, optional OPCS4
+procedure patterns, and optionally a UK Biobank algorithmically-defined
+outcome date field.
 }
 \examples{
 \dontrun{

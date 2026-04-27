@@ -12,6 +12,9 @@
 #' @param sr_codes Integer vector of UKB self-report illness codes (optional).
 #' @param death_icd10 Optional regular expression pattern (or code vector) for
 #'   death-cause ICD-10 matching. If NULL, defaults to \code{icd10_pattern}.
+#' @param opcs4_pattern Optional regular expression pattern (or code vector) for
+#'   OPCS4 operative procedure matching. If NULL, operative procedures are not
+#'   used in case ascertainment.
 #' @param algo_date_field Integer. UKB field ID for the algorithmically-defined
 #'   outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
 #'   The corresponding data column can be \code{p{field}_i0} or \code{p{field}}.
@@ -48,6 +51,7 @@ create_disease_definition <- function(name = NULL,
                                       icd9_pattern = NULL,
                                       sr_codes = NULL,
                                       death_icd10 = NULL,
+                                      opcs4_pattern = NULL,
                                       algo_date_field = NULL,
                                       algo_source_field = NULL,
                                       icd10 = NULL,
@@ -90,6 +94,7 @@ create_disease_definition <- function(name = NULL,
   icd10_pattern <- .normalize_pattern(icd10_pattern, "icd10_pattern")
   icd9_pattern <- .normalize_pattern(icd9_pattern, "icd9_pattern")
   death_icd10 <- .normalize_pattern(death_icd10, "death_icd10")
+  opcs4_pattern <- .normalize_pattern(opcs4_pattern, "opcs4_pattern")
 
   # Backward-compatible default: death matching follows ICD-10 pattern unless specified.
   if (is.null(death_icd10)) {
@@ -102,6 +107,7 @@ create_disease_definition <- function(name = NULL,
     icd9_pattern = icd9_pattern,
     sr_codes = sr_codes,
     death_icd10 = death_icd10,
+    opcs4_pattern = opcs4_pattern,
     algo_date_field = algo_date_field,
     algo_source_field = algo_source_field
   )
@@ -131,6 +137,12 @@ create_disease_definition <- function(name = NULL,
 #'   \item{T1DM}{Type 1 Diabetes Mellitus}
 #'   \item{T2DM}{Type 2 Diabetes Mellitus}
 #'   \item{Vascular_Disease}{Peripheral vascular disease}
+#'   \item{Arrhythmia}{Broad cardiac arrhythmia endpoint including OPCS4 procedures}
+#'   \item{Atrial_Fibrillation}{Atrial arrhythmia / atrial fibrillation-flutter}
+#'   \item{Ventricular_Arrhythmia}{Ventricular arrhythmia endpoint}
+#'   \item{AV_Block}{Atrioventricular conduction block}
+#'   \item{Intraventricular_Block}{Intraventricular conduction block}
+#'   \item{SVT}{Supraventricular tachycardia}
 #' }
 #'
 #' @examples
@@ -246,6 +258,11 @@ get_predefined_diseases <- function() {
     ),
 
     # Coronary and rhythm disorders
+    Arrhythmia = create_disease_definition(
+      name = "Cardiac Arrhythmia",
+      icd10_pattern = "^(I44|I45|I46|I47|I48|I49)",
+      opcs4_pattern = "^(K576|K59|K60|K61|K62|K641|K72|K73|K74)"
+    ),
     Angina = create_disease_definition(
       name = "Angina Pectoris",
       icd10_pattern = "^I20",
@@ -256,7 +273,25 @@ get_predefined_diseases <- function() {
       name = "Atrial Fibrillation/Flutter",
       icd10_pattern = "^I48",
       icd9_pattern = "^(4273|4274)",
-      sr_codes = c(1471, 1483, 1485)
+      sr_codes = c(1471, 1483, 1485),
+      opcs4_pattern = "^K62"
+    ),
+    Ventricular_Arrhythmia = create_disease_definition(
+      name = "Ventricular Arrhythmia",
+      icd10_pattern = "^(I470|I472|I490|I493)",
+      opcs4_pattern = "^(K576|K641)"
+    ),
+    AV_Block = create_disease_definition(
+      name = "Atrioventricular Block",
+      icd10_pattern = "^(I440|I441|I442|I443|I458)"
+    ),
+    Intraventricular_Block = create_disease_definition(
+      name = "Intraventricular Conduction Block",
+      icd10_pattern = "^(I444|I445|I446|I447|I450|I451|I452|I453|I454)"
+    ),
+    SVT = create_disease_definition(
+      name = "Supraventricular Tachycardia",
+      icd10_pattern = "^I471"
     ),
 
     # Respiratory diseases
@@ -446,6 +481,13 @@ combine_disease_definitions <- function(..., name = "Combined") {
     paste0("(", paste(death_patterns, collapse = "|"), ")")
   } else NULL
 
+  # Combine OPCS4 patterns
+  opcs4_patterns <- sapply(defs, function(x) x$opcs4_pattern)
+  opcs4_patterns <- opcs4_patterns[!sapply(opcs4_patterns, is.null)]
+  opcs4_combined <- if (length(opcs4_patterns) > 0) {
+    paste0("(", paste(opcs4_patterns, collapse = "|"), ")")
+  } else NULL
+
   # Combine self-report codes
   sr_codes <- unlist(lapply(defs, function(x) x$sr_codes))
   sr_codes <- unique(sr_codes[!is.na(sr_codes)])
@@ -456,6 +498,7 @@ combine_disease_definitions <- function(..., name = "Combined") {
     icd10_pattern = icd10_combined,
     icd9_pattern = icd9_combined,
     sr_codes = sr_codes,
-    death_icd10 = death_combined
+    death_icd10 = death_combined,
+    opcs4_pattern = opcs4_combined
   )
 }

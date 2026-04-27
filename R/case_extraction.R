@@ -8,7 +8,11 @@
 #' @param dt A data.table or data.frame containing complete UKB data.
 #' @param disease_definitions Named list of disease definitions.
 #' @param sources Character vector specifying data sources to include.
-#'   Valid options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".
+#'   Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
+#'   "Algorithm".
+#'   "OPCS4" uses hospital inpatient summary operations
+#'   (\code{p41272} + \code{p41282_a*}) and requires
+#'   \code{opcs4_pattern} in the disease definition.
 #'   "Algorithm" uses UK Biobank algorithmically-defined outcomes (Category 42)
 #'   which combine multiple data sources with high positive predictive value.
 #'   Requires \code{algo_date_field} in the disease definition.
@@ -24,6 +28,7 @@
 #' \itemize{
 #'   \item Main analysis with hospital-confirmed diagnoses only
 #'   \item Sensitivity analyses including self-reported conditions
+#'   \item Procedure-augmented definitions for surgical phenotypes using OPCS4
 #'   \item Source-specific case counts for methods reporting
 #'   \item UK Biobank algorithmically-defined outcomes for validated case ascertainment
 #' }
@@ -56,7 +61,7 @@ extract_cases_by_source <- function(dt,
                                      censor_date = as.Date("2023-10-31"),
                                      baseline_col = "p53_i0") {
 
-  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "Algorithm")
+  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
   if (!data.table::is.data.table(dt)) {
@@ -74,6 +79,7 @@ extract_cases_by_source <- function(dt,
   icd9_long <- if ("ICD9" %in% sources) parse_icd9_diagnoses(dt) else data.table::data.table()
   sr_long <- if ("Self-report" %in% sources) parse_self_reported_illnesses(dt, baseline_col) else data.table::data.table()
   death_long <- if ("Death" %in% sources) parse_death_records(dt) else data.table::data.table()
+  opcs4_long <- if ("OPCS4" %in% sources) parse_opcs4_procedures(dt) else data.table::data.table()
 
   death_dates <- get_death_dates(dt)
   baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
@@ -102,6 +108,11 @@ extract_cases_by_source <- function(dt,
     if ("Death" %in% sources && !is.null(death_pattern) && nrow(death_long) > 0) {
       filtered <- filter_death_codes(death_long, death_pattern, disease_key)
       if (nrow(filtered) > 0) diagnosis_sources$death <- aggregate_death_as_diagnosis(filtered)
+    }
+
+    if ("OPCS4" %in% sources && !is.null(def$opcs4_pattern) && nrow(opcs4_long) > 0) {
+      filtered <- filter_opcs4_codes(opcs4_long, def$opcs4_pattern, disease_key)
+      if (nrow(filtered) > 0) diagnosis_sources$opcs4 <- aggregate_opcs4_earliest(filtered)
     }
 
     # Algorithm source: UK Biobank algorithmically-defined outcomes (Category 42)
@@ -579,7 +590,8 @@ prepare_analysis_dataset <- function(dt,
 #' @param disease_definitions Named list of disease definitions. If NULL,
 #'   uses \code{\link{get_predefined_diseases}}.
 #' @param sources Character vector specifying data sources.
-#'   Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".
+#'   Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death",
+#'   "OPCS4", "Algorithm".
 #' @param baseline_col Column name for baseline assessment date.
 #'
 #' @return A data.table with columns:
@@ -632,7 +644,7 @@ extract_disease_history <- function(dt,
     stop("'diseases' must be a non-empty character vector")
   }
 
-  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "Algorithm")
+  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
   if (!data.table::is.data.table(dt)) {

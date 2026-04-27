@@ -341,12 +341,13 @@ str(dt)
 
 # Disease Definitions {#disease-definitions}
 
-UKBAnalytica identifies disease cases from up to five data sources:
+UKBAnalytica identifies disease cases from up to six data sources:
 
 | Source | Code field | Date field |
 |:-------|:-----------|:-----------|
 | ICD-10 (hospital) | `p41270` | `p41280_a*` |
 | ICD-9 (hospital) | `p41271` | `p41281_a*` |
+| OPCS4 procedures (hospital) | `p41272` | `p41282_a*` |
 | Self-report | `p20002_i*_a*` | `p20008_i*_a*` |
 | Death registry | `p40001`, `p40002` | `p40000` |
 | Algorithm (Category 42, optional) | `p{algo_source_field}` or `p{algo_source_field}_i0` | `p{algo_date_field}` or `p{algo_date_field}_i0` |
@@ -367,12 +368,13 @@ Select a subset by name:
 
 ```r
 my_diseases <- get_predefined_diseases()[
-  c("AA", "Hypertension", "Diabetes")
+  c("AA", "Arrhythmia", "Atrial_Fibrillation")
 ]
 ```
 
-Each definition is a list specifying ICD-10 codes, ICD-9 codes, self-report
-codes, death-cause codes, and optional algorithm field IDs.
+Each definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS4
+procedure codes, self-report codes, death-cause codes, and optional algorithm
+field IDs.
 
 ## Inspecting a definition
 
@@ -385,6 +387,7 @@ A definition typically contains:
 
 - `icd10_pattern` -- regular expression for ICD-10 codes.
 - `icd9_pattern` -- regular expression for ICD-9 codes.
+- `opcs4_pattern` -- optional regular expression for OPCS4 operative procedure codes.
 - `sr_codes` -- integer vector of self-report coding IDs.
 - `death_icd10` -- optional regular expression for death-cause ICD-10 codes
   (if omitted, `icd10_pattern` is used).
@@ -393,15 +396,14 @@ A definition typically contains:
 
 ## Creating custom definitions
 
-Use `create_disease_definition()` to define a new disease:
+Use `create_disease_definition()` to define a new disease. Surgical or
+procedure-defined phenotypes can add `opcs4_pattern`:
 
 ```r
-my_disease <- create_disease_definition(
-  name = "Chronic Liver Disease",
-  icd10_pattern = "^(K70|K71|K72|K73|K74)",
-  icd9_pattern = "^571",
-  sr_codes = c(1604),
-  death_icd10 = "^(K70|K74)"
+arrhythmia_def <- create_disease_definition(
+  name = "Cardiac Arrhythmia",
+  icd10_pattern = "^(I44|I45|I46|I47|I48|I49)",
+  opcs4_pattern = "^(K576|K59|K60|K61|K62|K641|K72|K73|K74)"
 )
 ```
 
@@ -423,15 +425,38 @@ copd_def <- create_disease_definition(
 Deprecated aliases `icd10`, `icd9`, and `self_report` are still accepted for
 backward compatibility.
 
+If `opcs4_pattern` is not supplied, operative procedure data are ignored even if
+`OPCS4` is included in `sources`.
+
 When parsing algorithm fields, both column naming styles are supported:
 `p{field}_i0` and `p{field}`.
+
+## Arrhythmia example with ICD-10 + OPCS4
+
+The predefined library now includes broad and subtype-specific arrhythmia
+endpoints such as `Arrhythmia`, `Atrial_Fibrillation`,
+`Ventricular_Arrhythmia`, `AV_Block`, `Intraventricular_Block`, and `SVT`.
+
+```r
+rhythm_defs <- get_predefined_diseases()[
+  c("Arrhythmia", "Atrial_Fibrillation", "Ventricular_Arrhythmia")
+]
+
+arrhythmia_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = rhythm_defs,
+  prevalent_sources = c("ICD10", "OPCS4"),
+  outcome_sources = c("ICD10", "OPCS4"),
+  primary_disease = "Arrhythmia"
+)
+```
 
 You can combine it with predefined diseases:
 
 ```r
 all_diseases <- c(
-  get_predefined_diseases()[c("Hypertension", "Diabetes")],
-  list(LiverDisease = my_disease)
+  get_predefined_diseases()[c("Hypertension", "Arrhythmia")],
+  list(CustomArrhythmia = arrhythmia_def)
 )
 ```
 
@@ -445,7 +470,7 @@ mace <- combine_disease_definitions(
 )
 ```
 
-This merges ICD-10, ICD-9, self-report, and death codes from all input
+This merges ICD-10, ICD-9, OPCS4, self-report, and death codes from all input
 definitions into a single combined definition.
 
 ## Comparing data sources
