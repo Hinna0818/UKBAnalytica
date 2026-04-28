@@ -39,8 +39,12 @@ Suggests:
     nnet,
     fastshap,
     pROC,
-    randomForestSRC
+    randomForestSRC,
+    clusterProfiler,
+    AnnotationDbi,
+    org.Hs.eg.db,
+    TCMDATA
 Config/testthat/edition: 3
-Config/Needs/bioc: FALSE
+Config/Needs/bioc: TRUE
 Depends: 
     R (>= 3.5)

@@ -4,21 +4,28 @@
 \alias{calculate_blood_pressure}
 \title{Calculate blood pressure from multiple readings}
 \usage{
-calculate_blood_pressure(df, type = c("sbp", "dbp"), prefer = "manual")
+calculate_blood_pressure(
+  df,
+  type = c("sbp", "dbp"),
+  prefer = c("auto", "manual")
+)
 }
 \arguments{
 \item{df}{A data.table containing BP columns}
 
 \item{type}{Character: "sbp" or "dbp"}
 
-\item{prefer}{Character: "manual" (default) or "auto"}
+\item{prefer}{Character: \code{"auto"} (default) or \code{"manual"}, controlling which
+measurement source is treated as primary when both are available.}
 }
 \value{
 A data.table with calculated \code{sbp} or \code{dbp} column added
 }
 \description{
-Combines manual and automated BP readings, using manual as primary
-and automated as fallback. Returns mean of two readings.
+Combines automated and manual BP readings using UK Biobank collection logic:
+automated readings are primary and manual readings are used as fallback when
+automated measurements are unavailable. Returns the mean of the two available
+readings.
 }
 \examples{
 \dontrun{

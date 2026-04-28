@@ -14,6 +14,7 @@ efficient extraction of diagnosis records and generation of survival analysis da
 \strong{Core Capabilities:}
 \itemize{
 \item Parse ICD-10/ICD-9 diagnosis codes from mixed-format data
+\item Parse OPCS4 operative procedure codes from hospital summary operations
 \item Process self-reported illness data with fractional year conversion
 \item Integrate death registry data as diagnosis sources
 \item Generate Cox regression-ready survival datasets
@@ -24,6 +25,7 @@ efficient extraction of diagnosis records and generation of survival analysis da
 \itemize{
 \item \code{\link{parse_icd10_diagnoses}}: Extract ICD-10 hospital diagnoses
 \item \code{\link{parse_icd9_diagnoses}}: Extract ICD-9 hospital diagnoses
+\item \code{\link{parse_opcs4_procedures}}: Extract OPCS4 hospital procedures
 \item \code{\link{parse_self_reported_illnesses}}: Extract self-reported conditions
 \item \code{\link{parse_death_records}}: Extract death registry data
 \item \code{\link{build_survival_dataset}}: Generate survival analysis data
@@ -34,6 +36,7 @@ efficient extraction of diagnosis records and generation of survival analysis da
 \itemize{
 \item ICD-10: \code{p41270} (codes) + \code{p41280_a*} (dates)
 \item ICD-9: \code{p41271} (codes) + \code{p41281_a*} (dates)
+\item OPCS4: \code{p41272} (codes) + \code{p41282_a*} (dates)
 \item Self-report: \code{p20002_i*_a*} (codes) + \code{p20008_i*_a*} (years)
 \item Death: \code{p40001/p40002} (causes) + \code{p40000} (dates)
 }

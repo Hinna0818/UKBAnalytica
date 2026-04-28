@@ -19,6 +19,8 @@
 ^_site$
 ^dist$
 ^dist/
+^supp$
+^supp/
 ^git-filter-repo$
 ^data/outcome_test\.rda$
 ^out_test$

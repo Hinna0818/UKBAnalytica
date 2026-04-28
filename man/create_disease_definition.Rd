@@ -55,9 +55,8 @@ A list containing the disease definition parameters.
 }
 \description{
 Helper function to create a standardized disease definition object
-containing ICD-10/ICD-9 patterns, self-report codes, optional OPCS4
-procedure patterns, and optionally a UK Biobank algorithmically-defined
-outcome date field.
+containing ICD-10/ICD-9 patterns, self-report codes, and optionally
+a UK Biobank algorithmically-defined outcome date field.
 }
 \examples{
 \dontrun{

@@ -12,7 +12,8 @@ bibliography: []
 description: |
   A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
   Research Analysis Platform (RAP) data, including data download, preprocessing,
-  disease phenotyping, survival analysis, and multiple imputation.
+  disease phenotyping, survival analysis, multiple imputation, and proteomics
+  enrichment analysis.
 link-citations: yes
 github-repo: Hinna0818/UKBAnalytica_v2
 ---
@@ -66,6 +67,7 @@ The package covers the following workflow:
 6. **Multiple imputation** -- Impute missing covariates and merge results back to the full dataset.
 7. **Main analysis** -- Correlation analysis, regression models, and sensitivity preprocessing.
 8. **Advanced analysis** -- Subgroup analysis, propensity score, mediation, MI pooling.
+9. **Proteomics enrichment** -- Convert RAP-exported Olink protein names to gene symbols and run GO/KEGG ORA.
 
 The remaining chapters walk through each step with code examples.
 

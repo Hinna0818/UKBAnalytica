@@ -42,6 +42,7 @@ UKBAnalytica.Rcheck/
 # local cleanup/tool artifacts
 dist/
 git-filter-repo
+/supp/
 
 out_test/data/outcome_test.rda
 out_test/

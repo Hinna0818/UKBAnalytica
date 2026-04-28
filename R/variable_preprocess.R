@@ -84,14 +84,14 @@ NULL
     ),
     
     # Blood Pressure
-    sbp_auto_1 = list(field_id = 93, ukb_col = "p93_i0_a0", description = "SBP automated reading 1"),
-    sbp_auto_2 = list(field_id = 93, ukb_col = "p93_i0_a1", description = "SBP automated reading 2"),
-    dbp_auto_1 = list(field_id = 94, ukb_col = "p94_i0_a0", description = "DBP automated reading 1"),
-    dbp_auto_2 = list(field_id = 94, ukb_col = "p94_i0_a1", description = "DBP automated reading 2"),
-    sbp_manual_1 = list(field_id = 4080, ukb_col = "p4080_i0_a0", description = "SBP manual reading 1"),
-    sbp_manual_2 = list(field_id = 4080, ukb_col = "p4080_i0_a1", description = "SBP manual reading 2"),
-    dbp_manual_1 = list(field_id = 4079, ukb_col = "p4079_i0_a0", description = "DBP manual reading 1"),
-    dbp_manual_2 = list(field_id = 4079, ukb_col = "p4079_i0_a1", description = "DBP manual reading 2"),
+    sbp_auto_1 = list(field_id = 4080, ukb_col = "p4080_i0_a0", description = "SBP automated reading 1"),
+    sbp_auto_2 = list(field_id = 4080, ukb_col = "p4080_i0_a1", description = "SBP automated reading 2"),
+    dbp_auto_1 = list(field_id = 4079, ukb_col = "p4079_i0_a0", description = "DBP automated reading 1"),
+    dbp_auto_2 = list(field_id = 4079, ukb_col = "p4079_i0_a1", description = "DBP automated reading 2"),
+    sbp_manual_1 = list(field_id = 93, ukb_col = "p93_i0_a0", description = "SBP manual reading 1"),
+    sbp_manual_2 = list(field_id = 93, ukb_col = "p93_i0_a1", description = "SBP manual reading 2"),
+    dbp_manual_1 = list(field_id = 94, ukb_col = "p94_i0_a0", description = "DBP manual reading 1"),
+    dbp_manual_2 = list(field_id = 94, ukb_col = "p94_i0_a1", description = "DBP manual reading 2"),
     
     # Medications 
     medication_male = list(
@@ -401,12 +401,15 @@ preprocess_baseline <- function(df,
 
 #' Calculate blood pressure from multiple readings
 #' 
-#' Combines manual and automated BP readings, using manual as primary 
-#' and automated as fallback. Returns mean of two readings.
+#' Combines automated and manual BP readings using UK Biobank collection logic:
+#' automated readings are primary and manual readings are used as fallback when
+#' automated measurements are unavailable. Returns the mean of the two available
+#' readings.
 #' 
 #' @param df A data.table containing BP columns
 #' @param type Character: "sbp" or "dbp"
-#' @param prefer Character: "manual" (default) or "auto"
+#' @param prefer Character: `"auto"` (default) or `"manual"`, controlling which
+#'   measurement source is treated as primary when both are available.
 #' @importFrom data.table := data.table copy is.data.table as.data.table
 #' 
 #' @return A data.table with calculated `sbp` or `dbp` column added
@@ -418,8 +421,9 @@ preprocess_baseline <- function(df,
 #' }
 #' 
 #' @export
-calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = "manual") {
+calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = c("auto", "manual")) {
   type <- match.arg(type)
+  prefer <- match.arg(prefer)
   
   if (!data.table::is.data.table(df)) {
     df <- data.table::as.data.table(df)
@@ -427,39 +431,49 @@ calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = "manua
   result_df <- data.table::copy(df)
   
   if (type == "sbp") {
-    manual_cols <- c("p4080_i0_a0", "p4080_i0_a1")
-    auto_cols <- c("p93_i0_a0", "p93_i0_a1")
+    auto_cols <- c("p4080_i0_a0", "p4080_i0_a1")
+    manual_cols <- c("p93_i0_a0", "p93_i0_a1")
     out_col <- "sbp"
   } else {
-    manual_cols <- c("p4079_i0_a0", "p4079_i0_a1")
-    auto_cols <- c("p94_i0_a0", "p94_i0_a1")
+    auto_cols <- c("p4079_i0_a0", "p4079_i0_a1")
+    manual_cols <- c("p94_i0_a0", "p94_i0_a1")
     out_col <- "dbp"
+  }
+
+  .bp_extract_cols <- function(data, cols) {
+    lapply(cols, function(col) {
+      if (col %in% names(data)) {
+        as.numeric(data[[col]])
+      } else {
+        rep(NA_real_, nrow(data))
+      }
+    })
   }
   
   # Check available columns
-  has_manual <- all(manual_cols %in% names(result_df))
-  has_auto <- all(auto_cols %in% names(result_df))
+  has_manual <- any(manual_cols %in% names(result_df))
+  has_auto <- any(auto_cols %in% names(result_df))
   
   if (!has_manual && !has_auto) {
     warning(sprintf("No %s columns found. Skipping.", toupper(type)))
     return(result_df)
   }
   
+  auto_vals <- .bp_extract_cols(result_df, auto_cols)
+  manual_vals <- .bp_extract_cols(result_df, manual_cols)
+
   if (has_manual && has_auto) {
-    # Fill manual with auto where missing
-    m1 <- result_df[[manual_cols[1]]]
-    m2 <- result_df[[manual_cols[2]]]
-    a1 <- result_df[[auto_cols[1]]]
-    a2 <- result_df[[auto_cols[2]]]
-    
-    v1 <- ifelse(is.na(m1), a1, m1)
-    v2 <- ifelse(is.na(m2), a2, m2)
+    primary_vals <- if (prefer == "auto") auto_vals else manual_vals
+    fallback_vals <- if (prefer == "auto") manual_vals else auto_vals
+
+    v1 <- ifelse(is.na(primary_vals[[1]]), fallback_vals[[1]], primary_vals[[1]])
+    v2 <- ifelse(is.na(primary_vals[[2]]), fallback_vals[[2]], primary_vals[[2]])
   } else if (has_manual) {
-    v1 <- result_df[[manual_cols[1]]]
-    v2 <- result_df[[manual_cols[2]]]
+    v1 <- manual_vals[[1]]
+    v2 <- manual_vals[[2]]
   } else {
-    v1 <- result_df[[auto_cols[1]]]
-    v2 <- result_df[[auto_cols[2]]]
+    v1 <- auto_vals[[1]]
+    v2 <- auto_vals[[2]]
   }
   
   # Calculate mean

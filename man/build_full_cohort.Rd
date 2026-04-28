@@ -25,12 +25,16 @@ build_full_cohort(
 prevalent (baseline) cases. Self-report is recommended here since participants
 reporting a disease at baseline clearly had it before enrollment. Default includes
 all sources: "ICD10", "ICD9", "Self-report", "Death".
+"OPCS4" can be added for surgical phenotypes when \code{opcs4_pattern}
+is supplied in the disease definition.
 Also supports "Algorithm" for UK Biobank algorithmically-defined outcomes.}
 
 \item{outcome_sources}{Character vector specifying data sources for defining
 incident outcomes. Self-report is typically excluded here because self-reported
 diagnosis dates are imprecise (year only) and less reliable for prospective
-endpoint ascertainment. Default: "ICD10", "ICD9", "Death".}
+endpoint ascertainment. Default: "ICD10", "ICD9", "Death". "OPCS4"
+can be included when the event of interest is a surgery or procedure-based
+phenotype.}
 
 \item{censor_date}{Administrative censoring date (default: "2023-10-31").}
 

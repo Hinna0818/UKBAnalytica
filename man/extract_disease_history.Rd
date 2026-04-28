@@ -22,7 +22,8 @@ Must match keys in \code{disease_definitions} or predefined disease names.}
 uses \code{\link{get_predefined_diseases}}.}
 
 \item{sources}{Character vector specifying data sources.
-Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".}
+Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death",
+"OPCS4", "Algorithm".}
 
 \item{baseline_col}{Column name for baseline assessment date.}
 }

@@ -19,7 +19,11 @@ generate_wide_format(
 \item{disease_definitions}{Named list of disease definitions.}
 
 \item{sources}{Character vector specifying data sources to include.
-Valid options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".
+Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
+"Algorithm".
+"OPCS4" uses hospital inpatient summary operations
+(\code{p41272} + \code{p41282_a*}) and requires
+\code{opcs4_pattern} in the disease definition.
 "Algorithm" uses UK Biobank algorithmically-defined outcomes (Category 42)
 which combine multiple data sources with high positive predictive value.
 Requires \code{algo_date_field} in the disease definition.

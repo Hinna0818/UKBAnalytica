@@ -70,8 +70,9 @@ parse_opcs4_procedures <- function(dt) {
       variable.name = "code_col", value.name = "opcs4_code", na.rm = TRUE
     )
     codes_long <- codes_long[!is.na(opcs4_code) & nzchar(opcs4_code) & opcs4_code != "NA"]
-    codes_long[, idx := as.integer(sub("^p41272_a", "", code_col))]
-    codes_long[, code_col := NULL]
+    code_idx <- as.integer(sub("^p41272_a", "", codes_long[["code_col"]]))
+    codes_long[, idx := code_idx]
+    data.table::set(codes_long, j = "code_col", value = NULL)
     codes_long[, opcs4_code := stringi::stri_extract_first_regex(opcs4_code, "[A-Z][0-9]{3}")]
     codes_long <- codes_long[!is.na(opcs4_code)]
   } else {
@@ -105,8 +106,9 @@ parse_opcs4_procedures <- function(dt) {
     dt_sub, id.vars = "eid", measure.vars = date_cols,
     variable.name = "date_col", value.name = "diag_date", na.rm = TRUE
   )
-  dates_long[, idx := as.integer(sub("^p41282_a", "", date_col))]
-  dates_long[, date_col := NULL]
+  date_idx <- as.integer(sub("^p41282_a", "", dates_long[["date_col"]]))
+  dates_long[, idx := date_idx]
+  data.table::set(dates_long, j = "date_col", value = NULL)
   dates_long[, diag_date := .safe_as_date(diag_date, col_name = "OPCS4_diag_date")]
 
   result <- data.table::merge.data.table(

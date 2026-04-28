@@ -46,8 +46,8 @@ This function is designed for epidemiological studies requiring:
 \itemize{
 \item Main analysis with hospital-confirmed diagnoses only
 \item Sensitivity analyses including self-reported conditions
-\item Source-specific case counts for methods reporting
 \item Procedure-augmented definitions for surgical phenotypes using OPCS4
+\item Source-specific case counts for methods reporting
 \item UK Biobank algorithmically-defined outcomes for validated case ascertainment
 }
 
