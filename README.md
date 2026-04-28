@@ -246,3 +246,14 @@ Here we provide some learning materials for UK Biobank in which you may be inter
 - [UK Biobank RAP platform](https://ukbiobank.dnanexus.com/landing)
 - [UK Biobank learning guides supported by our team](https://hinna0818.github.io/Bioinfo-SMU/Epidemiology/UK_Biobank/) 
 
+## Star History
+
+<p align="center">
+  <a href="https://www.star-history.com/?repos=Hinna0818%2FUKBAnalytica_v2&type=date&legend=top-left">
+    <img 
+      src="https://api.star-history.com/svg?repos=Hinna0818/UKBAnalytica_v2&type=date&legend=top-left"
+      width="600"
+      alt="Star History Chart"
+    />
+  </a>
+</p>
