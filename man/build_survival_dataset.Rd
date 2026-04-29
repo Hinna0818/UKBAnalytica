@@ -26,17 +26,21 @@ build_survival_dataset(
 \item{prevalent_sources}{Character vector specifying data sources for identifying
 prevalent (baseline) cases. Self-report is recommended here since participants
 reporting a disease at baseline clearly had it before enrollment. Default includes
-all sources: "ICD10", "ICD9", "Self-report", "Death".
+all core sources: "ICD10", "ICD9", "Self-report", "Death".
 "OPCS4" can be added for surgical phenotypes when \code{opcs4_pattern}
 is supplied in the disease definition.
-Also supports "Algorithm" for UK Biobank algorithmically-defined outcomes.}
+Also supports "CancerRegistry" for UKB cancer registry outcomes,
+"FirstOccurrence" for UKB First Occurrence fields, and "Algorithm" for
+UK Biobank algorithmically-defined outcomes.}
 
 \item{outcome_sources}{Character vector specifying data sources for defining
 incident outcomes. Self-report is typically excluded here because self-reported
 diagnosis dates are imprecise (year only) and less reliable for prospective
-endpoint ascertainment. Default: "ICD10", "ICD9", "Death". "OPCS4"
-can be included when the event of interest is a surgery or procedure-based
-phenotype.}
+endpoint ascertainment. Default: "ICD10", "ICD9", "Death".
+"CancerRegistry" can be added for cancer outcomes; "FirstOccurrence" can
+be added when the extracted dataset includes UKB First Occurrence fields
+for the disease definition. "OPCS4" can be included when the event of
+interest is a surgery or procedure-based phenotype.}
 
 \item{censor_date}{Administrative censoring date (default: "2023-10-31").}
 
@@ -72,7 +76,8 @@ A data.table with columns:
 }
 \description{
 Integrates diagnosis data from multiple sources (ICD-10, ICD-9, self-report,
-death, OPCS4 procedures, algorithm) to generate a survival dataset. By default, returns a wide
+death, OPCS4 procedures, cancer registry records, First Occurrence fields,
+algorithm) to generate a survival dataset. By default, returns a wide
 table that retains all participants and adds disease history/incident indicators
 plus follow-up time for a primary disease.
 }

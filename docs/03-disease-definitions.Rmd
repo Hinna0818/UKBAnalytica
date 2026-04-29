@@ -1,6 +1,6 @@
 # Disease Definitions {#disease-definitions}
 
-UKBAnalytica identifies disease cases from up to six data sources:
+UKBAnalytica identifies disease cases from up to eight data sources:
 
 | Source | Code field | Date field |
 |:-------|:-----------|:-----------|
@@ -9,6 +9,8 @@ UKBAnalytica identifies disease cases from up to six data sources:
 | OPCS4 procedures (hospital) | `p41272` | `p41282_a*` |
 | Self-report | `p20002_i*_a*` | `p20008_i*_a*` |
 | Death registry | `p40001`, `p40002` | `p40000` |
+| Cancer registry | `p40006_i*`, optional `p40011_i*`, `p40012_i*` | `p40005_i*` |
+| First Occurrence | `p{source_field}` or `p{source_field}_i0` | `p{date_field}` or `p{date_field}_i0` |
 | Algorithm (Category 42, optional) | `p{algo_source_field}` or `p{algo_source_field}_i0` | `p{algo_date_field}` or `p{algo_date_field}_i0` |
 
 ## Predefined diseases
@@ -32,7 +34,8 @@ my_diseases <- get_predefined_diseases()[
 ```
 
 Each definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS4
-procedure codes, self-report codes, death-cause codes, and optional algorithm
+procedure codes, self-report codes, death-cause codes, optional First
+Occurrence fields, optional cancer registry filters, and optional algorithm
 field IDs.
 
 ## Inspecting a definition
@@ -50,6 +53,15 @@ A definition typically contains:
 - `sr_codes` -- integer vector of self-report coding IDs.
 - `death_icd10` -- optional regular expression for death-cause ICD-10 codes
   (if omitted, `icd10_pattern` is used).
+- `first_occurrence_fields` -- optional UKB Category 1712 date field IDs for
+  3-character ICD-10 First Occurrence outcomes.
+- `first_occurrence_source_fields` -- optional source field IDs. If omitted,
+  the package uses `first_occurrence_fields + 1`.
+- `cancer_icd10_pattern` -- optional regular expression for cancer registry
+  ICD-10 field `p40006_i*`.
+- `cancer_histology` -- optional ICD-O-3 histology code filter from `p40011_i*`.
+- `cancer_behaviour` -- optional tumour behaviour code filter from `p40012_i*`;
+  use `3L` for malignant tumours.
 - `algo_date_field` -- integer UKB field ID for algorithm-defined diagnosis date (optional).
 - `algo_source_field` -- integer UKB field ID for algorithm-defined diagnosis source (optional).
 
@@ -81,14 +93,45 @@ copd_def <- create_disease_definition(
 )
 ```
 
+For diseases with UKB First Occurrence fields, add the date field IDs directly.
+The corresponding source fields are inferred automatically because UKB stores
+them as the next field ID:
+
+```r
+mi_def <- create_disease_definition(
+  name = "Myocardial Infarction",
+  icd10_pattern = "^(I21|I22)",
+  first_occurrence_fields = c(131298, 131300)
+)
+```
+
+First Occurrence fields are 3-character ICD-10 outcomes. For example, `131298`
+is "Date I21 first reported"; `131299` is its source field. This means they are
+excellent for broad ICD-10 outcomes, but they should not be used to distinguish
+4-character subtypes such as `I714` versus `I713`.
+
+For cancer endpoints, use the cancer registry source. UKB stores cancer type as
+ICD-10 in field `40006`, diagnosis date in `40005`, tumour histology in `40011`,
+and tumour behaviour in `40012`:
+
+```r
+lung_cancer_def <- create_disease_definition(
+  name = "Lung Cancer",
+  icd10_pattern = "^C34",
+  death_icd10 = "^C34",
+  cancer_icd10_pattern = "^C34",
+  cancer_behaviour = 3L
+)
+```
+
 Deprecated aliases `icd10`, `icd9`, and `self_report` are still accepted for
 backward compatibility.
 
 If `opcs4_pattern` is not supplied, operative procedure data are ignored even if
 `OPCS4` is included in `sources`.
 
-When parsing algorithm fields, both column naming styles are supported:
-`p{field}_i0` and `p{field}`.
+When parsing algorithm and First Occurrence fields, both column naming styles
+are supported: `p{field}_i0` and `p{field}`.
 
 ## Arrhythmia example with ICD-10 + OPCS4
 
@@ -129,8 +172,9 @@ mace <- combine_disease_definitions(
 )
 ```
 
-This merges ICD-10, ICD-9, OPCS4, self-report, and death codes from all input
-definitions into a single combined definition.
+This merges ICD-10, ICD-9, OPCS4, cancer registry, First Occurrence,
+self-report, and death codes from all input definitions into a single combined
+definition.
 
 ## Comparing data sources
 

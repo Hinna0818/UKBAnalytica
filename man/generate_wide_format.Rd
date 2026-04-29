@@ -20,7 +20,7 @@ generate_wide_format(
 
 \item{sources}{Character vector specifying data sources to include.
 Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
-"Algorithm".
+"CancerRegistry", "FirstOccurrence", "Algorithm".
 "OPCS4" uses hospital inpatient summary operations
 (\code{p41272} + \code{p41282_a*}) and requires
 \code{opcs4_pattern} in the disease definition.
@@ -28,7 +28,13 @@ Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
 which combine multiple data sources with high positive predictive value.
 Requires \code{algo_date_field} in the disease definition.
 If \code{algo_source_field} is also provided, output
-\code{diagnosis_source} is refined as \code{"Algorithm_<source_code>"}.}
+\code{diagnosis_source} is refined as \code{"Algorithm_<source_code>"}.
+"FirstOccurrence" uses UK Biobank First Occurrence date fields
+(Category 1712, \code{p13xxxx}) and requires
+\code{first_occurrence_fields} in the disease definition.
+"CancerRegistry" uses UK Biobank cancer register records
+(\code{p40006_i*} + \code{p40005_i*}) and requires
+\code{cancer_icd10_pattern} in the disease definition.}
 
 \item{censor_date}{Administrative censoring date.}
 

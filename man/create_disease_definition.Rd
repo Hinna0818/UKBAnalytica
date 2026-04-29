@@ -11,6 +11,11 @@ create_disease_definition(
   sr_codes = NULL,
   death_icd10 = NULL,
   opcs4_pattern = NULL,
+  first_occurrence_fields = NULL,
+  first_occurrence_source_fields = NULL,
+  cancer_icd10_pattern = NULL,
+  cancer_histology = NULL,
+  cancer_behaviour = NULL,
   algo_date_field = NULL,
   algo_source_field = NULL,
   icd10 = NULL,
@@ -35,6 +40,24 @@ death-cause ICD-10 matching. If NULL, defaults to \code{icd10_pattern}.}
 OPCS4 operative procedure matching. If NULL, operative procedures are not
 used in case ascertainment.}
 
+\item{first_occurrence_fields}{Optional integer vector of UK Biobank First
+Occurrence date field IDs. These fields are generated for 3-character ICD-10
+codes in Category 1712, e.g. 131298 for I21 (acute myocardial infarction)
+and 130708 for E11 (type 2 diabetes). The source field is normally the next
+field ID and is inferred automatically.}
+
+\item{first_occurrence_source_fields}{Optional integer vector of First
+Occurrence source field IDs. If NULL, uses \code{first_occurrence_fields + 1}.}
+
+\item{cancer_icd10_pattern}{Optional regular expression pattern for UKB
+cancer registry ICD-10 codes (Field 40006).}
+
+\item{cancer_histology}{Optional integer vector of tumour histology codes
+(Field 40011) to retain.}
+
+\item{cancer_behaviour}{Optional integer vector of tumour behaviour codes
+(Field 40012) to retain. Use \code{3L} for malignant tumours.}
+
 \item{algo_date_field}{Integer. UKB field ID for the algorithmically-defined
 outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
 The corresponding data column can be \code{p{field}_i0} or \code{p{field}}.
@@ -55,8 +78,9 @@ A list containing the disease definition parameters.
 }
 \description{
 Helper function to create a standardized disease definition object
-containing ICD-10/ICD-9 patterns, self-report codes, and optionally
-a UK Biobank algorithmically-defined outcome date field.
+containing ICD-10/ICD-9 patterns, self-report codes, UK Biobank First
+Occurrence fields, and optionally a UK Biobank algorithmically-defined
+outcome date field.
 }
 \examples{
 \dontrun{

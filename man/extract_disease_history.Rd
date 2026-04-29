@@ -23,7 +23,7 @@ uses \code{\link{get_predefined_diseases}}.}
 
 \item{sources}{Character vector specifying data sources.
 Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death",
-"OPCS4", "Algorithm".}
+"OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm".}
 
 \item{baseline_col}{Column name for baseline assessment date.}
 }

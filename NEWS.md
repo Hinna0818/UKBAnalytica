@@ -2,6 +2,19 @@
 
 ## UKBAnalytica 0.6.2.2（2026-04-29）
 
+### Disease phenotyping
+- Added UK Biobank cancer registry support as a new `CancerRegistry` disease source using fields 40006, 40005, 40011, and 40012.
+- Added `cancer_icd10_pattern`, `cancer_histology`, and `cancer_behaviour` to `create_disease_definition()`.
+- Added predefined `Lung_Cancer` with cancer registry, ICD-10, and death-registry ascertainment.
+- Added UK Biobank First Occurrence support as a new `FirstOccurrence` disease source.
+- Added `first_occurrence_fields` and `first_occurrence_source_fields` to `create_disease_definition()`.
+- Added internal parsing for singular `p13xxxx` First Occurrence date/source fields, including UKB special date coding 819 handling.
+- Added common First Occurrence field IDs to predefined diseases where the disease definition matches 3-character ICD-10 field granularity.
+
+### Workflow helpers
+- Added `ukb_clean_missing()` for converting common UKB non-response labels and numeric missing codes into analysis-ready values.
+- Added `ukb_snapshot()` to record row/column counts, missingness, complete rows, object size, and deltas across analysis pipeline checkpoints.
+
 ### RAP phenotype extraction
 - Added R-native RAP phenotype extraction helpers that wrap DNAnexus `dx extract_dataset` and RAP `table-exporter`.
 - Added `rap_find_dataset()`, `rap_list_fields()`, `rap_plan_extract()`, `rap_extract_pheno()`, and `rap_submit_extract()`.

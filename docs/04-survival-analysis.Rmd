@@ -72,6 +72,52 @@ The function classifies each participant as follows:
 3. **Censored** -- no diagnosis by the end of follow-up (death or
    administrative censor date, whichever comes first).
 
+## Recommended workflow for users
+
+For most prospective UKB analyses, use `build_survival_dataset()` as the only
+disease-phenotyping entry point. The user-facing workflow is:
+
+1. Choose diseases with `get_predefined_diseases()` or create one custom
+   definition with `create_disease_definition()`.
+2. Choose `primary_disease`, which controls `outcome_status` and
+   `outcome_surv_time`.
+3. Use `prevalent_sources` for baseline exclusion/history covariates.
+4. Use `outcome_sources` for incident endpoint ascertainment.
+5. After the function returns, keep participants with non-missing
+   `outcome_status` and valid non-negative `outcome_surv_time` for Cox models.
+
+Example for an arrhythmia endpoint with ICD-10, OPCS4 procedures, and death
+registry:
+
+```r
+rhythm_defs <- get_predefined_diseases()[
+  c("Arrhythmia", "Atrial_Fibrillation", "Ventricular_Arrhythmia")
+]
+
+analysis_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = rhythm_defs,
+  primary_disease = "Arrhythmia",
+  baseline_col = "p53_i0",
+  censor_date = as.Date("2023-10-31"),
+  prevalent_sources = c("ICD10", "OPCS4"),
+  outcome_sources = c("ICD10", "OPCS4", "Death"),
+  show_flow = TRUE,
+  dt_threads = 8
+)
+
+cox_dt <- analysis_dt[
+  !is.na(outcome_status) &
+    !is.na(outcome_surv_time) &
+    outcome_surv_time >= 0
+]
+```
+
+This keeps the full cohort in `analysis_dt` for auditing and covariate merges,
+while `cox_dt` is the at-risk analysis subset. Prevalent primary-disease cases
+are encoded as `outcome_status = NA` and `outcome_surv_time = NA` because they
+were not at risk for an incident event.
+
 ## Follow-up time
 
 Follow-up time for the primary disease is calculated as:
@@ -95,6 +141,39 @@ recommended because:
 `"Algorithm"` can be added to either source list when your disease definition
 includes `algo_date_field` (and optionally `algo_source_field`). The parser
 accepts both UKB column naming styles: `p{field}_i0` and `p{field}`.
+
+`"CancerRegistry"` can be added for malignant neoplasm endpoints when the
+extracted dataset contains cancer registry fields (`p40006_i*`, `p40005_i*`,
+and optionally `p40011_i*` / `p40012_i*`). For example:
+
+```r
+lung_defs <- get_predefined_diseases()["Lung_Cancer"]
+
+lung_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = lung_defs,
+  prevalent_sources = c("CancerRegistry", "ICD10"),
+  outcome_sources = c("CancerRegistry", "ICD10", "Death"),
+  primary_disease = "Lung_Cancer"
+)
+```
+
+`"FirstOccurrence"` can also be added when your dataset contains UKB Category
+1712 fields. Predefined diseases include common First Occurrence field IDs, so
+most users only need to add the source name:
+
+```r
+analysis_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = get_predefined_diseases()[c("MI", "Stroke", "Diabetes")],
+  prevalent_sources = c("ICD10", "ICD9", "Self-report", "FirstOccurrence"),
+  outcome_sources = c("ICD10", "ICD9", "Death", "FirstOccurrence"),
+  primary_disease = "MI"
+)
+```
+
+First Occurrence dates with UKB special date coding 819 are treated as missing
+and excluded before prevalent/incident classification.
 
 Default settings reflect this design:
 

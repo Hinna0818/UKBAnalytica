@@ -259,7 +259,59 @@ job$job_id
 
 `field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为legacy/helper脚本，适合已经习惯Python命令行流程的用户。
 
-其次，对于疾病诊断和前瞻性队列的生存时间计算，可以参考使用`build_survival_dataset()`函数，不同的sources对应疾病诊断来源，比如ICD、自我报告、算法定义、死亡、以及手术/操作编码OPCS4这些。`primary_disease`就是你的主疾病。参数`disease_definitions`就是一个疾病定义的格式，具体可以看文档（如果自己要定义的话）。如果一个疾病定义里没有设置`opcs4_pattern`，那么即使sources里写了`OPCS4`，也不会把手术信息纳入诊断。函数返回会有`xx_history`和`xx_incident`的列，history就是baseline及其前患病，如果是前瞻性队列就要去掉；incident对应前瞻性的事件发生，可以用来做cox回归。主疾病经过这个函数有两列是直接可以用于cox的，分别是`outcome_status`和`outcome_surv_time`，一个是事件是否发生0/1，另一个是生存时间。为什么要设置outcome sources和primary_sources？原因是有时候我们希望把基线患特定疾病作为协变量进行调整，这个函数就方便计算了。
+拿到数据后，建议先清理UKB常见缺失编码，并用`snapshot`记录每一步样本量，方便后续写流程图：
+
+```r
+ukb_snapshot(ukb_data, "Raw extracted data")
+
+ukb_data <- ukb_clean_missing(
+  ukb_data,
+  action = "na"
+)
+
+ukb_snapshot(ukb_data, "After missing-code cleaning")
+ukb_snapshot()
+```
+
+其次，疾病诊断和前瞻性队列的生存时间计算推荐统一走`build_survival_dataset()`。普通用户不需要自己解析ICD、OPCS4、死亡登记这些长表，只要选择疾病定义和数据来源即可。
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+ukb_data <- fread("/mnt/project/analysis/baseline_outcome.csv")
+
+# 选择你要构建的疾病；primary_disease是主结局
+disease_defs <- get_predefined_diseases()[
+  c("Arrhythmia", "Atrial_Fibrillation", "Ventricular_Arrhythmia")
+]
+
+analysis_dt <- build_survival_dataset(
+  dt = ukb_data,
+  disease_definitions = disease_defs,
+  primary_disease = "Arrhythmia",
+  baseline_col = "p53_i0",
+  censor_date = as.Date("2023-10-31"),
+
+  # baseline排除可以宽一点：ICD + 手术/操作
+  prevalent_sources = c("ICD10", "OPCS4"),
+
+  # incident结局用客观、可定年的来源：ICD + OPCS4 + 死亡
+  outcome_sources = c("ICD10", "OPCS4", "Death"),
+
+  show_flow = TRUE,
+  dt_threads = 8
+)
+
+# Cox前通常只保留非基线患病且随访时间有效的人
+cox_dt <- analysis_dt[
+  !is.na(outcome_status) &
+    !is.na(outcome_surv_time) &
+    outcome_surv_time >= 0
+]
+```
+
+`sources`对应疾病诊断来源：`ICD10`、`ICD9`、`Self-report`、`Death`、`OPCS4`、`CancerRegistry`、`FirstOccurrence`、`Algorithm`。癌症结局建议优先纳入`CancerRegistry`，例如预置`Lung_Cancer`已经支持`p40006_i*`癌症ICD-10和`p40005_i*`诊断日期。预置疾病也内置了常见First Occurrence字段；自定义疾病可以用`cancer_icd10_pattern`、`cancer_behaviour`或`first_occurrence_fields`扩展。如果某个疾病定义没有设置`opcs4_pattern`、`cancer_icd10_pattern`或`first_occurrence_fields`，即使sources里写了对应来源，函数也会自动忽略。输出里的`xx_history`表示baseline及以前患病，`xx_incident`表示随访中新发；主疾病还会生成可直接用于Cox模型的`outcome_status`和`outcome_surv_time`。
 
 后续的研究就是个性化的分析，常规的回归分析、生存分析、亚组分析、统计检验、机器学习等模块我们都有纳入。这个看自己情况来做即可。这个包的函数是很灵活的，希望大家好好挖掘，有建议可以提issue或者PR。
 

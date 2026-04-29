@@ -76,7 +76,9 @@
   }
 
   if (isTRUE(warn)) {
-    introduced_na <- !is.na(orig_x) & is.na(out)
+    orig_chr <- trimws(as.character(orig_x))
+    orig_missing <- is.na(orig_x) | orig_chr %in% c("", "NA", "N/A", "NULL", "null", "NaN")
+    introduced_na <- !orig_missing & is.na(out)
     if (any(introduced_na)) {
       label <- if (!is.null(col_name) && nzchar(col_name)) col_name else "date input"
       bad_values <- unique(as.character(orig_x[introduced_na]))

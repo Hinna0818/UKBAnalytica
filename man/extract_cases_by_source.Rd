@@ -19,7 +19,7 @@ extract_cases_by_source(
 
 \item{sources}{Character vector specifying data sources to include.
 Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
-"Algorithm".
+"CancerRegistry", "FirstOccurrence", "Algorithm".
 "OPCS4" uses hospital inpatient summary operations
 (\code{p41272} + \code{p41282_a*}) and requires
 \code{opcs4_pattern} in the disease definition.
@@ -27,7 +27,13 @@ Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
 which combine multiple data sources with high positive predictive value.
 Requires \code{algo_date_field} in the disease definition.
 If \code{algo_source_field} is also provided, output
-\code{diagnosis_source} is refined as \code{"Algorithm_<source_code>"}.}
+\code{diagnosis_source} is refined as \code{"Algorithm_<source_code>"}.
+"FirstOccurrence" uses UK Biobank First Occurrence date fields
+(Category 1712, \code{p13xxxx}) and requires
+\code{first_occurrence_fields} in the disease definition.
+"CancerRegistry" uses UK Biobank cancer register records
+(\code{p40006_i*} + \code{p40005_i*}) and requires
+\code{cancer_icd10_pattern} in the disease definition.}
 
 \item{censor_date}{Administrative censoring date.}
 
@@ -47,6 +53,8 @@ This function is designed for epidemiological studies requiring:
 \item Main analysis with hospital-confirmed diagnoses only
 \item Sensitivity analyses including self-reported conditions
 \item Procedure-augmented definitions for surgical phenotypes using OPCS4
+\item Cancer registry ascertainment for malignant neoplasm endpoints
+\item First Occurrence fields for UKB's pre-mapped 3-character ICD-10 outcomes
 \item Source-specific case counts for methods reporting
 \item UK Biobank algorithmically-defined outcomes for validated case ascertainment
 }
@@ -58,6 +66,12 @@ and death records with high positive predictive value.
 Records with date \code{1900-01-01} are excluded (date unknown).
 If a source field is available in the definition, it is propagated into
 \code{diagnosis_source} as \code{"Algorithm_<source_code>"}.
+
+The "FirstOccurrence" source reads singular UKB fields such as
+\code{p131298_i0} or \code{p131298} for I21 first reported. Values with
+UKB special date coding 819 (\code{1900-01-01}, \code{1901-01-01},
+\code{1902-02-02}, \code{1903-03-03}, \code{1909-09-09}, and
+\code{2037-07-07}) are excluded.
 }
 \examples{
 \dontrun{

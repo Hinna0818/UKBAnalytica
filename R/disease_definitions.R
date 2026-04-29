@@ -2,8 +2,9 @@
 #'
 #' @description
 #' Helper function to create a standardized disease definition object
-#' containing ICD-10/ICD-9 patterns, self-report codes, and optionally
-#' a UK Biobank algorithmically-defined outcome date field.
+#' containing ICD-10/ICD-9 patterns, self-report codes, UK Biobank First
+#' Occurrence fields, and optionally a UK Biobank algorithmically-defined
+#' outcome date field.
 #'
 #' @param name Full disease name (e.g., "Aortic Aneurysm"). If NULL,
 #'   defaults to "Custom disease".
@@ -15,6 +16,19 @@
 #' @param opcs4_pattern Optional regular expression pattern (or code vector) for
 #'   OPCS4 operative procedure matching. If NULL, operative procedures are not
 #'   used in case ascertainment.
+#' @param first_occurrence_fields Optional integer vector of UK Biobank First
+#'   Occurrence date field IDs. These fields are generated for 3-character ICD-10
+#'   codes in Category 1712, e.g. 131298 for I21 (acute myocardial infarction)
+#'   and 130708 for E11 (type 2 diabetes). The source field is normally the next
+#'   field ID and is inferred automatically.
+#' @param first_occurrence_source_fields Optional integer vector of First
+#'   Occurrence source field IDs. If NULL, uses \code{first_occurrence_fields + 1}.
+#' @param cancer_icd10_pattern Optional regular expression pattern for UKB
+#'   cancer registry ICD-10 codes (Field 40006).
+#' @param cancer_histology Optional integer vector of tumour histology codes
+#'   (Field 40011) to retain.
+#' @param cancer_behaviour Optional integer vector of tumour behaviour codes
+#'   (Field 40012) to retain. Use \code{3L} for malignant tumours.
 #' @param algo_date_field Integer. UKB field ID for the algorithmically-defined
 #'   outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
 #'   The corresponding data column can be \code{p{field}_i0} or \code{p{field}}.
@@ -52,6 +66,11 @@ create_disease_definition <- function(name = NULL,
                                       sr_codes = NULL,
                                       death_icd10 = NULL,
                                       opcs4_pattern = NULL,
+                                      first_occurrence_fields = NULL,
+                                      first_occurrence_source_fields = NULL,
+                                      cancer_icd10_pattern = NULL,
+                                      cancer_histology = NULL,
+                                      cancer_behaviour = NULL,
                                       algo_date_field = NULL,
                                       algo_source_field = NULL,
                                       icd10 = NULL,
@@ -95,6 +114,20 @@ create_disease_definition <- function(name = NULL,
   icd9_pattern <- .normalize_pattern(icd9_pattern, "icd9_pattern")
   death_icd10 <- .normalize_pattern(death_icd10, "death_icd10")
   opcs4_pattern <- .normalize_pattern(opcs4_pattern, "opcs4_pattern")
+  cancer_icd10_pattern <- .normalize_pattern(cancer_icd10_pattern, "cancer_icd10_pattern")
+  first_occurrence_fields <- .normalize_first_occurrence_fields(first_occurrence_fields)
+  if (!is.null(first_occurrence_source_fields)) {
+    first_occurrence_source_fields <- .normalize_first_occurrence_fields(
+      first_occurrence_source_fields,
+      "first_occurrence_source_fields"
+    )
+    if (length(first_occurrence_source_fields) != length(first_occurrence_fields)) {
+      stop(
+        "'first_occurrence_source_fields' must have the same length as 'first_occurrence_fields'",
+        call. = FALSE
+      )
+    }
+  }
 
   # Backward-compatible default: death matching follows ICD-10 pattern unless specified.
   if (is.null(death_icd10)) {
@@ -108,6 +141,11 @@ create_disease_definition <- function(name = NULL,
     sr_codes = sr_codes,
     death_icd10 = death_icd10,
     opcs4_pattern = opcs4_pattern,
+    first_occurrence_fields = first_occurrence_fields,
+    first_occurrence_source_fields = first_occurrence_source_fields,
+    cancer_icd10_pattern = cancer_icd10_pattern,
+    cancer_histology = .extract_integer_code(cancer_histology),
+    cancer_behaviour = .extract_integer_code(cancer_behaviour),
     algo_date_field = algo_date_field,
     algo_source_field = algo_source_field
   )
@@ -143,6 +181,7 @@ create_disease_definition <- function(name = NULL,
 #'   \item{AV_Block}{Atrioventricular conduction block}
 #'   \item{Intraventricular_Block}{Intraventricular conduction block}
 #'   \item{SVT}{Supraventricular tachycardia}
+#'   \item{Lung_Cancer}{Lung cancer using ICD-10/death and cancer registry}
 #' }
 #'
 #' @examples
@@ -158,7 +197,8 @@ get_predefined_diseases <- function() {
     AA = create_disease_definition(
       name = "Aortic Aneurysm",
       icd10_pattern = "^I71",
-      icd9_pattern = "^441"
+      icd9_pattern = "^441",
+      first_occurrence_fields = 131382
     ),
     TAA = create_disease_definition(
       name = "Thoracic Aortic Aneurysm",
@@ -176,13 +216,15 @@ get_predefined_diseases <- function() {
       name = "Cardiovascular Disease",
       icd10_pattern = "^(I21|I22|I23|I24|I25)",
       icd9_pattern = "^(410|411|412|413|414)",
-      sr_codes = c(1066, 1067)
+      sr_codes = c(1066, 1067),
+      first_occurrence_fields = c(131298, 131300, 131302, 131304, 131306)
     ),
     MI = create_disease_definition(
       name = "Myocardial Infarction",
       icd10_pattern = "^(I21|I22)",
       icd9_pattern = "^410",
       sr_codes = c(1066),
+      first_occurrence_fields = c(131298, 131300),
       algo_date_field = 42000,
       algo_source_field = 42001
     ),
@@ -207,6 +249,7 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^(I60|I61|I62|I63|I64)",
       icd9_pattern = "^(430|431|432|433|434|436)",
       sr_codes = c(1068),
+      first_occurrence_fields = c(131360, 131362, 131364, 131366, 131368),
       algo_date_field = 42006,
       algo_source_field = 42007
     ),
@@ -231,50 +274,58 @@ get_predefined_diseases <- function() {
       name = "Hypertension",
       icd10_pattern = "^(I10|I11|I12|I13|I14|I15)",
       icd9_pattern = "^(401|402|403|404|405)",
-      sr_codes = c(1065)
+      sr_codes = c(1065),
+      first_occurrence_fields = c(131286, 131288, 131290, 131292, 131294)
     ),
     Diabetes = create_disease_definition(
       name = "Diabetes Mellitus",
       icd10_pattern = "^(E10|E11|E12|E13|E14)",
       icd9_pattern = "^250",
-      sr_codes = c(1220, 1221, 1222, 1223)
+      sr_codes = c(1220, 1221, 1222, 1223),
+      first_occurrence_fields = c(130706, 130708, 130710, 130712, 130714)
     ),
     T1DM = create_disease_definition(
       name = "Type 1 Diabetes Mellitus",
       icd10_pattern = "^E10",
-      sr_codes = c(1222)
+      sr_codes = c(1222),
+      first_occurrence_fields = 130706
     ),
     T2DM = create_disease_definition(
       name = "Type 2 Diabetes Mellitus",
       icd10_pattern = "^E11",
-      sr_codes = c(1223)
+      sr_codes = c(1223),
+      first_occurrence_fields = 130708
     ),
 
     # Vascular diseases
     Vascular_Disease = create_disease_definition(
       name = "Vascular Disease",
       icd10_pattern = "^(I71|I72|I73|I77|I78|I79)",
-      icd9_pattern = "^(441|442|443|447)"
+      icd9_pattern = "^(441|442|443|447)",
+      first_occurrence_fields = c(131382, 131384, 131386, 131390, 131392, 131394)
     ),
 
     # Coronary and rhythm disorders
     Arrhythmia = create_disease_definition(
       name = "Cardiac Arrhythmia",
       icd10_pattern = "^(I44|I45|I46|I47|I48|I49)",
-      opcs4_pattern = "^(K576|K59|K60|K61|K62|K641|K72|K73|K74)"
+      opcs4_pattern = "^(K576|K59|K60|K61|K62|K641|K72|K73|K74)",
+      first_occurrence_fields = c(131342, 131344, 131346, 131348, 131350, 131352)
     ),
     Angina = create_disease_definition(
       name = "Angina Pectoris",
       icd10_pattern = "^I20",
       icd9_pattern = "^413",
-      sr_codes = c(1074)
+      sr_codes = c(1074),
+      first_occurrence_fields = 131296
     ),
     Atrial_Fibrillation = create_disease_definition(
       name = "Atrial Fibrillation/Flutter",
       icd10_pattern = "^I48",
       icd9_pattern = "^(4273|4274)",
       sr_codes = c(1471, 1483, 1485),
-      opcs4_pattern = "^K62"
+      opcs4_pattern = "^K62",
+      first_occurrence_fields = 131350
     ),
     Ventricular_Arrhythmia = create_disease_definition(
       name = "Ventricular Arrhythmia",
@@ -300,6 +351,7 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^(J45|J46)",
       icd9_pattern = "^493",
       sr_codes = c(1111),
+      first_occurrence_fields = c(131494, 131496),
       algo_date_field = 42014,
       algo_source_field = 42015
     ),
@@ -308,8 +360,16 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^(J40|J41|J42|J43|J44)",
       icd9_pattern = "^(491|492|4932|496)",
       sr_codes = c(1112, 1113, 1472),
+      first_occurrence_fields = c(131484, 131486, 131488, 131490, 131492),
       algo_date_field = 42016,
       algo_source_field = 42017
+    ),
+    Lung_Cancer = create_disease_definition(
+      name = "Lung Cancer",
+      icd10_pattern = "^C34",
+      death_icd10 = "^C34",
+      cancer_icd10_pattern = "^C34",
+      cancer_behaviour = 3L
     ),
 
     # Renal and metabolic
@@ -317,7 +377,8 @@ get_predefined_diseases <- function() {
       name = "Chronic Kidney Disease",
       icd10_pattern = "^(N18|N19)",
       icd9_pattern = "^(585|586)",
-      sr_codes = c(1192, 1193, 1194, 1405, 1582, 1675)
+      sr_codes = c(1192, 1193, 1194, 1405, 1582, 1675),
+      first_occurrence_fields = c(132032, 132034)
     ),
     ESRD = create_disease_definition(
       name = "End Stage Renal Disease",
@@ -328,7 +389,8 @@ get_predefined_diseases <- function() {
       name = "Hyperlipidemia/High Cholesterol",
       icd10_pattern = "^E78",
       icd9_pattern = "^272",
-      sr_codes = c(1473)
+      sr_codes = c(1473),
+      first_occurrence_fields = 130814
     ),
 
     # Peripheral vascular and thromboembolic
@@ -342,7 +404,8 @@ get_predefined_diseases <- function() {
       name = "Venous Thromboembolism",
       icd10_pattern = "^(I26|I80|I81|I82)",
       icd9_pattern = "^(4151|451|453)",
-      sr_codes = c(1068, 1093, 1094)
+      sr_codes = c(1068, 1093, 1094),
+      first_occurrence_fields = c(131308, 131396, 131398, 131400)
     ),
 
     # Musculoskeletal and rheumatologic
@@ -350,13 +413,15 @@ get_predefined_diseases <- function() {
       name = "Osteoarthritis",
       icd10_pattern = "^(M15|M16|M17|M18|M19)",
       icd9_pattern = "^715",
-      sr_codes = c(1465)
+      sr_codes = c(1465),
+      first_occurrence_fields = c(131868, 131870, 131872, 131874, 131876)
     ),
     Rheumatoid_Arthritis = create_disease_definition(
       name = "Rheumatoid Arthritis",
       icd10_pattern = "^(M05|M06)",
       icd9_pattern = "^714",
-      sr_codes = c(1464, 1477)
+      sr_codes = c(1464, 1477),
+      first_occurrence_fields = c(131848, 131850)
     ),
 
     # Neurologic and psychiatric
@@ -365,6 +430,7 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^G20",
       icd9_pattern = "^3320",
       sr_codes = c(1262),
+      first_occurrence_fields = 131022,
       algo_date_field = 42032,
       algo_source_field = 42033
     ),
@@ -388,6 +454,7 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^(F00|F01|F02|F03|G30)",
       icd9_pattern = "^(290|3310)",
       sr_codes = c(1263),
+      first_occurrence_fields = c(130836, 130838, 130840, 130842, 131036),
       algo_date_field = 42018,
       algo_source_field = 42019
     ),
@@ -415,19 +482,22 @@ get_predefined_diseases <- function() {
       name = "Epilepsy",
       icd10_pattern = "^(G40|G41)",
       icd9_pattern = "^345",
-      sr_codes = c(1264)
+      sr_codes = c(1264),
+      first_occurrence_fields = c(131048, 131050)
     ),
     Depression = create_disease_definition(
       name = "Depressive Disorders",
       icd10_pattern = "^(F32|F33)",
       icd9_pattern = "^(2962|2963|311)",
-      sr_codes = c(1286, 1531, 1682)
+      sr_codes = c(1286, 1531, 1682),
+      first_occurrence_fields = c(130894, 130896)
     ),
     Anxiety = create_disease_definition(
       name = "Anxiety Disorders",
       icd10_pattern = "^(F40|F41)",
       icd9_pattern = "^(3000|3002|3003)",
-      sr_codes = c(1287)
+      sr_codes = c(1287),
+      first_occurrence_fields = c(130904, 130906)
     )
   )
 }
@@ -488,6 +558,31 @@ combine_disease_definitions <- function(..., name = "Combined") {
     paste0("(", paste(opcs4_patterns, collapse = "|"), ")")
   } else NULL
 
+  # Combine UKB First Occurrence date fields
+  first_occurrence_fields <- unique(unlist(lapply(defs, function(x) x$first_occurrence_fields)))
+  first_occurrence_fields <- first_occurrence_fields[!is.na(first_occurrence_fields)]
+  if (length(first_occurrence_fields) == 0) first_occurrence_fields <- NULL
+
+  # Combine cancer registry definitions. Histology/behaviour restrictions are
+  # preserved only when every cancer definition supplies that restriction.
+  cancer_patterns <- sapply(defs, function(x) x$cancer_icd10_pattern)
+  cancer_patterns <- cancer_patterns[!sapply(cancer_patterns, is.null)]
+  cancer_combined <- if (length(cancer_patterns) > 0) {
+    paste0("(", paste(cancer_patterns, collapse = "|"), ")")
+  } else NULL
+
+  cancer_histology_list <- lapply(defs, function(x) x$cancer_histology)
+  cancer_histology_nonnull <- cancer_histology_list[!vapply(cancer_histology_list, is.null, logical(1))]
+  cancer_histology <- if (length(cancer_histology_nonnull) == length(cancer_patterns) && length(cancer_patterns) > 0) {
+    unique(unlist(cancer_histology_nonnull))
+  } else NULL
+
+  cancer_behaviour_list <- lapply(defs, function(x) x$cancer_behaviour)
+  cancer_behaviour_nonnull <- cancer_behaviour_list[!vapply(cancer_behaviour_list, is.null, logical(1))]
+  cancer_behaviour <- if (length(cancer_behaviour_nonnull) == length(cancer_patterns) && length(cancer_patterns) > 0) {
+    unique(unlist(cancer_behaviour_nonnull))
+  } else NULL
+
   # Combine self-report codes
   sr_codes <- unlist(lapply(defs, function(x) x$sr_codes))
   sr_codes <- unique(sr_codes[!is.na(sr_codes)])
@@ -499,6 +594,10 @@ combine_disease_definitions <- function(..., name = "Combined") {
     icd9_pattern = icd9_combined,
     sr_codes = sr_codes,
     death_icd10 = death_combined,
-    opcs4_pattern = opcs4_combined
+    opcs4_pattern = opcs4_combined,
+    first_occurrence_fields = first_occurrence_fields,
+    cancer_icd10_pattern = cancer_combined,
+    cancer_histology = cancer_histology,
+    cancer_behaviour = cancer_behaviour
   )
 }

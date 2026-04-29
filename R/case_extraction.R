@@ -9,7 +9,7 @@
 #' @param disease_definitions Named list of disease definitions.
 #' @param sources Character vector specifying data sources to include.
 #'   Valid options: "ICD10", "ICD9", "Self-report", "Death", "OPCS4",
-#'   "Algorithm".
+#'   "CancerRegistry", "FirstOccurrence", "Algorithm".
 #'   "OPCS4" uses hospital inpatient summary operations
 #'   (\code{p41272} + \code{p41282_a*}) and requires
 #'   \code{opcs4_pattern} in the disease definition.
@@ -18,6 +18,12 @@
 #'   Requires \code{algo_date_field} in the disease definition.
 #'   If \code{algo_source_field} is also provided, output
 #'   \code{diagnosis_source} is refined as \code{"Algorithm_<source_code>"}.
+#'   "FirstOccurrence" uses UK Biobank First Occurrence date fields
+#'   (Category 1712, \code{p13xxxx}) and requires
+#'   \code{first_occurrence_fields} in the disease definition.
+#'   "CancerRegistry" uses UK Biobank cancer register records
+#'   (\code{p40006_i*} + \code{p40005_i*}) and requires
+#'   \code{cancer_icd10_pattern} in the disease definition.
 #' @param censor_date Administrative censoring date.
 #' @param baseline_col Column name for baseline assessment date.
 #'
@@ -29,6 +35,8 @@
 #'   \item Main analysis with hospital-confirmed diagnoses only
 #'   \item Sensitivity analyses including self-reported conditions
 #'   \item Procedure-augmented definitions for surgical phenotypes using OPCS4
+#'   \item Cancer registry ascertainment for malignant neoplasm endpoints
+#'   \item First Occurrence fields for UKB's pre-mapped 3-character ICD-10 outcomes
 #'   \item Source-specific case counts for methods reporting
 #'   \item UK Biobank algorithmically-defined outcomes for validated case ascertainment
 #' }
@@ -40,6 +48,12 @@
 #' Records with date \code{1900-01-01} are excluded (date unknown).
 #' If a source field is available in the definition, it is propagated into
 #' \code{diagnosis_source} as \code{"Algorithm_<source_code>"}.
+#'
+#' The "FirstOccurrence" source reads singular UKB fields such as
+#' \code{p131298_i0} or \code{p131298} for I21 first reported. Values with
+#' UKB special date coding 819 (\code{1900-01-01}, \code{1901-01-01},
+#' \code{1902-02-02}, \code{1903-03-03}, \code{1909-09-09}, and
+#' \code{2037-07-07}) are excluded.
 #'
 #' @examples
 #' \dontrun{
@@ -61,7 +75,7 @@ extract_cases_by_source <- function(dt,
                                      censor_date = as.Date("2023-10-31"),
                                      baseline_col = "p53_i0") {
 
-  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "Algorithm")
+  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
   if (!data.table::is.data.table(dt)) {
@@ -80,6 +94,7 @@ extract_cases_by_source <- function(dt,
   sr_long <- if ("Self-report" %in% sources) parse_self_reported_illnesses(dt, baseline_col) else data.table::data.table()
   death_long <- if ("Death" %in% sources) parse_death_records(dt) else data.table::data.table()
   opcs4_long <- if ("OPCS4" %in% sources) parse_opcs4_procedures(dt) else data.table::data.table()
+  cancer_long <- if ("CancerRegistry" %in% sources) parse_cancer_registry(dt) else data.table::data.table()
 
   death_dates <- get_death_dates(dt)
   baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
@@ -113,6 +128,30 @@ extract_cases_by_source <- function(dt,
     if ("OPCS4" %in% sources && !is.null(def$opcs4_pattern) && nrow(opcs4_long) > 0) {
       filtered <- filter_opcs4_codes(opcs4_long, def$opcs4_pattern, disease_key)
       if (nrow(filtered) > 0) diagnosis_sources$opcs4 <- aggregate_opcs4_earliest(filtered)
+    }
+
+    if ("CancerRegistry" %in% sources && !is.null(def$cancer_icd10_pattern) && nrow(cancer_long) > 0) {
+      filtered <- filter_cancer_registry(
+        cancer_long,
+        pattern = def$cancer_icd10_pattern,
+        disease_label = disease_key,
+        histology = def$cancer_histology,
+        behaviour = def$cancer_behaviour
+      )
+      if (nrow(filtered) > 0) {
+        diagnosis_sources$cancer <- aggregate_cancer_registry_earliest(filtered)
+      }
+    }
+
+    if ("FirstOccurrence" %in% sources && !is.null(def$first_occurrence_fields)) {
+      fo_long <- .parse_first_occurrence_records(
+        dt = dt,
+        fields = def$first_occurrence_fields,
+        source_fields = def$first_occurrence_source_fields
+      )
+      if (nrow(fo_long) > 0) {
+        diagnosis_sources$first_occurrence <- .aggregate_first_occurrence_earliest(fo_long, disease_key)
+      }
     }
 
     # Algorithm source: UK Biobank algorithmically-defined outcomes (Category 42)
@@ -591,7 +630,7 @@ prepare_analysis_dataset <- function(dt,
 #'   uses \code{\link{get_predefined_diseases}}.
 #' @param sources Character vector specifying data sources.
 #'   Default: "ICD10". Options: "ICD10", "ICD9", "Self-report", "Death",
-#'   "OPCS4", "Algorithm".
+#'   "OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm".
 #' @param baseline_col Column name for baseline assessment date.
 #'
 #' @return A data.table with columns:
@@ -644,7 +683,7 @@ extract_disease_history <- function(dt,
     stop("'diseases' must be a non-empty character vector")
   }
 
-  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "Algorithm")
+  valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
   if (!data.table::is.data.table(dt)) {
@@ -721,7 +760,8 @@ extract_disease_history <- function(dt,
 #' @param disease_definitions Named list of disease definitions. If NULL,
 #'   uses \code{\link{get_predefined_diseases}}.
 #' @param sources Character vector specifying sources for baseline history.
-#'   Options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".
+#'   Options: "ICD10", "ICD9", "Self-report", "Death", "CancerRegistry",
+#'   "FirstOccurrence", "Algorithm".
 #' @param baseline_col Column name for baseline date. Default: \code{"p53_i0"}.
 #' @param hba1c_col Column name for baseline HbA1c (mmol/mol).
 #'   Default: \code{"p30750_i0"}.
@@ -1381,4 +1421,3 @@ extract_copd_combined <- function(dt,
 
   return(result_dt)
 }
-

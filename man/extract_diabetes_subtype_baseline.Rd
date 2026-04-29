@@ -21,7 +21,8 @@ extract_diabetes_subtype_baseline(
 uses \code{\link{get_predefined_diseases}}.}
 
 \item{sources}{Character vector specifying sources for baseline history.
-Options: "ICD10", "ICD9", "Self-report", "Death", "Algorithm".}
+Options: "ICD10", "ICD9", "Self-report", "Death", "CancerRegistry",
+"FirstOccurrence", "Algorithm".}
 
 \item{baseline_col}{Column name for baseline date. Default: \code{"p53_i0"}.}
 

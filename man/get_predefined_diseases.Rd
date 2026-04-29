@@ -34,6 +34,7 @@ Included diseases:
 \item{AV_Block}{Atrioventricular conduction block}
 \item{Intraventricular_Block}{Intraventricular conduction block}
 \item{SVT}{Supraventricular tachycardia}
+\item{Lung_Cancer}{Lung cancer using ICD-10/death and cancer registry}
 }
 }
 \examples{
