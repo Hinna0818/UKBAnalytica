@@ -1,5 +1,19 @@
 # UKBAnalytica News
 
+## UKBAnalytica 0.6.2.2（2026-04-29）
+
+### RAP phenotype extraction
+- Added R-native RAP phenotype extraction helpers that wrap DNAnexus `dx extract_dataset` and RAP `table-exporter`.
+- Added `rap_find_dataset()`, `rap_list_fields()`, `rap_plan_extract()`, `rap_extract_pheno()`, and `rap_submit_extract()`.
+- Added dry-run extraction planning so users can inspect matched fields and table-exporter command metadata before launching jobs.
+- Added support for `variables = ...` using UKBAnalytica predefined baseline mappings, while preserving `field_id = ...` for all instances and arrays of a UKB field.
+- Kept Python download scripts under `inst/python/` as legacy/helper entry points.
+
+### Documentation and tests
+- Expanded the RAP download chapter with a complete RAP JupyterLab -> Terminal -> R workflow, including output paths such as `/mnt/project`.
+- Updated README examples to recommend R-native RAP extraction for new users.
+- Added offline tests for RAP extraction field parsing, field planning, predefined-variable mapping, and table-exporter dry-run formatting.
+
 ## UKBAnalytica 0.6.2.1（2026-04-24）
 
 ### Disease definition and phenotyping updates

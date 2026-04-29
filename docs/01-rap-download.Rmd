@@ -1,8 +1,12 @@
 # Downloading Data from RAP {#rap-download}
 
-The UKBAnalytica package ships Python helper scripts for downloading data from the
-UK Biobank Research Analysis Platform (RAP). These scripts live in `inst/python/`
-after package installation.
+UKBAnalytica provides R-native helpers for extracting phenotype data inside the
+UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the
+DNAnexus `dx` CLI from R, using `dx extract_dataset` for small synchronous
+extracts and the RAP `table-exporter` app for large cloud-side extracts.
+
+The older Python scripts are still shipped in `inst/python/` as legacy/helper
+entry points for users who already rely on those command-line workflows.
 
 ## File structure
 
@@ -16,7 +20,297 @@ inst/
     metabolites_non_ratio.txt   # Non-ratio metabolite reference (170 fields)
 ```
 
-## Demographic data
+## R-native phenotype extraction
+
+Run these functions inside a RAP R session, or in a local environment where the
+DNAnexus `dx` CLI is installed and authenticated. For most users, the intended
+workflow is RAP JupyterLab -> Terminal -> R.
+
+### Start an R session on RAP
+
+1. Log in to the UK Biobank RAP.
+2. Open the project that contains your approved UKB `.dataset` file.
+3. Start a JupyterLab or R-capable workstation.
+4. Use a small instance such as `mem1_ssd1_v2_x4` for field checks and dry-runs.
+   Use `rap_submit_extract()` for large jobs instead of pulling many fields into
+   the active R session.
+5. In JupyterLab, open `Terminal`.
+6. Start R:
+
+```bash
+R
+```
+
+If `UKBAnalytica` is already installed in the RAP environment:
+
+```r
+library(UKBAnalytica)
+```
+
+If it is not installed yet:
+
+```r
+install.packages("remotes")
+remotes::install_github("Hinna0818/UKBAnalytica_v2")
+library(UKBAnalytica)
+```
+
+RAP project files are usually mounted under `/mnt/project`. Files written by an
+interactive session may also appear in the current working directory. Check both
+locations when looking for outputs:
+
+```r
+getwd()
+list.files()
+list.files("/mnt/project")
+```
+
+### Confirm the dataset
+
+The package expects a `.dataset` file in the current RAP project root. Detect it
+with:
+
+```r
+dataset <- rap_find_dataset()
+dataset
+```
+
+A successful result looks like:
+
+```text
+"app12345_20260401.dataset"
+```
+
+If no dataset is found, confirm that you opened the correct RAP project and that
+the `.dataset` file is visible in the project root.
+
+### Inspect available fields
+
+Use `rap_list_fields()` to search fields that are approved for your project:
+
+```r
+rap_list_fields(pattern = "^participant\\.p31|^participant\\.p53|^participant\\.p21022|^participant\\.p21001")
+rap_list_fields(pattern = "blood pressure|smoking|alcohol")
+```
+
+Common demographic and baseline field IDs:
+
+| Field ID | Meaning |
+|:---------|:--------|
+| 31 | Sex |
+| 53 | Date of attending assessment centre |
+| 21022 | Age at recruitment |
+| 21001 | Body mass index |
+| 21000 | Ethnic background |
+| 20116 | Smoking status |
+| 20117 | Alcohol drinker status |
+| 738 | Household income |
+| 6138 | Qualifications |
+| 4080 | Automated systolic blood pressure |
+| 4079 | Automated diastolic blood pressure |
+| 93 | Manual systolic blood pressure |
+| 94 | Manual diastolic blood pressure |
+
+You can also use the predefined variable names used by `preprocess_baseline()`:
+
+```r
+get_variable_info("demographics")
+get_variable_info("anthropometrics")
+get_variable_info("lifestyle")
+get_variable_info("socioeconomic")
+get_variable_info("blood_pressure")
+```
+
+### Preview before extracting
+
+Always dry-run large jobs before submission:
+
+```r
+plan <- rap_submit_extract(
+  variables = c(
+    "sex", "age", "ethnicity",
+    "bmi", "height", "weight",
+    "smoking", "drinking",
+    "education", "income",
+    "sbp_auto_1", "sbp_auto_2",
+    "dbp_auto_1", "dbp_auto_2"
+  ),
+  file = "baseline_demographics",
+  dry_run = TRUE
+)
+
+plan$fields
+plan$matched
+plan$command
+```
+
+Use `variables` for exact columns defined by UKBAnalytica. Use `field_id` when
+you want all instances and arrays for a UKB field:
+
+```r
+plan <- rap_submit_extract(
+  field_id = c(31, 53, 21022, 21001, 21000, 20116, 20117, 738, 6138, 4080, 4079),
+  file = "baseline_demographics",
+  dry_run = TRUE
+)
+```
+
+### Small synchronous extraction
+
+For a few fields, `rap_extract_pheno()` can extract data with
+`dx extract_dataset` and read the CSV directly into R:
+
+```r
+baseline_small <- rap_extract_pheno(
+  variables = c("sex", "age", "bmi", "smoking", "drinking"),
+  strip_entity_prefix = TRUE
+)
+
+dim(baseline_small)
+head(baseline_small)
+```
+
+Write the result to the current RAP working directory:
+
+```r
+data.table::fwrite(baseline_small, "baseline_small.csv")
+```
+
+If you want a stable local path in the active RAP session:
+
+```r
+baseline_small <- rap_extract_pheno(
+  variables = c("sex", "age", "bmi", "smoking", "drinking"),
+  output = "baseline_small.csv",
+  strip_entity_prefix = TRUE
+)
+```
+
+For large extractions, do not use synchronous mode. Submit a table-exporter job
+instead.
+
+### Recommended demographic extraction with table-exporter
+
+Use `rap_submit_extract()` for regular baseline datasets:
+
+```r
+job <- rap_submit_extract(
+  variables = c(
+    "sex", "age", "ethnicity",
+    "bmi", "height", "weight",
+    "smoking", "drinking",
+    "sleep_duration",
+    "education", "income",
+    "sbp_auto_1", "sbp_auto_2",
+    "dbp_auto_1", "dbp_auto_2",
+    "triglycerides", "ldl", "hdl", "hba1c", "glucose"
+  ),
+  file = "baseline_demographics",
+  priority = "low"
+)
+
+job$job_id
+job$output
+```
+
+This submits a RAP `table-exporter` job and creates `baseline_demographics.csv`
+in the RAP project when the job finishes.
+
+### Monitor the table-exporter job
+
+From the same JupyterLab Terminal, use the returned job ID:
+
+```bash
+dx describe job-xxxx
+```
+
+List recent jobs:
+
+```bash
+dx find jobs --brief
+```
+
+After completion, check that the output file exists:
+
+```bash
+dx ls
+dx ls /mnt/project
+```
+
+Depending on the RAP session and project mount, the completed output can be
+visible in the project file browser, the project root, or `/mnt/project`.
+
+### Read extracted data back into R
+
+If the file is in the current working directory:
+
+```r
+baseline <- data.table::fread("baseline_demographics.csv")
+```
+
+If the file is visible under `/mnt/project`:
+
+```r
+baseline <- data.table::fread("/mnt/project/baseline_demographics.csv")
+```
+
+Then continue with UKBAnalytica preprocessing:
+
+```r
+baseline <- preprocess_baseline(
+  baseline,
+  variables = c(
+    "sex", "age", "ethnicity",
+    "bmi", "smoking", "drinking",
+    "education", "income"
+  )
+)
+
+baseline <- calculate_blood_pressure(baseline, type = "sbp")
+baseline <- calculate_blood_pressure(baseline, type = "dbp")
+```
+
+### Minimal complete demographic workflow
+
+```r
+library(UKBAnalytica)
+
+rap_find_dataset()
+
+plan <- rap_submit_extract(
+  variables = c(
+    "sex", "age", "ethnicity",
+    "bmi", "height", "weight",
+    "smoking", "drinking",
+    "education", "income",
+    "sbp_auto_1", "sbp_auto_2",
+    "dbp_auto_1", "dbp_auto_2"
+  ),
+  file = "baseline_demographics",
+  dry_run = TRUE
+)
+
+plan$fields
+
+job <- rap_submit_extract(
+  variables = c(
+    "sex", "age", "ethnicity",
+    "bmi", "height", "weight",
+    "smoking", "drinking",
+    "education", "income",
+    "sbp_auto_1", "sbp_auto_2",
+    "dbp_auto_1", "dbp_auto_2"
+  ),
+  file = "baseline_demographics",
+  priority = "low"
+)
+
+job$job_id
+```
+
+## Legacy Python helpers
+
+### Demographic data
 
 Download any combination of UKB fields by specifying their field IDs.
 The loader uses Spark via `dxdata` under the hood.
@@ -45,7 +339,7 @@ The ID file supports comments (`#`), comma-separated and space-separated formats
 20116, 20117, 1289
 ```
 
-## Metabolomics data (NMR)
+### Metabolomics data (NMR)
 
 Download NMR metabolomics data. You can retrieve all 251 metabolite fields
 or restrict to the curated non-ratio subset of 170 fields.
@@ -60,7 +354,7 @@ python ukb_data_loader.py metabolites \
   -o metabolites_non_ratio.csv
 ```
 
-## Proteomics data (Olink)
+### Proteomics data (Olink)
 
 Download Olink protein expression data via `dx` commands.
 The loader handles batching, merging, and progress tracking automatically.
@@ -103,6 +397,13 @@ The table below lists commonly used field IDs for reference:
 
 ## Troubleshooting
 
+- **`dx` is not found**: start the workflow inside a RAP JupyterLab Terminal or
+  use an environment where DNAnexus `dx-toolkit` is installed and authenticated.
+- **No `.dataset` file is found**: confirm that you opened the correct RAP
+  project and that the dataset file is visible in the project root.
+- **Cannot find the exported CSV**: check the project file browser, `dx ls`,
+  `list.files()`, and `list.files("/mnt/project")`. Table-exporter outputs are
+  written to the RAP project rather than directly into a local R object.
 - **Spark initialisation fails**: make sure you are running inside a RAP JupyterLab session.
 - **Field not found**: some fields require instance/array suffixes (e.g., `_i0`, `_a0`).
 - **Memory issues**: reduce `--batch-size` for protein downloads.

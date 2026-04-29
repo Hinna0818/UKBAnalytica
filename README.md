@@ -125,7 +125,8 @@ data are ignored even if `OPCS4` is included in `prevalent_sources` or
 ## What this package covers
 
 ### Core Functionality
-- RAP data download helpers (Python scripts)
+- R-native RAP phenotype extraction via `dx extract_dataset` and `table-exporter`
+- Legacy RAP data download helpers (Python scripts)
 - Baseline preprocessing with standardized mappings
 - Multi-source disease definitions (ICD-10, ICD-9, OPCS4, self-report, death, algorithm)
 - Survival analysis datasets with prevalent/incident classification
@@ -234,7 +235,29 @@ cox_sens <- runmulti_cox(
 ```
 
 ## Basic Workflow Demonstration for Chinese Users
-请各位用户注意，**UKB的数据是不能下载到本地的**，这个R包开发的目的是提高研究人员在官方的RAP平台上的数据分析效率。当你在做一个UKB研究的时候，首先要获取你想要的数据（注意这里说的download指的是从云平台获取你研究相关的数据，不是下载到本地）。获取最常见的人口学数据可以使用`inst/python/ukb_data_loader.py`，配合一个`field_ids.txt`，在RAP的服务器的终端，就可以直接用命令行来获取了（脚本默认取了eid列，所以不用单独管eid）。血浆蛋白的数据可以用`inst/python/protein_loader.py`来获取，也是类似的命令行获取。
+请各位用户注意，**UKB的数据是不能下载到本地的**，这个R包开发的目的是提高研究人员在官方的RAP平台上的数据分析效率。当你在做一个UKB研究的时候，首先要获取你想要的数据（注意这里说的download指的是从云平台获取你研究相关的数据，不是下载到本地）。现在推荐在RAP的R会话中直接使用R函数提取表型数据：
+
+```r
+library(UKBAnalytica)
+
+# 先检查项目里有哪些可用字段
+fields <- rap_list_fields(pattern = "blood pressure|^participant\\.p31")
+
+# 小规模同步提取，直接读回R
+baseline <- rap_extract_pheno(
+  variables = c("sex", "age", "bmi", "sbp_auto_1"),
+  strip_entity_prefix = TRUE
+)
+
+# 大规模提取建议提交table-exporter云端任务
+job <- rap_submit_extract(
+  field_id = c(31, 53, 21022, 21001, 4080, 4079),
+  file = "baseline_core"
+)
+job$job_id
+```
+
+`field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为legacy/helper脚本，适合已经习惯Python命令行流程的用户。
 
 其次，对于疾病诊断和前瞻性队列的生存时间计算，可以参考使用`build_survival_dataset()`函数，不同的sources对应疾病诊断来源，比如ICD、自我报告、算法定义、死亡、以及手术/操作编码OPCS4这些。`primary_disease`就是你的主疾病。参数`disease_definitions`就是一个疾病定义的格式，具体可以看文档（如果自己要定义的话）。如果一个疾病定义里没有设置`opcs4_pattern`，那么即使sources里写了`OPCS4`，也不会把手术信息纳入诊断。函数返回会有`xx_history`和`xx_incident`的列，history就是baseline及其前患病，如果是前瞻性队列就要去掉；incident对应前瞻性的事件发生，可以用来做cox回归。主疾病经过这个函数有两列是直接可以用于cox的，分别是`outcome_status`和`outcome_surv_time`，一个是事件是否发生0/1，另一个是生存时间。为什么要设置outcome sources和primary_sources？原因是有时候我们希望把基线患特定疾病作为协变量进行调整，这个函数就方便计算了。
 

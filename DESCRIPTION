@@ -1,6 +1,6 @@
 Package: UKBAnalytica
 Title: UK Biobank Data Processing and Survival Analysis Toolkit
-Version: 0.6.2.1
+Version: 0.6.2.2
 Authors@R: person(given = "Nan", family = "He", email = "nanh302311@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0009-0008-6932-3867"))
 Author: Nan He [aut, cre] (<https://orcid.org/0009-0008-6932-3867>)
 Maintainer: Nan He <nanh302311@gmail.com>
