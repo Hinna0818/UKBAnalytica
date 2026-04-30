@@ -9,8 +9,8 @@
 
 <img src="man/figures/logo.png" align="right" height="139" alt="UKBAnalytica logo" />
 
-**UKBAnalytica** is a high-performance R package for processing UK Biobank 
-Research Analysis Platform (RAP) data exports. It focuses on standardized
+**UKBAnalytica** is a high-performance R package for working with UK Biobank
+Research Analysis Platform (RAP) data inside approved RAP projects. It focuses on standardized
 phenotyping, survival-ready datasets, scalable preprocessing, and downstream analysis.
 
 **For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica_v2/)
@@ -126,7 +126,7 @@ data are ignored even if `OPCS4` is included in `prevalent_sources` or
 
 ### Core Functionality
 - R-native RAP phenotype extraction via `dx extract_dataset` and `table-exporter`
-- Legacy RAP data download helpers (Python scripts)
+- Legacy RAP extraction helper scripts for older project-scoped workflows (Python)
 - Baseline preprocessing with standardized mappings
 - Multi-source disease definitions (ICD-10, ICD-9, OPCS4, self-report, death, algorithm)
 - Survival analysis datasets with prevalent/incident classification
@@ -146,32 +146,47 @@ data are ignored even if `OPCS4` is included in `prevalent_sources` or
 ```r
 library(UKBAnalytica)
 
-# Train a Random Forest classifier
-ml_rf <- ukb_ml_model(
+# Recommended: one user-facing workflow with a frozen test set
+ml <- ukb_ml_workflow(
   diabetes ~ age + bmi + sbp + smoking,
   data = ukb_data,
-  model = "rf",
-  task = "classification",
+  model = "logistic",
+  split_params = list(
+    split = "train_valid_test",
+    train_ratio = 0.70,
+    validation_ratio = 0.10,
+    test_ratio = 0.20
+  ),
+  feature_select = "filter",
+  feature_params = list(max_features = 20),
+  tune = TRUE,
+  tune_params = list(resampling = "validation", metric = "auc"),
+  threshold_method = "youden",
   seed = 42
 )
 
-# Model evaluation
-print(ml_rf)  # AUC, accuracy, etc.
-ukb_ml_metrics(ml_rf, ci = TRUE)
+ml$final_test_metrics
+head(ml$final_test_predictions)
 
-# ROC curve
-roc <- ukb_ml_roc(ml_rf)
-plot(roc)
+# Manual split is also supported when train/test files already exist
+split_obj <- ukb_ml_as_split(
+  train_data = train_df,
+  validation_data = valid_df,
+  test_data = test_df,
+  id_col = "eid",
+  outcome = "diabetes"
+)
 
-# SHAP interpretation (requires fastshap)
-shap <- ukb_shap(ml_rf, sample_n = 1000)
-plot_shap_summary(shap)
-plot_shap_dependence(shap, feature = "age")
+ml_manual <- ukb_ml_workflow(
+  diabetes ~ age + bmi + sbp + smoking,
+  split = split_obj,
+  model = "rf",
+  threshold_method = "youden",
+  seed = 42
+)
 
-# Model comparison
-ml_xgb <- ukb_ml_model(diabetes ~ ., data, model = "xgboost")
-comparison <- ukb_ml_compare(ml_rf, ml_xgb)
-plot(comparison)
+# Lower-level legacy helpers remain available for quick exploration:
+# ukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc(), ukb_shap().
 
 # Survival ML
 surv_rf <- ukb_ml_survival(
@@ -235,7 +250,7 @@ cox_sens <- runmulti_cox(
 ```
 
 ## Basic Workflow Demonstration for Chinese Users
-请各位用户注意，**UKB的数据是不能下载到本地的**，这个R包开发的目的是提高研究人员在官方的RAP平台上的数据分析效率。当你在做一个UKB研究的时候，首先要获取你想要的数据（注意这里说的download指的是从云平台获取你研究相关的数据，不是下载到本地）。现在推荐在RAP的R会话中直接使用R函数提取表型数据：
+请各位用户注意，**UKB 的 participant-level 数据不能从 RAP 下载到本地**。这个 R 包的目标是在经批准的 RAP 项目环境内提高数据提取、表型构建和分析效率。下文中提到的获取、提取或输出，均指在 RAP 项目存储或当前 RAP 会话内生成研究所需文件，而不是将个体级数据带出平台。现在推荐在 RAP 的 R 会话中直接使用 R 函数提取表型数据：
 
 ```r
 library(UKBAnalytica)
@@ -257,7 +272,7 @@ job <- rap_submit_extract(
 job$job_id
 ```
 
-`field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为legacy/helper脚本，适合已经习惯Python命令行流程的用户。
+`field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为 legacy 辅助脚本，用于旧版的 RAP 内项目流程；新的项目更推荐优先使用上面的 R 接口。无论使用哪种方式，都应遵循 UKB 的治理要求，仅在允许范围内导出不包含个体级信息的汇总结果和图表。
 
 拿到数据后，建议先清理UKB常见缺失编码，并用`snapshot`记录每一步样本量，方便后续写流程图：
 
