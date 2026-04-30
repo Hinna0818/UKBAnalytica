@@ -1,7 +1,7 @@
 # Machine Learning Workflow {#machine-learning}
 
 This chapter describes the recommended non-survival machine learning workflow
-in **UKBAnalytica**. The main user-facing function is `ukb_ml_workflow()`.
+in **UKBAnalytica_v2**. The main user-facing function is `ukb_ml_workflow()`.
 It is designed to keep the API simple while enforcing a standard analysis
 structure:
 
@@ -502,7 +502,7 @@ Before reporting ML results, check the following:
 
 ## Optional packages
 
-Install only the model backends you plan to use. UKBAnalytica checks optional
+Install only the model backends you plan to use. UKBAnalytica_v2 checks optional
 packages only when the selected model or helper needs them. It does not install
 extra ML dependencies unless you explicitly opt in:
 

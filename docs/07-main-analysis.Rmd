@@ -1,6 +1,6 @@
 # Main Analysis {#main-analysis}
 
-This chapter demonstrates how to perform statistical analyses using **UKBAnalytica**, including pre-analysis correlation checks and three types of regression models: linear regression, logistic regression, and Cox proportional hazards regression.
+This chapter demonstrates how to perform statistical analyses using **UKBAnalytica_v2**, including pre-analysis correlation checks and three types of regression models: linear regression, logistic regression, and Cox proportional hazards regression.
 
 ## Pre-Analysis: Correlation Check {#correlation}
 
@@ -97,7 +97,7 @@ The function automatically adjusts text color (white on strong correlations, bla
 
 ## Regression Analysis {#regression}
 
-**UKBAnalytica** provides three regression functions with a unified interface for testing multiple variables:
+**UKBAnalytica_v2** provides three regression functions with a unified interface for testing multiple variables:
 
 - `runmulti_lm()`: Linear regression
 - `runmulti_logit()`: Logistic regression  

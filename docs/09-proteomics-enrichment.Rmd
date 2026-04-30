@@ -1,6 +1,6 @@
 # Proteomics Enrichment Analysis {#proteomics-enrichment}
 
-This chapter introduces the proteomics enrichment module in **UKBAnalytica**.
+This chapter introduces the proteomics enrichment module in **UKBAnalytica_v2**.
 It is designed for UK Biobank RAP Olink proteomics data, where protein columns
 often appear as lower-case names with an Olink prefix such as
 `olink_instance_0.eno2` or `olink_instance_0.il6`.
@@ -20,7 +20,7 @@ before running this chapter.
 # CRAN helper
 install.packages("BiocManager")
 
-# Bioconductor packages used by UKBAnalytica enrichment helpers
+# Bioconductor packages used by UKBAnalytica_v2 enrichment helpers
 BiocManager::install(c("clusterProfiler", "AnnotationDbi", "org.Hs.eg.db"))
 
 # Optional plotting package used by plot_go_ora_bar() and plot_enrichment_lollipop()

@@ -1,7 +1,7 @@
 # Variable Preprocessing {#preprocessing}
 
 After downloading data from RAP, the next step is to clean and recode baseline
-variables. UKBAnalytica provides `preprocess_baseline()` and several helper
+variables. UKBAnalytica_v2 provides `preprocess_baseline()` and several helper
 functions to handle this in a standardised way.
 
 ## Available variables

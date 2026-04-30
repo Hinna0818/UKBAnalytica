@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</title>
+  <meta name="description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="UKBAnalytica_v2: A Guide to UK Biobank Data Analysis" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  <meta name="github-repo" content="Hinna0818/UKBAnalytica_v2" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="UKBAnalytica_v2: A Guide to UK Biobank Data Analysis" />
+  
+  <meta name="twitter:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  
+
+
+
+<meta name="date" content="2026-04-30" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="rap-download.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">UKBAnalytica</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#key-features"><i class="fa fa-check"></i><b>1.1</b> Key features</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#recent-survival-updates-v0.6.2"><i class="fa fa-check"></i><b>1.2</b> Recent survival updates (v0.6.2)</a></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#installation"><i class="fa fa-check"></i><b>1.3</b> Installation</a></li>
+<li class="chapter" data-level="1.4" data-path="index.html"><a href="index.html#package-overview"><i class="fa fa-check"></i><b>1.4</b> Package overview</a></li>
+<li class="chapter" data-level="1.5" data-path="index.html"><a href="index.html#core-functions"><i class="fa fa-check"></i><b>1.5</b> Core functions</a></li>
+<li class="chapter" data-level="1.6" data-path="index.html"><a href="index.html#advanced-analysis-functions"><i class="fa fa-check"></i><b>1.6</b> Advanced analysis functions</a></li>
+<li class="chapter" data-level="1.7" data-path="index.html"><a href="index.html#machine-learning-functions"><i class="fa fa-check"></i><b>1.7</b> Machine learning functions</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="rap-download.html"><a href="rap-download.html"><i class="fa fa-check"></i><b>2</b> Downloading Data from RAP</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="rap-download.html"><a href="rap-download.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
+<li class="chapter" data-level="2.2" data-path="rap-download.html"><a href="rap-download.html#r-native-phenotype-extraction"><i class="fa fa-check"></i><b>2.2</b> R-native phenotype extraction</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="rap-download.html"><a href="rap-download.html#start-an-r-session-on-rap"><i class="fa fa-check"></i><b>2.2.1</b> Start an R session on RAP</a></li>
+<li class="chapter" data-level="2.2.2" data-path="rap-download.html"><a href="rap-download.html#confirm-the-dataset"><i class="fa fa-check"></i><b>2.2.2</b> Confirm the dataset</a></li>
+<li class="chapter" data-level="2.2.3" data-path="rap-download.html"><a href="rap-download.html#inspect-available-fields"><i class="fa fa-check"></i><b>2.2.3</b> Inspect available fields</a></li>
+<li class="chapter" data-level="2.2.4" data-path="rap-download.html"><a href="rap-download.html#preview-before-extracting"><i class="fa fa-check"></i><b>2.2.4</b> Preview before extracting</a></li>
+<li class="chapter" data-level="2.2.5" data-path="rap-download.html"><a href="rap-download.html#small-synchronous-extraction"><i class="fa fa-check"></i><b>2.2.5</b> Small synchronous extraction</a></li>
+<li class="chapter" data-level="2.2.6" data-path="rap-download.html"><a href="rap-download.html#recommended-demographic-extraction-with-table-exporter"><i class="fa fa-check"></i><b>2.2.6</b> Recommended demographic extraction with table-exporter</a></li>
+<li class="chapter" data-level="2.2.7" data-path="rap-download.html"><a href="rap-download.html#monitor-the-table-exporter-job"><i class="fa fa-check"></i><b>2.2.7</b> Monitor the table-exporter job</a></li>
+<li class="chapter" data-level="2.2.8" data-path="rap-download.html"><a href="rap-download.html#read-extracted-data-back-into-r"><i class="fa fa-check"></i><b>2.2.8</b> Read extracted data back into R</a></li>
+<li class="chapter" data-level="2.2.9" data-path="rap-download.html"><a href="rap-download.html#minimal-complete-demographic-workflow"><i class="fa fa-check"></i><b>2.2.9</b> Minimal complete demographic workflow</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="rap-download.html"><a href="rap-download.html#legacy-python-helpers"><i class="fa fa-check"></i><b>2.3</b> Legacy Python helpers</a>
+<ul>
+<li class="chapter" data-level="2.3.1" data-path="rap-download.html"><a href="rap-download.html#demographic-data"><i class="fa fa-check"></i><b>2.3.1</b> Demographic data</a></li>
+<li class="chapter" data-level="2.3.2" data-path="rap-download.html"><a href="rap-download.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3.2</b> Metabolomics data (NMR)</a></li>
+<li class="chapter" data-level="2.3.3" data-path="rap-download.html"><a href="rap-download.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.3.3</b> Proteomics data (Olink)</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="rap-download.html"><a href="rap-download.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.4</b> Common UKB field IDs</a></li>
+<li class="chapter" data-level="2.5" data-path="rap-download.html"><a href="rap-download.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.5</b> Typical output sizes</a></li>
+<li class="chapter" data-level="2.6" data-path="rap-download.html"><a href="rap-download.html#troubleshooting"><i class="fa fa-check"></i><b>2.6</b> Troubleshooting</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="preprocessing.html"><a href="preprocessing.html"><i class="fa fa-check"></i><b>3</b> Variable Preprocessing</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="preprocessing.html"><a href="preprocessing.html#available-variables"><i class="fa fa-check"></i><b>3.1</b> Available variables</a></li>
+<li class="chapter" data-level="3.2" data-path="preprocessing.html"><a href="preprocessing.html#basic-usage"><i class="fa fa-check"></i><b>3.2</b> Basic usage</a></li>
+<li class="chapter" data-level="3.3" data-path="preprocessing.html"><a href="preprocessing.html#blood-pressure"><i class="fa fa-check"></i><b>3.3</b> Blood pressure</a></li>
+<li class="chapter" data-level="3.4" data-path="preprocessing.html"><a href="preprocessing.html#medication-use"><i class="fa fa-check"></i><b>3.4</b> Medication use</a></li>
+<li class="chapter" data-level="3.5" data-path="preprocessing.html"><a href="preprocessing.html#air-pollution-exposure"><i class="fa fa-check"></i><b>3.5</b> Air pollution exposure</a></li>
+<li class="chapter" data-level="3.6" data-path="preprocessing.html"><a href="preprocessing.html#custom-variable-mapping"><i class="fa fa-check"></i><b>3.6</b> Custom variable mapping</a></li>
+<li class="chapter" data-level="3.7" data-path="preprocessing.html"><a href="preprocessing.html#complete-preprocessing-example"><i class="fa fa-check"></i><b>3.7</b> Complete preprocessing example</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="disease-definitions.html"><a href="disease-definitions.html"><i class="fa fa-check"></i><b>4</b> Disease Definitions</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="disease-definitions.html"><a href="disease-definitions.html#predefined-diseases"><i class="fa fa-check"></i><b>4.1</b> Predefined diseases</a></li>
+<li class="chapter" data-level="4.2" data-path="disease-definitions.html"><a href="disease-definitions.html#inspecting-a-definition"><i class="fa fa-check"></i><b>4.2</b> Inspecting a definition</a></li>
+<li class="chapter" data-level="4.3" data-path="disease-definitions.html"><a href="disease-definitions.html#creating-custom-definitions"><i class="fa fa-check"></i><b>4.3</b> Creating custom definitions</a></li>
+<li class="chapter" data-level="4.4" data-path="disease-definitions.html"><a href="disease-definitions.html#arrhythmia-example-with-icd-10-opcs4"><i class="fa fa-check"></i><b>4.4</b> Arrhythmia example with ICD-10 + OPCS4</a></li>
+<li class="chapter" data-level="4.5" data-path="disease-definitions.html"><a href="disease-definitions.html#composite-endpoints"><i class="fa fa-check"></i><b>4.5</b> Composite endpoints</a></li>
+<li class="chapter" data-level="4.6" data-path="disease-definitions.html"><a href="disease-definitions.html#comparing-data-sources"><i class="fa fa-check"></i><b>4.6</b> Comparing data sources</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="survival-analysis.html"><a href="survival-analysis.html"><i class="fa fa-check"></i><b>5</b> Survival Analysis</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="survival-analysis.html"><a href="survival-analysis.html#quick-start"><i class="fa fa-check"></i><b>5.1</b> Quick start</a></li>
+<li class="chapter" data-level="5.2" data-path="survival-analysis.html"><a href="survival-analysis.html#output-columns"><i class="fa fa-check"></i><b>5.2</b> Output columns</a></li>
+<li class="chapter" data-level="5.3" data-path="survival-analysis.html"><a href="survival-analysis.html#participant-flow-reporting"><i class="fa fa-check"></i><b>5.3</b> Participant flow reporting</a></li>
+<li class="chapter" data-level="5.4" data-path="survival-analysis.html"><a href="survival-analysis.html#case-classification-logic"><i class="fa fa-check"></i><b>5.4</b> Case classification logic</a></li>
+<li class="chapter" data-level="5.5" data-path="survival-analysis.html"><a href="survival-analysis.html#recommended-workflow-for-users"><i class="fa fa-check"></i><b>5.5</b> Recommended workflow for users</a></li>
+<li class="chapter" data-level="5.6" data-path="survival-analysis.html"><a href="survival-analysis.html#follow-up-time"><i class="fa fa-check"></i><b>5.6</b> Follow-up time</a></li>
+<li class="chapter" data-level="5.7" data-path="survival-analysis.html"><a href="survival-analysis.html#dual-source-design"><i class="fa fa-check"></i><b>5.7</b> Dual-source design</a></li>
+<li class="chapter" data-level="5.8" data-path="survival-analysis.html"><a href="survival-analysis.html#performance-tuning-large-data"><i class="fa fa-check"></i><b>5.8</b> Performance tuning (large data)</a></li>
+<li class="chapter" data-level="5.9" data-path="survival-analysis.html"><a href="survival-analysis.html#running-a-cox-model"><i class="fa fa-check"></i><b>5.9</b> Running a Cox model</a></li>
+<li class="chapter" data-level="5.10" data-path="survival-analysis.html"><a href="survival-analysis.html#sensitivity-analyses"><i class="fa fa-check"></i><b>5.10</b> Sensitivity analyses</a></li>
+<li class="chapter" data-level="5.11" data-path="survival-analysis.html"><a href="survival-analysis.html#long-format-output"><i class="fa fa-check"></i><b>5.11</b> Long format output</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="baseline-table.html"><a href="baseline-table.html"><i class="fa fa-check"></i><b>6</b> Baseline Table</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="baseline-table.html"><a href="baseline-table.html#basic-usage-1"><i class="fa fa-check"></i><b>6.1</b> Basic usage</a></li>
+<li class="chapter" data-level="6.2" data-path="baseline-table.html"><a href="baseline-table.html#exporting-to-csv"><i class="fa fa-check"></i><b>6.2</b> Exporting to CSV</a></li>
+<li class="chapter" data-level="6.3" data-path="baseline-table.html"><a href="baseline-table.html#using-with-the-survival-package-example-data"><i class="fa fa-check"></i><b>6.3</b> Using with the <code>survival</code> package example data</a></li>
+<li class="chapter" data-level="6.4" data-path="baseline-table.html"><a href="baseline-table.html#parameters"><i class="fa fa-check"></i><b>6.4</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="imputation.html"><a href="imputation.html"><i class="fa fa-check"></i><b>7</b> Multiple Imputation</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="imputation.html"><a href="imputation.html#motivation"><i class="fa fa-check"></i><b>7.1</b> Motivation</a></li>
+<li class="chapter" data-level="7.2" data-path="imputation.html"><a href="imputation.html#basic-usage-2"><i class="fa fa-check"></i><b>7.2</b> Basic usage</a></li>
+<li class="chapter" data-level="7.3" data-path="imputation.html"><a href="imputation.html#working-with-the-output"><i class="fa fa-check"></i><b>7.3</b> Working with the output</a></li>
+<li class="chapter" data-level="7.4" data-path="imputation.html"><a href="imputation.html#merging-additional-datasets"><i class="fa fa-check"></i><b>7.4</b> Merging additional datasets</a></li>
+<li class="chapter" data-level="7.5" data-path="imputation.html"><a href="imputation.html#diagnostics"><i class="fa fa-check"></i><b>7.5</b> Diagnostics</a></li>
+<li class="chapter" data-level="7.6" data-path="imputation.html"><a href="imputation.html#pooled-analysis"><i class="fa fa-check"></i><b>7.6</b> Pooled analysis</a></li>
+<li class="chapter" data-level="7.7" data-path="imputation.html"><a href="imputation.html#saving-completed-datasets"><i class="fa fa-check"></i><b>7.7</b> Saving completed datasets</a></li>
+<li class="chapter" data-level="7.8" data-path="imputation.html"><a href="imputation.html#parameters-1"><i class="fa fa-check"></i><b>7.8</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="8" data-path="main-analysis.html"><a href="main-analysis.html"><i class="fa fa-check"></i><b>8</b> Main Analysis</a>
+<ul>
+<li class="chapter" data-level="8.1" data-path="main-analysis.html"><a href="main-analysis.html#correlation"><i class="fa fa-check"></i><b>8.1</b> Pre-Analysis: Correlation Check</a>
+<ul>
+<li class="chapter" data-level="8.1.1" data-path="main-analysis.html"><a href="main-analysis.html#calculate-correlation-matrix"><i class="fa fa-check"></i><b>8.1.1</b> Calculate Correlation Matrix</a></li>
+<li class="chapter" data-level="8.1.2" data-path="main-analysis.html"><a href="main-analysis.html#visualize-correlation-heatmap"><i class="fa fa-check"></i><b>8.1.2</b> Visualize Correlation Heatmap</a></li>
+</ul></li>
+<li class="chapter" data-level="8.2" data-path="main-analysis.html"><a href="main-analysis.html#regression"><i class="fa fa-check"></i><b>8.2</b> Regression Analysis</a>
+<ul>
+<li class="chapter" data-level="8.2.1" data-path="main-analysis.html"><a href="main-analysis.html#lm"><i class="fa fa-check"></i><b>8.2.1</b> Linear Regression</a></li>
+<li class="chapter" data-level="8.2.2" data-path="main-analysis.html"><a href="main-analysis.html#logistic"><i class="fa fa-check"></i><b>8.2.2</b> Logistic Regression</a></li>
+<li class="chapter" data-level="8.2.3" data-path="main-analysis.html"><a href="main-analysis.html#cox"><i class="fa fa-check"></i><b>8.2.3</b> Cox Proportional Hazards Regression</a></li>
+</ul></li>
+<li class="chapter" data-level="8.3" data-path="main-analysis.html"><a href="main-analysis.html#unified-interface"><i class="fa fa-check"></i><b>8.3</b> Unified Interface Across Models</a></li>
+<li class="chapter" data-level="8.4" data-path="main-analysis.html"><a href="main-analysis.html#best-practices"><i class="fa fa-check"></i><b>8.4</b> Best Practices</a>
+<ul>
+<li class="chapter" data-level="8.4.1" data-path="main-analysis.html"><a href="main-analysis.html#check-correlations-first"><i class="fa fa-check"></i><b>8.4.1</b> Check Correlations First</a></li>
+<li class="chapter" data-level="8.4.2" data-path="main-analysis.html"><a href="main-analysis.html#start-with-univariate-then-multivariate"><i class="fa fa-check"></i><b>8.4.2</b> Start with Univariate, Then Multivariate</a></li>
+<li class="chapter" data-level="8.4.3" data-path="main-analysis.html"><a href="main-analysis.html#validate-model-assumptions"><i class="fa fa-check"></i><b>8.4.3</b> Validate Model Assumptions</a></li>
+<li class="chapter" data-level="8.4.4" data-path="main-analysis.html"><a href="main-analysis.html#handle-missing-data-appropriately"><i class="fa fa-check"></i><b>8.4.4</b> Handle Missing Data Appropriately</a></li>
+<li class="chapter" data-level="8.4.5" data-path="main-analysis.html"><a href="main-analysis.html#run-sensitivity-analysis-preprocessing"><i class="fa fa-check"></i><b>8.4.5</b> Run Sensitivity Analysis Preprocessing</a></li>
+</ul></li>
+<li class="chapter" data-level="8.5" data-path="main-analysis.html"><a href="main-analysis.html#summary"><i class="fa fa-check"></i><b>8.5</b> Summary</a></li>
+</ul></li>
+<li class="chapter" data-level="9" data-path="advanced-analysis.html"><a href="advanced-analysis.html"><i class="fa fa-check"></i><b>9</b> Advanced Analysis Modules</a>
+<ul>
+<li class="chapter" data-level="9.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#overview"><i class="fa fa-check"></i><b>9.1</b> Overview</a></li>
+<li class="chapter" data-level="9.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#subgroup"><i class="fa fa-check"></i><b>9.2</b> Subgroup Analysis</a>
+<ul>
+<li class="chapter" data-level="9.2.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-usage-3"><i class="fa fa-check"></i><b>9.2.1</b> Basic Usage</a></li>
+<li class="chapter" data-level="9.2.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#multiple-subgroup-variables"><i class="fa fa-check"></i><b>9.2.2</b> Multiple Subgroup Variables</a></li>
+<li class="chapter" data-level="9.2.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#parameters-2"><i class="fa fa-check"></i><b>9.2.3</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="9.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity"><i class="fa fa-check"></i><b>9.3</b> Propensity Score Methods</a>
+<ul>
+<li class="chapter" data-level="9.3.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#estimate-propensity-scores"><i class="fa fa-check"></i><b>9.3.1</b> Estimate Propensity Scores</a></li>
+<li class="chapter" data-level="9.3.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity-score-matching-psm"><i class="fa fa-check"></i><b>9.3.2</b> Propensity Score Matching (PSM)</a></li>
+<li class="chapter" data-level="9.3.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#inverse-probability-of-treatment-weighting-iptw"><i class="fa fa-check"></i><b>9.3.3</b> Inverse Probability of Treatment Weighting (IPTW)</a></li>
+<li class="chapter" data-level="9.3.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#weight-types"><i class="fa fa-check"></i><b>9.3.4</b> Weight Types</a></li>
+</ul></li>
+<li class="chapter" data-level="9.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mediation"><i class="fa fa-check"></i><b>9.4</b> Mediation Analysis</a>
+<ul>
+<li class="chapter" data-level="9.4.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-mediation-analysis"><i class="fa fa-check"></i><b>9.4.1</b> Basic Mediation Analysis</a></li>
+<li class="chapter" data-level="9.4.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#effect-definitions"><i class="fa fa-check"></i><b>9.4.2</b> Effect Definitions</a></li>
+<li class="chapter" data-level="9.4.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#multiple-mediators"><i class="fa fa-check"></i><b>9.4.3</b> Multiple Mediators</a></li>
+<li class="chapter" data-level="9.4.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mediation-visualization"><i class="fa fa-check"></i><b>9.4.4</b> Visualization</a></li>
+</ul></li>
+<li class="chapter" data-level="9.5" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mi-pooling"><i class="fa fa-check"></i><b>9.5</b> Multiple Imputation Pooling</a>
+<ul>
+<li class="chapter" data-level="9.5.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-usage-4"><i class="fa fa-check"></i><b>9.5.1</b> Basic Usage</a></li>
+<li class="chapter" data-level="9.5.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#one-step-fitting-and-pooling"><i class="fa fa-check"></i><b>9.5.2</b> One-Step Fitting and Pooling</a></li>
+<li class="chapter" data-level="9.5.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#supported-model-types"><i class="fa fa-check"></i><b>9.5.3</b> Supported Model Types</a></li>
+<li class="chapter" data-level="9.5.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#custom-estimates-pooling"><i class="fa fa-check"></i><b>9.5.4</b> Custom Estimates Pooling</a></li>
+<li class="chapter" data-level="9.5.5" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mi-visualization"><i class="fa fa-check"></i><b>9.5.5</b> Visualization</a></li>
+<li class="chapter" data-level="9.5.6" data-path="advanced-analysis.html"><a href="advanced-analysis.html#understanding-fmi"><i class="fa fa-check"></i><b>9.5.6</b> Understanding FMI</a></li>
+</ul></li>
+<li class="chapter" data-level="9.6" data-path="advanced-analysis.html"><a href="advanced-analysis.html#visualization"><i class="fa fa-check"></i><b>9.6</b> Visualization Functions</a>
+<ul>
+<li class="chapter" data-level="9.6.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#forest-plot"><i class="fa fa-check"></i><b>9.6.1</b> Forest Plot</a></li>
+<li class="chapter" data-level="9.6.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#kaplan-meier-curves"><i class="fa fa-check"></i><b>9.6.2</b> Kaplan-Meier Curves</a></li>
+<li class="chapter" data-level="9.6.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity-score-plots"><i class="fa fa-check"></i><b>9.6.3</b> Propensity Score Plots</a></li>
+</ul></li>
+<li class="chapter" data-level="9.7" data-path="advanced-analysis.html"><a href="advanced-analysis.html#workflow"><i class="fa fa-check"></i><b>9.7</b> Integration Example: Complete Workflow</a></li>
+<li class="chapter" data-level="9.8" data-path="advanced-analysis.html"><a href="advanced-analysis.html#summary-1"><i class="fa fa-check"></i><b>9.8</b> Summary</a></li>
+<li class="chapter" data-level="9.9" data-path="advanced-analysis.html"><a href="advanced-analysis.html#required-packages"><i class="fa fa-check"></i><b>9.9</b> Required Packages</a></li>
+</ul></li>
+<li class="chapter" data-level="10" data-path="machine-learning.html"><a href="machine-learning.html"><i class="fa fa-check"></i><b>10</b> Machine Learning Workflow</a>
+<ul>
+<li class="chapter" data-level="10.1" data-path="machine-learning.html"><a href="machine-learning.html#what-users-usually-need"><i class="fa fa-check"></i><b>10.1</b> What users usually need</a></li>
+<li class="chapter" data-level="10.2" data-path="machine-learning.html"><a href="machine-learning.html#prepare-an-ml-ready-dataset"><i class="fa fa-check"></i><b>10.2</b> Prepare an ML-ready dataset</a></li>
+<li class="chapter" data-level="10.3" data-path="machine-learning.html"><a href="machine-learning.html#model-choices"><i class="fa fa-check"></i><b>10.3</b> Model choices</a></li>
+<li class="chapter" data-level="10.4" data-path="machine-learning.html"><a href="machine-learning.html#binary-classification"><i class="fa fa-check"></i><b>10.4</b> Binary classification</a></li>
+<li class="chapter" data-level="10.5" data-path="machine-learning.html"><a href="machine-learning.html#continuous-outcomes"><i class="fa fa-check"></i><b>10.5</b> Continuous outcomes</a></li>
+<li class="chapter" data-level="10.6" data-path="machine-learning.html"><a href="machine-learning.html#multiclass-outcomes"><i class="fa fa-check"></i><b>10.6</b> Multiclass outcomes</a></li>
+<li class="chapter" data-level="10.7" data-path="machine-learning.html"><a href="machine-learning.html#when-traintest-files-already-exist"><i class="fa fa-check"></i><b>10.7</b> When train/test files already exist</a></li>
+<li class="chapter" data-level="10.8" data-path="machine-learning.html"><a href="machine-learning.html#feature-selection"><i class="fa fa-check"></i><b>10.8</b> Feature selection</a></li>
+<li class="chapter" data-level="10.9" data-path="machine-learning.html"><a href="machine-learning.html#hyperparameter-tuning"><i class="fa fa-check"></i><b>10.9</b> Hyperparameter tuning</a></li>
+<li class="chapter" data-level="10.10" data-path="machine-learning.html"><a href="machine-learning.html#output-object"><i class="fa fa-check"></i><b>10.10</b> Output object</a></li>
+<li class="chapter" data-level="10.11" data-path="machine-learning.html"><a href="machine-learning.html#shap-interpretation"><i class="fa fa-check"></i><b>10.11</b> SHAP interpretation</a></li>
+<li class="chapter" data-level="10.12" data-path="machine-learning.html"><a href="machine-learning.html#advanced-run-the-workflow-step-by-step"><i class="fa fa-check"></i><b>10.12</b> Advanced: run the workflow step by step</a></li>
+<li class="chapter" data-level="10.13" data-path="machine-learning.html"><a href="machine-learning.html#legacy-quick-model-interface"><i class="fa fa-check"></i><b>10.13</b> Legacy quick-model interface</a></li>
+<li class="chapter" data-level="10.14" data-path="machine-learning.html"><a href="machine-learning.html#survival-machine-learning"><i class="fa fa-check"></i><b>10.14</b> Survival machine learning</a></li>
+<li class="chapter" data-level="10.15" data-path="machine-learning.html"><a href="machine-learning.html#practical-checklist"><i class="fa fa-check"></i><b>10.15</b> Practical checklist</a></li>
+<li class="chapter" data-level="10.16" data-path="machine-learning.html"><a href="machine-learning.html#optional-packages"><i class="fa fa-check"></i><b>10.16</b> Optional packages</a></li>
+</ul></li>
+<li class="chapter" data-level="11" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html"><i class="fa fa-check"></i><b>11</b> Proteomics Enrichment Analysis</a>
+<ul>
+<li class="chapter" data-level="11.1" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#required-packages-1"><i class="fa fa-check"></i><b>11.1</b> Required packages</a></li>
+<li class="chapter" data-level="11.2" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#supported-protein-name-formats"><i class="fa fa-check"></i><b>11.2</b> Supported protein name formats</a></li>
+<li class="chapter" data-level="11.3" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#convert-rap-exported-olink-names-to-gene-symbols"><i class="fa fa-check"></i><b>11.3</b> Convert RAP-exported Olink names to gene symbols</a></li>
+<li class="chapter" data-level="11.4" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#go-over-representation-analysis"><i class="fa fa-check"></i><b>11.4</b> GO over-representation analysis</a></li>
+<li class="chapter" data-level="11.5" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#kegg-over-representation-analysis"><i class="fa fa-check"></i><b>11.5</b> KEGG over-representation analysis</a></li>
+<li class="chapter" data-level="11.6" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#use-a-custom-background-universe"><i class="fa fa-check"></i><b>11.6</b> Use a custom background universe</a></li>
+<li class="chapter" data-level="11.7" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#plot-enrichment-results"><i class="fa fa-check"></i><b>11.7</b> Plot enrichment results</a></li>
+<li class="chapter" data-level="11.8" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#use-a-custom-mapping-table"><i class="fa fa-check"></i><b>11.8</b> Use a custom mapping table</a></li>
+<li class="chapter" data-level="11.9" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#run-string-ppi-analysis-for-proteomics-hits"><i class="fa fa-check"></i><b>11.9</b> Run STRING PPI analysis for proteomics hits</a></li>
+<li class="chapter" data-level="11.10" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#filter-the-ppi-network-and-compute-topology"><i class="fa fa-check"></i><b>11.10</b> Filter the PPI network and compute topology</a></li>
+<li class="chapter" data-level="11.11" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#detect-ppi-modules"><i class="fa fa-check"></i><b>11.11</b> Detect PPI modules</a></li>
+<li class="chapter" data-level="11.12" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#assess-network-robustness"><i class="fa fa-check"></i><b>11.12</b> Assess network robustness</a></li>
+<li class="chapter" data-level="11.13" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#practical-notes"><i class="fa fa-check"></i><b>11.13</b> Practical notes</a></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/Hinna0818/UKBAnalytica_v2" target="_blank">GitHub</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</h1>
+<p class="author multi-author"><em>Nan He</em></p>
+<address class="author_afil">
+Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University<br>
+<a class="author_email" href="mailto:#"><a href="mailto:nanh302311@gmail.com" class="email">nanh302311@gmail.com</a></a>
+</address>
+<p class="date"><em>2026-04-30</em></p>
+</div>
+<div id="intro" class="section level1 hasAnchor" number="1">
+<h1><span class="header-section-number">Chapter 1</span> Introduction<a href="index.html#intro" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div class="float">
+<img src="image.png" alt="package-overview" />
+<div class="figcaption">package-overview</div>
+</div>
+<p><strong>UKBAnalytica_v2</strong> is a high-performance R package for processing UK Biobank (UKB)
+Research Analysis Platform (RAP) data exports. It provides efficient extraction
+of diagnosis records from multiple sources and generates Cox regression-ready
+survival datasets.</p>
+<div id="key-features" class="section level2 hasAnchor" number="1.1">
+<h2><span class="header-section-number">1.1</span> Key features<a href="index.html#key-features" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<ul>
+<li>Built on <code>data.table</code> for efficient processing of large-scale biobank data.</li>
+<li>Supports ICD-10, ICD-9, self-reported illness, and death registry data.</li>
+<li>Supports optional UKB algorithm-defined outcomes (Category 42).</li>
+<li>Flexible dual-source case definitions for main and sensitivity analyses.</li>
+<li>Generates survival datasets with proper prevalent/incident case handling.</li>
+<li>Supports participant-flow reporting and optional thread tuning in survival dataset construction.</li>
+<li>Includes predefined definitions for common cardiovascular and metabolic diseases.</li>
+<li>Provides standardized preprocessing for common UKB baseline variables.</li>
+<li><strong>Advanced analysis modules</strong>: subgroup analysis, propensity score methods, mediation analysis, and multiple imputation pooling.</li>
+<li><strong>Machine learning workflow</strong>: frozen-test ML for binary, multiclass, and continuous outcomes.</li>
+<li>Includes sensitivity preprocessing helpers for restricted-dataset regression analyses.</li>
+</ul>
+</div>
+<div id="recent-survival-updates-v0.6.2" class="section level2 hasAnchor" number="1.2">
+<h2><span class="header-section-number">1.2</span> Recent survival updates (v0.6.2)<a href="index.html#recent-survival-updates-v0.6.2" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<ul>
+<li><code>build_survival_dataset()</code> supports <code>show_flow</code> to print participant attrition and attach <code>attr(result, "participant_flow")</code>.</li>
+<li><code>build_survival_dataset()</code> supports optional <code>dt_threads</code> for temporary <code>data.table</code> thread control in large datasets.</li>
+<li>Algorithm fields now support both <code>p{field}_i0</code> and <code>p{field}</code> naming styles for Category 42 data.</li>
+<li>Date parsing is more robust to malformed values in ICD, self-report, and death records.</li>
+</ul>
+</div>
+<div id="installation" class="section level2 hasAnchor" number="1.3">
+<h2><span class="header-section-number">1.3</span> Installation<a href="index.html#installation" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Install the development version from GitHub:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="index.html#cb1-1" tabindex="-1"></a><span class="co"># install.packages(&quot;devtools&quot;)</span></span>
+<span id="cb1-2"><a href="index.html#cb1-2" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;Hinna0818/UKBAnalytica_v2&quot;</span>)</span></code></pre></div>
+</div>
+<div id="package-overview" class="section level2 hasAnchor" number="1.4">
+<h2><span class="header-section-number">1.4</span> Package overview<a href="index.html#package-overview" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>The package covers the following workflow:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Data download</strong> – Python scripts for downloading data from the RAP platform.</li>
+<li><strong>Variable preprocessing</strong> – Standardized cleaning and recoding of baseline characteristics.</li>
+<li><strong>Disease phenotyping</strong> – Predefined and custom disease definitions from multiple coding systems.</li>
+<li><strong>Survival analysis</strong> – Build Cox-ready datasets with proper prevalent/incident classification.</li>
+<li><strong>Baseline tables</strong> – Create Table 1 summaries stratified by case/control status.</li>
+<li><strong>Multiple imputation</strong> – Impute missing covariates and merge results back to the full dataset.</li>
+<li><strong>Main analysis</strong> – Correlation analysis, regression models, and sensitivity preprocessing.</li>
+<li><strong>Advanced analysis</strong> – Subgroup analysis, propensity score, mediation, MI pooling.</li>
+<li><strong>Machine learning</strong> – Frozen-test ML workflows for binary, multiclass, and continuous outcomes.</li>
+<li><strong>Proteomics enrichment</strong> – Convert RAP-exported Olink protein names to gene symbols and run GO/KEGG ORA.</li>
+</ol>
+<p>The remaining chapters walk through each step with code examples.</p>
+</div>
+<div id="core-functions" class="section level2 hasAnchor" number="1.5">
+<h2><span class="header-section-number">1.5</span> Core functions<a href="index.html#core-functions" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<table>
+<colgroup>
+<col width="43%" />
+<col width="56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>build_survival_dataset()</code></td>
+<td align="left">Build wide-format survival dataset</td>
+</tr>
+<tr class="even">
+<td align="left"><code>extract_cases_by_source()</code></td>
+<td align="left">Extract cases from specified data sources</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>get_predefined_diseases()</code></td>
+<td align="left">Get predefined disease definitions</td>
+</tr>
+<tr class="even">
+<td align="left"><code>create_disease_definition()</code></td>
+<td align="left">Create a custom disease definition</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>preprocess_baseline()</code></td>
+<td align="left">Preprocess baseline characteristics</td>
+</tr>
+<tr class="even">
+<td align="left"><code>create_baseline_table()</code></td>
+<td align="left">Create a Table 1 (via <code>tableone</code>)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>run_imputation()</code></td>
+<td align="left">Multiple imputation with <code>mice</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>sensitivity_exclude_early_events()</code></td>
+<td align="left">Remove early events before time-to-event regression</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>sensitivity_exclude_missing_covariates()</code></td>
+<td align="left">Remove rows with missing specified covariates</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="advanced-analysis-functions" class="section level2 hasAnchor" number="1.6">
+<h2><span class="header-section-number">1.6</span> Advanced analysis functions<a href="index.html#advanced-analysis-functions" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<table>
+<colgroup>
+<col width="43%" />
+<col width="56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>run_subgroup_analysis()</code></td>
+<td align="left">Stratified analysis with interaction p-values</td>
+</tr>
+<tr class="even">
+<td align="left"><code>run_multi_subgroup()</code></td>
+<td align="left">Batch subgroup analysis across multiple variables</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>estimate_propensity_score()</code></td>
+<td align="left">Estimate propensity scores</td>
+</tr>
+<tr class="even">
+<td align="left"><code>match_propensity()</code></td>
+<td align="left">Propensity score matching</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>calculate_weights()</code></td>
+<td align="left">IPTW weight calculation</td>
+</tr>
+<tr class="even">
+<td align="left"><code>run_mediation()</code></td>
+<td align="left">Causal mediation analysis</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>pool_mi_models()</code></td>
+<td align="left">Pool results from multiple imputation</td>
+</tr>
+<tr class="even">
+<td align="left"><code>plot_forest()</code></td>
+<td align="left">Forest plot visualization</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>plot_km_curve()</code></td>
+<td align="left">Kaplan-Meier curves</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="machine-learning-functions" class="section level2 hasAnchor" number="1.7">
+<h2><span class="header-section-number">1.7</span> Machine learning functions<a href="index.html#machine-learning-functions" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<table>
+<colgroup>
+<col width="43%" />
+<col width="56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Function</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>ukb_ml_workflow()</code></td>
+<td align="left">Recommended end-to-end ML workflow with frozen-test evaluation</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_split_data()</code></td>
+<td align="left">Create train/test or train/validation/test splits</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_as_split()</code></td>
+<td align="left">Register user-supplied train/test splits</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_feature_select()</code></td>
+<td align="left">Select features using training-development data only</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_tune()</code></td>
+<td align="left">Tune hyperparameters without touching the test set</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_threshold()</code></td>
+<td align="left">Learn binary classification thresholds</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_fit_final()</code></td>
+<td align="left">Refit final ML models on training-development data</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_evaluate_test()</code></td>
+<td align="left">Evaluate once on the frozen test set</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_model()</code></td>
+<td align="left">Deprecated legacy quick-model interface</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_predict()</code></td>
+<td align="left">Deprecated legacy prediction helper</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_cv()</code></td>
+<td align="left">Deprecated legacy cross-validation helper</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_compare()</code></td>
+<td align="left">Deprecated legacy model-comparison helper</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_metrics()</code></td>
+<td align="left">Deprecated legacy performance metrics helper</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_roc()</code></td>
+<td align="left">Deprecated legacy ROC helper</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_calibration()</code></td>
+<td align="left">Deprecated legacy calibration helper</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_ml_confusion()</code></td>
+<td align="left">Deprecated legacy confusion-matrix helper</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_importance()</code></td>
+<td align="left">Deprecated legacy variable-importance helper</td>
+</tr>
+<tr class="even">
+<td align="left"><code>ukb_shap()</code></td>
+<td align="left">Compute SHAP values for workflow or legacy ML objects</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ukb_ml_survival()</code></td>
+<td align="left">Survival ML models (RSF, GBM, CoxNet)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>plot_shap_summary()</code></td>
+<td align="left">SHAP summary plot</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>plot_shap_dependence()</code></td>
+<td align="left">SHAP dependence plot</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="rap-download.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": true,
+    "facebook": false,
+    "twitter": false,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": null,
+    "text": null
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["UKBAnalytica_v2.pdf", "UKBAnalytica_v2.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

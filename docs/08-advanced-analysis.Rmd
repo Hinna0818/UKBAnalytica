@@ -1,6 +1,6 @@
 # Advanced Analysis Modules {#advanced-analysis}
 
-This chapter covers the advanced statistical analysis modules in **UKBAnalytica**, including subgroup analysis, propensity score methods, mediation analysis, and multiple imputation pooling.
+This chapter covers the advanced statistical analysis modules in **UKBAnalytica_v2**, including subgroup analysis, propensity score methods, mediation analysis, and multiple imputation pooling.
 
 ## Overview
 
@@ -444,7 +444,7 @@ This chapter covered four advanced statistical modules:
 3. **Mediation Analysis**: `run_mediation()`, `run_multi_mediator()`
 4. **MI Pooling**: `pool_mi_models()`, `pool_custom_estimates()`
 
-Each module includes dedicated visualization functions and integrates with the standard UKBAnalytica workflow. Machine learning now has a separate chapter because the recommended API is a full frozen-test workflow rather than a single model-fitting helper.
+Each module includes dedicated visualization functions and integrates with the standard UKBAnalytica_v2 workflow. Machine learning now has a separate chapter because the recommended API is a full frozen-test workflow rather than a single model-fitting helper.
 
 ---
 

@@ -1,5 +1,5 @@
 --- 
-title: "UKBAnalytica: A Guide to UK Biobank Data Analysis"
+title: "UKBAnalytica_v2: A Guide to UK Biobank Data Analysis"
 author:
 - name: "Nan He"
   email: "nanh302311@gmail.com"
@@ -10,7 +10,7 @@ site: bookdown::bookdown_site
 documentclass: book
 bibliography: []
 description: |
-  A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
+  A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
   Research Analysis Platform (RAP) data, including data download, preprocessing,
   disease phenotyping, survival analysis, multiple imputation, machine learning,
   and proteomics enrichment analysis.
@@ -19,9 +19,9 @@ github-repo: Hinna0818/UKBAnalytica_v2
 ---
 
 # Introduction {#intro}
-![package-overview](docs/image.png)
+![package-overview](image.png)
 
-**UKBAnalytica** is a high-performance R package for processing UK Biobank (UKB)
+**UKBAnalytica_v2** is a high-performance R package for processing UK Biobank (UKB)
 Research Analysis Platform (RAP) data exports. It provides efficient extraction
 of diagnosis records from multiple sources and generates Cox regression-ready
 survival datasets.

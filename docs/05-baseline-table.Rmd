@@ -1,7 +1,7 @@
 # Baseline Table {#baseline-table}
 
 A Table 1 summarising baseline characteristics stratified by case/control
-status is standard in epidemiological papers. UKBAnalytica wraps the
+status is standard in epidemiological papers. UKBAnalytica_v2 wraps the
 [tableone](https://github.com/kaz-yos/tableone) package for this purpose.
 
 ## Basic usage

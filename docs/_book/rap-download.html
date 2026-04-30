@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 2 Downloading Data from RAP | UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</title>
+  <meta name="description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 2 Downloading Data from RAP | UKBAnalytica_v2: A Guide to UK Biobank Data Analysis" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  <meta name="github-repo" content="Hinna0818/UKBAnalytica_v2" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 2 Downloading Data from RAP | UKBAnalytica_v2: A Guide to UK Biobank Data Analysis" />
+  
+  <meta name="twitter:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
+Research Analysis Platform (RAP) data, including data download, preprocessing,
+disease phenotyping, survival analysis, multiple imputation, machine learning,
+and proteomics enrichment analysis.</p>" />
+  
+
+
+
+<meta name="date" content="2026-04-30" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="index.html"/>
+<link rel="next" href="preprocessing.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">UKBAnalytica</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#key-features"><i class="fa fa-check"></i><b>1.1</b> Key features</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#recent-survival-updates-v0.6.2"><i class="fa fa-check"></i><b>1.2</b> Recent survival updates (v0.6.2)</a></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#installation"><i class="fa fa-check"></i><b>1.3</b> Installation</a></li>
+<li class="chapter" data-level="1.4" data-path="index.html"><a href="index.html#package-overview"><i class="fa fa-check"></i><b>1.4</b> Package overview</a></li>
+<li class="chapter" data-level="1.5" data-path="index.html"><a href="index.html#core-functions"><i class="fa fa-check"></i><b>1.5</b> Core functions</a></li>
+<li class="chapter" data-level="1.6" data-path="index.html"><a href="index.html#advanced-analysis-functions"><i class="fa fa-check"></i><b>1.6</b> Advanced analysis functions</a></li>
+<li class="chapter" data-level="1.7" data-path="index.html"><a href="index.html#machine-learning-functions"><i class="fa fa-check"></i><b>1.7</b> Machine learning functions</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="rap-download.html"><a href="rap-download.html"><i class="fa fa-check"></i><b>2</b> Downloading Data from RAP</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="rap-download.html"><a href="rap-download.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
+<li class="chapter" data-level="2.2" data-path="rap-download.html"><a href="rap-download.html#r-native-phenotype-extraction"><i class="fa fa-check"></i><b>2.2</b> R-native phenotype extraction</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="rap-download.html"><a href="rap-download.html#start-an-r-session-on-rap"><i class="fa fa-check"></i><b>2.2.1</b> Start an R session on RAP</a></li>
+<li class="chapter" data-level="2.2.2" data-path="rap-download.html"><a href="rap-download.html#confirm-the-dataset"><i class="fa fa-check"></i><b>2.2.2</b> Confirm the dataset</a></li>
+<li class="chapter" data-level="2.2.3" data-path="rap-download.html"><a href="rap-download.html#inspect-available-fields"><i class="fa fa-check"></i><b>2.2.3</b> Inspect available fields</a></li>
+<li class="chapter" data-level="2.2.4" data-path="rap-download.html"><a href="rap-download.html#preview-before-extracting"><i class="fa fa-check"></i><b>2.2.4</b> Preview before extracting</a></li>
+<li class="chapter" data-level="2.2.5" data-path="rap-download.html"><a href="rap-download.html#small-synchronous-extraction"><i class="fa fa-check"></i><b>2.2.5</b> Small synchronous extraction</a></li>
+<li class="chapter" data-level="2.2.6" data-path="rap-download.html"><a href="rap-download.html#recommended-demographic-extraction-with-table-exporter"><i class="fa fa-check"></i><b>2.2.6</b> Recommended demographic extraction with table-exporter</a></li>
+<li class="chapter" data-level="2.2.7" data-path="rap-download.html"><a href="rap-download.html#monitor-the-table-exporter-job"><i class="fa fa-check"></i><b>2.2.7</b> Monitor the table-exporter job</a></li>
+<li class="chapter" data-level="2.2.8" data-path="rap-download.html"><a href="rap-download.html#read-extracted-data-back-into-r"><i class="fa fa-check"></i><b>2.2.8</b> Read extracted data back into R</a></li>
+<li class="chapter" data-level="2.2.9" data-path="rap-download.html"><a href="rap-download.html#minimal-complete-demographic-workflow"><i class="fa fa-check"></i><b>2.2.9</b> Minimal complete demographic workflow</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="rap-download.html"><a href="rap-download.html#legacy-python-helpers"><i class="fa fa-check"></i><b>2.3</b> Legacy Python helpers</a>
+<ul>
+<li class="chapter" data-level="2.3.1" data-path="rap-download.html"><a href="rap-download.html#demographic-data"><i class="fa fa-check"></i><b>2.3.1</b> Demographic data</a></li>
+<li class="chapter" data-level="2.3.2" data-path="rap-download.html"><a href="rap-download.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3.2</b> Metabolomics data (NMR)</a></li>
+<li class="chapter" data-level="2.3.3" data-path="rap-download.html"><a href="rap-download.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.3.3</b> Proteomics data (Olink)</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="rap-download.html"><a href="rap-download.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.4</b> Common UKB field IDs</a></li>
+<li class="chapter" data-level="2.5" data-path="rap-download.html"><a href="rap-download.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.5</b> Typical output sizes</a></li>
+<li class="chapter" data-level="2.6" data-path="rap-download.html"><a href="rap-download.html#troubleshooting"><i class="fa fa-check"></i><b>2.6</b> Troubleshooting</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="preprocessing.html"><a href="preprocessing.html"><i class="fa fa-check"></i><b>3</b> Variable Preprocessing</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="preprocessing.html"><a href="preprocessing.html#available-variables"><i class="fa fa-check"></i><b>3.1</b> Available variables</a></li>
+<li class="chapter" data-level="3.2" data-path="preprocessing.html"><a href="preprocessing.html#basic-usage"><i class="fa fa-check"></i><b>3.2</b> Basic usage</a></li>
+<li class="chapter" data-level="3.3" data-path="preprocessing.html"><a href="preprocessing.html#blood-pressure"><i class="fa fa-check"></i><b>3.3</b> Blood pressure</a></li>
+<li class="chapter" data-level="3.4" data-path="preprocessing.html"><a href="preprocessing.html#medication-use"><i class="fa fa-check"></i><b>3.4</b> Medication use</a></li>
+<li class="chapter" data-level="3.5" data-path="preprocessing.html"><a href="preprocessing.html#air-pollution-exposure"><i class="fa fa-check"></i><b>3.5</b> Air pollution exposure</a></li>
+<li class="chapter" data-level="3.6" data-path="preprocessing.html"><a href="preprocessing.html#custom-variable-mapping"><i class="fa fa-check"></i><b>3.6</b> Custom variable mapping</a></li>
+<li class="chapter" data-level="3.7" data-path="preprocessing.html"><a href="preprocessing.html#complete-preprocessing-example"><i class="fa fa-check"></i><b>3.7</b> Complete preprocessing example</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="disease-definitions.html"><a href="disease-definitions.html"><i class="fa fa-check"></i><b>4</b> Disease Definitions</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="disease-definitions.html"><a href="disease-definitions.html#predefined-diseases"><i class="fa fa-check"></i><b>4.1</b> Predefined diseases</a></li>
+<li class="chapter" data-level="4.2" data-path="disease-definitions.html"><a href="disease-definitions.html#inspecting-a-definition"><i class="fa fa-check"></i><b>4.2</b> Inspecting a definition</a></li>
+<li class="chapter" data-level="4.3" data-path="disease-definitions.html"><a href="disease-definitions.html#creating-custom-definitions"><i class="fa fa-check"></i><b>4.3</b> Creating custom definitions</a></li>
+<li class="chapter" data-level="4.4" data-path="disease-definitions.html"><a href="disease-definitions.html#arrhythmia-example-with-icd-10-opcs4"><i class="fa fa-check"></i><b>4.4</b> Arrhythmia example with ICD-10 + OPCS4</a></li>
+<li class="chapter" data-level="4.5" data-path="disease-definitions.html"><a href="disease-definitions.html#composite-endpoints"><i class="fa fa-check"></i><b>4.5</b> Composite endpoints</a></li>
+<li class="chapter" data-level="4.6" data-path="disease-definitions.html"><a href="disease-definitions.html#comparing-data-sources"><i class="fa fa-check"></i><b>4.6</b> Comparing data sources</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="survival-analysis.html"><a href="survival-analysis.html"><i class="fa fa-check"></i><b>5</b> Survival Analysis</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="survival-analysis.html"><a href="survival-analysis.html#quick-start"><i class="fa fa-check"></i><b>5.1</b> Quick start</a></li>
+<li class="chapter" data-level="5.2" data-path="survival-analysis.html"><a href="survival-analysis.html#output-columns"><i class="fa fa-check"></i><b>5.2</b> Output columns</a></li>
+<li class="chapter" data-level="5.3" data-path="survival-analysis.html"><a href="survival-analysis.html#participant-flow-reporting"><i class="fa fa-check"></i><b>5.3</b> Participant flow reporting</a></li>
+<li class="chapter" data-level="5.4" data-path="survival-analysis.html"><a href="survival-analysis.html#case-classification-logic"><i class="fa fa-check"></i><b>5.4</b> Case classification logic</a></li>
+<li class="chapter" data-level="5.5" data-path="survival-analysis.html"><a href="survival-analysis.html#recommended-workflow-for-users"><i class="fa fa-check"></i><b>5.5</b> Recommended workflow for users</a></li>
+<li class="chapter" data-level="5.6" data-path="survival-analysis.html"><a href="survival-analysis.html#follow-up-time"><i class="fa fa-check"></i><b>5.6</b> Follow-up time</a></li>
+<li class="chapter" data-level="5.7" data-path="survival-analysis.html"><a href="survival-analysis.html#dual-source-design"><i class="fa fa-check"></i><b>5.7</b> Dual-source design</a></li>
+<li class="chapter" data-level="5.8" data-path="survival-analysis.html"><a href="survival-analysis.html#performance-tuning-large-data"><i class="fa fa-check"></i><b>5.8</b> Performance tuning (large data)</a></li>
+<li class="chapter" data-level="5.9" data-path="survival-analysis.html"><a href="survival-analysis.html#running-a-cox-model"><i class="fa fa-check"></i><b>5.9</b> Running a Cox model</a></li>
+<li class="chapter" data-level="5.10" data-path="survival-analysis.html"><a href="survival-analysis.html#sensitivity-analyses"><i class="fa fa-check"></i><b>5.10</b> Sensitivity analyses</a></li>
+<li class="chapter" data-level="5.11" data-path="survival-analysis.html"><a href="survival-analysis.html#long-format-output"><i class="fa fa-check"></i><b>5.11</b> Long format output</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="baseline-table.html"><a href="baseline-table.html"><i class="fa fa-check"></i><b>6</b> Baseline Table</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="baseline-table.html"><a href="baseline-table.html#basic-usage-1"><i class="fa fa-check"></i><b>6.1</b> Basic usage</a></li>
+<li class="chapter" data-level="6.2" data-path="baseline-table.html"><a href="baseline-table.html#exporting-to-csv"><i class="fa fa-check"></i><b>6.2</b> Exporting to CSV</a></li>
+<li class="chapter" data-level="6.3" data-path="baseline-table.html"><a href="baseline-table.html#using-with-the-survival-package-example-data"><i class="fa fa-check"></i><b>6.3</b> Using with the <code>survival</code> package example data</a></li>
+<li class="chapter" data-level="6.4" data-path="baseline-table.html"><a href="baseline-table.html#parameters"><i class="fa fa-check"></i><b>6.4</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="imputation.html"><a href="imputation.html"><i class="fa fa-check"></i><b>7</b> Multiple Imputation</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="imputation.html"><a href="imputation.html#motivation"><i class="fa fa-check"></i><b>7.1</b> Motivation</a></li>
+<li class="chapter" data-level="7.2" data-path="imputation.html"><a href="imputation.html#basic-usage-2"><i class="fa fa-check"></i><b>7.2</b> Basic usage</a></li>
+<li class="chapter" data-level="7.3" data-path="imputation.html"><a href="imputation.html#working-with-the-output"><i class="fa fa-check"></i><b>7.3</b> Working with the output</a></li>
+<li class="chapter" data-level="7.4" data-path="imputation.html"><a href="imputation.html#merging-additional-datasets"><i class="fa fa-check"></i><b>7.4</b> Merging additional datasets</a></li>
+<li class="chapter" data-level="7.5" data-path="imputation.html"><a href="imputation.html#diagnostics"><i class="fa fa-check"></i><b>7.5</b> Diagnostics</a></li>
+<li class="chapter" data-level="7.6" data-path="imputation.html"><a href="imputation.html#pooled-analysis"><i class="fa fa-check"></i><b>7.6</b> Pooled analysis</a></li>
+<li class="chapter" data-level="7.7" data-path="imputation.html"><a href="imputation.html#saving-completed-datasets"><i class="fa fa-check"></i><b>7.7</b> Saving completed datasets</a></li>
+<li class="chapter" data-level="7.8" data-path="imputation.html"><a href="imputation.html#parameters-1"><i class="fa fa-check"></i><b>7.8</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="8" data-path="main-analysis.html"><a href="main-analysis.html"><i class="fa fa-check"></i><b>8</b> Main Analysis</a>
+<ul>
+<li class="chapter" data-level="8.1" data-path="main-analysis.html"><a href="main-analysis.html#correlation"><i class="fa fa-check"></i><b>8.1</b> Pre-Analysis: Correlation Check</a>
+<ul>
+<li class="chapter" data-level="8.1.1" data-path="main-analysis.html"><a href="main-analysis.html#calculate-correlation-matrix"><i class="fa fa-check"></i><b>8.1.1</b> Calculate Correlation Matrix</a></li>
+<li class="chapter" data-level="8.1.2" data-path="main-analysis.html"><a href="main-analysis.html#visualize-correlation-heatmap"><i class="fa fa-check"></i><b>8.1.2</b> Visualize Correlation Heatmap</a></li>
+</ul></li>
+<li class="chapter" data-level="8.2" data-path="main-analysis.html"><a href="main-analysis.html#regression"><i class="fa fa-check"></i><b>8.2</b> Regression Analysis</a>
+<ul>
+<li class="chapter" data-level="8.2.1" data-path="main-analysis.html"><a href="main-analysis.html#lm"><i class="fa fa-check"></i><b>8.2.1</b> Linear Regression</a></li>
+<li class="chapter" data-level="8.2.2" data-path="main-analysis.html"><a href="main-analysis.html#logistic"><i class="fa fa-check"></i><b>8.2.2</b> Logistic Regression</a></li>
+<li class="chapter" data-level="8.2.3" data-path="main-analysis.html"><a href="main-analysis.html#cox"><i class="fa fa-check"></i><b>8.2.3</b> Cox Proportional Hazards Regression</a></li>
+</ul></li>
+<li class="chapter" data-level="8.3" data-path="main-analysis.html"><a href="main-analysis.html#unified-interface"><i class="fa fa-check"></i><b>8.3</b> Unified Interface Across Models</a></li>
+<li class="chapter" data-level="8.4" data-path="main-analysis.html"><a href="main-analysis.html#best-practices"><i class="fa fa-check"></i><b>8.4</b> Best Practices</a>
+<ul>
+<li class="chapter" data-level="8.4.1" data-path="main-analysis.html"><a href="main-analysis.html#check-correlations-first"><i class="fa fa-check"></i><b>8.4.1</b> Check Correlations First</a></li>
+<li class="chapter" data-level="8.4.2" data-path="main-analysis.html"><a href="main-analysis.html#start-with-univariate-then-multivariate"><i class="fa fa-check"></i><b>8.4.2</b> Start with Univariate, Then Multivariate</a></li>
+<li class="chapter" data-level="8.4.3" data-path="main-analysis.html"><a href="main-analysis.html#validate-model-assumptions"><i class="fa fa-check"></i><b>8.4.3</b> Validate Model Assumptions</a></li>
+<li class="chapter" data-level="8.4.4" data-path="main-analysis.html"><a href="main-analysis.html#handle-missing-data-appropriately"><i class="fa fa-check"></i><b>8.4.4</b> Handle Missing Data Appropriately</a></li>
+<li class="chapter" data-level="8.4.5" data-path="main-analysis.html"><a href="main-analysis.html#run-sensitivity-analysis-preprocessing"><i class="fa fa-check"></i><b>8.4.5</b> Run Sensitivity Analysis Preprocessing</a></li>
+</ul></li>
+<li class="chapter" data-level="8.5" data-path="main-analysis.html"><a href="main-analysis.html#summary"><i class="fa fa-check"></i><b>8.5</b> Summary</a></li>
+</ul></li>
+<li class="chapter" data-level="9" data-path="advanced-analysis.html"><a href="advanced-analysis.html"><i class="fa fa-check"></i><b>9</b> Advanced Analysis Modules</a>
+<ul>
+<li class="chapter" data-level="9.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#overview"><i class="fa fa-check"></i><b>9.1</b> Overview</a></li>
+<li class="chapter" data-level="9.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#subgroup"><i class="fa fa-check"></i><b>9.2</b> Subgroup Analysis</a>
+<ul>
+<li class="chapter" data-level="9.2.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-usage-3"><i class="fa fa-check"></i><b>9.2.1</b> Basic Usage</a></li>
+<li class="chapter" data-level="9.2.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#multiple-subgroup-variables"><i class="fa fa-check"></i><b>9.2.2</b> Multiple Subgroup Variables</a></li>
+<li class="chapter" data-level="9.2.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#parameters-2"><i class="fa fa-check"></i><b>9.2.3</b> Parameters</a></li>
+</ul></li>
+<li class="chapter" data-level="9.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity"><i class="fa fa-check"></i><b>9.3</b> Propensity Score Methods</a>
+<ul>
+<li class="chapter" data-level="9.3.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#estimate-propensity-scores"><i class="fa fa-check"></i><b>9.3.1</b> Estimate Propensity Scores</a></li>
+<li class="chapter" data-level="9.3.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity-score-matching-psm"><i class="fa fa-check"></i><b>9.3.2</b> Propensity Score Matching (PSM)</a></li>
+<li class="chapter" data-level="9.3.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#inverse-probability-of-treatment-weighting-iptw"><i class="fa fa-check"></i><b>9.3.3</b> Inverse Probability of Treatment Weighting (IPTW)</a></li>
+<li class="chapter" data-level="9.3.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#weight-types"><i class="fa fa-check"></i><b>9.3.4</b> Weight Types</a></li>
+</ul></li>
+<li class="chapter" data-level="9.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mediation"><i class="fa fa-check"></i><b>9.4</b> Mediation Analysis</a>
+<ul>
+<li class="chapter" data-level="9.4.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-mediation-analysis"><i class="fa fa-check"></i><b>9.4.1</b> Basic Mediation Analysis</a></li>
+<li class="chapter" data-level="9.4.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#effect-definitions"><i class="fa fa-check"></i><b>9.4.2</b> Effect Definitions</a></li>
+<li class="chapter" data-level="9.4.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#multiple-mediators"><i class="fa fa-check"></i><b>9.4.3</b> Multiple Mediators</a></li>
+<li class="chapter" data-level="9.4.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mediation-visualization"><i class="fa fa-check"></i><b>9.4.4</b> Visualization</a></li>
+</ul></li>
+<li class="chapter" data-level="9.5" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mi-pooling"><i class="fa fa-check"></i><b>9.5</b> Multiple Imputation Pooling</a>
+<ul>
+<li class="chapter" data-level="9.5.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#basic-usage-4"><i class="fa fa-check"></i><b>9.5.1</b> Basic Usage</a></li>
+<li class="chapter" data-level="9.5.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#one-step-fitting-and-pooling"><i class="fa fa-check"></i><b>9.5.2</b> One-Step Fitting and Pooling</a></li>
+<li class="chapter" data-level="9.5.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#supported-model-types"><i class="fa fa-check"></i><b>9.5.3</b> Supported Model Types</a></li>
+<li class="chapter" data-level="9.5.4" data-path="advanced-analysis.html"><a href="advanced-analysis.html#custom-estimates-pooling"><i class="fa fa-check"></i><b>9.5.4</b> Custom Estimates Pooling</a></li>
+<li class="chapter" data-level="9.5.5" data-path="advanced-analysis.html"><a href="advanced-analysis.html#mi-visualization"><i class="fa fa-check"></i><b>9.5.5</b> Visualization</a></li>
+<li class="chapter" data-level="9.5.6" data-path="advanced-analysis.html"><a href="advanced-analysis.html#understanding-fmi"><i class="fa fa-check"></i><b>9.5.6</b> Understanding FMI</a></li>
+</ul></li>
+<li class="chapter" data-level="9.6" data-path="advanced-analysis.html"><a href="advanced-analysis.html#visualization"><i class="fa fa-check"></i><b>9.6</b> Visualization Functions</a>
+<ul>
+<li class="chapter" data-level="9.6.1" data-path="advanced-analysis.html"><a href="advanced-analysis.html#forest-plot"><i class="fa fa-check"></i><b>9.6.1</b> Forest Plot</a></li>
+<li class="chapter" data-level="9.6.2" data-path="advanced-analysis.html"><a href="advanced-analysis.html#kaplan-meier-curves"><i class="fa fa-check"></i><b>9.6.2</b> Kaplan-Meier Curves</a></li>
+<li class="chapter" data-level="9.6.3" data-path="advanced-analysis.html"><a href="advanced-analysis.html#propensity-score-plots"><i class="fa fa-check"></i><b>9.6.3</b> Propensity Score Plots</a></li>
+</ul></li>
+<li class="chapter" data-level="9.7" data-path="advanced-analysis.html"><a href="advanced-analysis.html#workflow"><i class="fa fa-check"></i><b>9.7</b> Integration Example: Complete Workflow</a></li>
+<li class="chapter" data-level="9.8" data-path="advanced-analysis.html"><a href="advanced-analysis.html#summary-1"><i class="fa fa-check"></i><b>9.8</b> Summary</a></li>
+<li class="chapter" data-level="9.9" data-path="advanced-analysis.html"><a href="advanced-analysis.html#required-packages"><i class="fa fa-check"></i><b>9.9</b> Required Packages</a></li>
+</ul></li>
+<li class="chapter" data-level="10" data-path="machine-learning.html"><a href="machine-learning.html"><i class="fa fa-check"></i><b>10</b> Machine Learning Workflow</a>
+<ul>
+<li class="chapter" data-level="10.1" data-path="machine-learning.html"><a href="machine-learning.html#what-users-usually-need"><i class="fa fa-check"></i><b>10.1</b> What users usually need</a></li>
+<li class="chapter" data-level="10.2" data-path="machine-learning.html"><a href="machine-learning.html#prepare-an-ml-ready-dataset"><i class="fa fa-check"></i><b>10.2</b> Prepare an ML-ready dataset</a></li>
+<li class="chapter" data-level="10.3" data-path="machine-learning.html"><a href="machine-learning.html#model-choices"><i class="fa fa-check"></i><b>10.3</b> Model choices</a></li>
+<li class="chapter" data-level="10.4" data-path="machine-learning.html"><a href="machine-learning.html#binary-classification"><i class="fa fa-check"></i><b>10.4</b> Binary classification</a></li>
+<li class="chapter" data-level="10.5" data-path="machine-learning.html"><a href="machine-learning.html#continuous-outcomes"><i class="fa fa-check"></i><b>10.5</b> Continuous outcomes</a></li>
+<li class="chapter" data-level="10.6" data-path="machine-learning.html"><a href="machine-learning.html#multiclass-outcomes"><i class="fa fa-check"></i><b>10.6</b> Multiclass outcomes</a></li>
+<li class="chapter" data-level="10.7" data-path="machine-learning.html"><a href="machine-learning.html#when-traintest-files-already-exist"><i class="fa fa-check"></i><b>10.7</b> When train/test files already exist</a></li>
+<li class="chapter" data-level="10.8" data-path="machine-learning.html"><a href="machine-learning.html#feature-selection"><i class="fa fa-check"></i><b>10.8</b> Feature selection</a></li>
+<li class="chapter" data-level="10.9" data-path="machine-learning.html"><a href="machine-learning.html#hyperparameter-tuning"><i class="fa fa-check"></i><b>10.9</b> Hyperparameter tuning</a></li>
+<li class="chapter" data-level="10.10" data-path="machine-learning.html"><a href="machine-learning.html#output-object"><i class="fa fa-check"></i><b>10.10</b> Output object</a></li>
+<li class="chapter" data-level="10.11" data-path="machine-learning.html"><a href="machine-learning.html#shap-interpretation"><i class="fa fa-check"></i><b>10.11</b> SHAP interpretation</a></li>
+<li class="chapter" data-level="10.12" data-path="machine-learning.html"><a href="machine-learning.html#advanced-run-the-workflow-step-by-step"><i class="fa fa-check"></i><b>10.12</b> Advanced: run the workflow step by step</a></li>
+<li class="chapter" data-level="10.13" data-path="machine-learning.html"><a href="machine-learning.html#legacy-quick-model-interface"><i class="fa fa-check"></i><b>10.13</b> Legacy quick-model interface</a></li>
+<li class="chapter" data-level="10.14" data-path="machine-learning.html"><a href="machine-learning.html#survival-machine-learning"><i class="fa fa-check"></i><b>10.14</b> Survival machine learning</a></li>
+<li class="chapter" data-level="10.15" data-path="machine-learning.html"><a href="machine-learning.html#practical-checklist"><i class="fa fa-check"></i><b>10.15</b> Practical checklist</a></li>
+<li class="chapter" data-level="10.16" data-path="machine-learning.html"><a href="machine-learning.html#optional-packages"><i class="fa fa-check"></i><b>10.16</b> Optional packages</a></li>
+</ul></li>
+<li class="chapter" data-level="11" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html"><i class="fa fa-check"></i><b>11</b> Proteomics Enrichment Analysis</a>
+<ul>
+<li class="chapter" data-level="11.1" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#required-packages-1"><i class="fa fa-check"></i><b>11.1</b> Required packages</a></li>
+<li class="chapter" data-level="11.2" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#supported-protein-name-formats"><i class="fa fa-check"></i><b>11.2</b> Supported protein name formats</a></li>
+<li class="chapter" data-level="11.3" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#convert-rap-exported-olink-names-to-gene-symbols"><i class="fa fa-check"></i><b>11.3</b> Convert RAP-exported Olink names to gene symbols</a></li>
+<li class="chapter" data-level="11.4" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#go-over-representation-analysis"><i class="fa fa-check"></i><b>11.4</b> GO over-representation analysis</a></li>
+<li class="chapter" data-level="11.5" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#kegg-over-representation-analysis"><i class="fa fa-check"></i><b>11.5</b> KEGG over-representation analysis</a></li>
+<li class="chapter" data-level="11.6" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#use-a-custom-background-universe"><i class="fa fa-check"></i><b>11.6</b> Use a custom background universe</a></li>
+<li class="chapter" data-level="11.7" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#plot-enrichment-results"><i class="fa fa-check"></i><b>11.7</b> Plot enrichment results</a></li>
+<li class="chapter" data-level="11.8" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#use-a-custom-mapping-table"><i class="fa fa-check"></i><b>11.8</b> Use a custom mapping table</a></li>
+<li class="chapter" data-level="11.9" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#run-string-ppi-analysis-for-proteomics-hits"><i class="fa fa-check"></i><b>11.9</b> Run STRING PPI analysis for proteomics hits</a></li>
+<li class="chapter" data-level="11.10" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#filter-the-ppi-network-and-compute-topology"><i class="fa fa-check"></i><b>11.10</b> Filter the PPI network and compute topology</a></li>
+<li class="chapter" data-level="11.11" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#detect-ppi-modules"><i class="fa fa-check"></i><b>11.11</b> Detect PPI modules</a></li>
+<li class="chapter" data-level="11.12" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#assess-network-robustness"><i class="fa fa-check"></i><b>11.12</b> Assess network robustness</a></li>
+<li class="chapter" data-level="11.13" data-path="proteomics-enrichment.html"><a href="proteomics-enrichment.html#practical-notes"><i class="fa fa-check"></i><b>11.13</b> Practical notes</a></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/Hinna0818/UKBAnalytica_v2" target="_blank">GitHub</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="rap-download" class="section level1 hasAnchor" number="2">
+<h1><span class="header-section-number">Chapter 2</span> Downloading Data from RAP<a href="rap-download.html#rap-download" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>UKBAnalytica_v2 provides R-native helpers for extracting phenotype data inside the
+UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the
+DNAnexus <code>dx</code> CLI from R, using <code>dx extract_dataset</code> for small synchronous
+extracts and the RAP <code>table-exporter</code> app for large cloud-side extracts.</p>
+<p>The older Python scripts are still shipped in <code>inst/python/</code> as legacy/helper
+entry points for users who already rely on those command-line workflows.</p>
+<div id="file-structure" class="section level2 hasAnchor" number="2.1">
+<h2><span class="header-section-number">2.1</span> File structure<a href="rap-download.html#file-structure" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<pre><code>inst/
+  python/
+    ukb_data_loader.py          # Demographics &amp; metabolites (Spark)
+    protein_loader.py           # Proteomics (dx commands)
+    field_ids_demographic.txt   # Example demographic field IDs
+  extdata/
+    metabolites_non_ratio.txt   # Non-ratio metabolite reference (170 fields)</code></pre>
+</div>
+<div id="r-native-phenotype-extraction" class="section level2 hasAnchor" number="2.2">
+<h2><span class="header-section-number">2.2</span> R-native phenotype extraction<a href="rap-download.html#r-native-phenotype-extraction" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Run these functions inside a RAP R session, or in a local environment where the
+DNAnexus <code>dx</code> CLI is installed and authenticated. For most users, the intended
+workflow is RAP JupyterLab -&gt; Terminal -&gt; R.</p>
+<div id="start-an-r-session-on-rap" class="section level3 hasAnchor" number="2.2.1">
+<h3><span class="header-section-number">2.2.1</span> Start an R session on RAP<a href="rap-download.html#start-an-r-session-on-rap" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<ol style="list-style-type: decimal">
+<li>Log in to the UK Biobank RAP.</li>
+<li>Open the project that contains your approved UKB <code>.dataset</code> file.</li>
+<li>Start a JupyterLab or R-capable workstation.</li>
+<li>Use a small instance such as <code>mem1_ssd1_v2_x4</code> for field checks and dry-runs.
+Use <code>rap_submit_extract()</code> for large jobs instead of pulling many fields into
+the active R session.</li>
+<li>In JupyterLab, open <code>Terminal</code>.</li>
+<li>Start R:</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="rap-download.html#cb3-1" tabindex="-1"></a><span class="ex">R</span></span></code></pre></div>
+<p>If the UKBAnalytica_v2 release is already installed in the RAP environment:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="rap-download.html#cb4-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span></code></pre></div>
+<p>If it is not installed yet:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="rap-download.html#cb5-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;remotes&quot;</span>)</span>
+<span id="cb5-2"><a href="rap-download.html#cb5-2" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;Hinna0818/UKBAnalytica_v2&quot;</span>)</span>
+<span id="cb5-3"><a href="rap-download.html#cb5-3" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span></code></pre></div>
+<p>RAP project files are usually mounted under <code>/mnt/project</code>. Files written by an
+interactive session may also appear in the current working directory. Check both
+locations when looking for outputs:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="rap-download.html#cb6-1" tabindex="-1"></a><span class="fu">getwd</span>()</span>
+<span id="cb6-2"><a href="rap-download.html#cb6-2" tabindex="-1"></a><span class="fu">list.files</span>()</span>
+<span id="cb6-3"><a href="rap-download.html#cb6-3" tabindex="-1"></a><span class="fu">list.files</span>(<span class="st">&quot;/mnt/project&quot;</span>)</span></code></pre></div>
+</div>
+<div id="confirm-the-dataset" class="section level3 hasAnchor" number="2.2.2">
+<h3><span class="header-section-number">2.2.2</span> Confirm the dataset<a href="rap-download.html#confirm-the-dataset" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>The package expects a <code>.dataset</code> file in the current RAP project root. Detect it
+with:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="rap-download.html#cb7-1" tabindex="-1"></a>dataset <span class="ot">&lt;-</span> <span class="fu">rap_find_dataset</span>()</span>
+<span id="cb7-2"><a href="rap-download.html#cb7-2" tabindex="-1"></a>dataset</span></code></pre></div>
+<p>A successful result looks like:</p>
+<pre class="text"><code>&quot;app12345_20260401.dataset&quot;</code></pre>
+<p>If no dataset is found, confirm that you opened the correct RAP project and that
+the <code>.dataset</code> file is visible in the project root.</p>
+</div>
+<div id="inspect-available-fields" class="section level3 hasAnchor" number="2.2.3">
+<h3><span class="header-section-number">2.2.3</span> Inspect available fields<a href="rap-download.html#inspect-available-fields" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>rap_list_fields()</code> to search fields that are approved for your project:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="rap-download.html#cb9-1" tabindex="-1"></a><span class="fu">rap_list_fields</span>(<span class="at">pattern =</span> <span class="st">&quot;^participant</span><span class="sc">\\</span><span class="st">.p31|^participant</span><span class="sc">\\</span><span class="st">.p53|^participant</span><span class="sc">\\</span><span class="st">.p21022|^participant</span><span class="sc">\\</span><span class="st">.p21001&quot;</span>)</span>
+<span id="cb9-2"><a href="rap-download.html#cb9-2" tabindex="-1"></a><span class="fu">rap_list_fields</span>(<span class="at">pattern =</span> <span class="st">&quot;blood pressure|smoking|alcohol&quot;</span>)</span></code></pre></div>
+<p>Common demographic and baseline field IDs:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Field ID</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">31</td>
+<td align="left">Sex</td>
+</tr>
+<tr class="even">
+<td align="left">53</td>
+<td align="left">Date of attending assessment centre</td>
+</tr>
+<tr class="odd">
+<td align="left">21022</td>
+<td align="left">Age at recruitment</td>
+</tr>
+<tr class="even">
+<td align="left">21001</td>
+<td align="left">Body mass index</td>
+</tr>
+<tr class="odd">
+<td align="left">21000</td>
+<td align="left">Ethnic background</td>
+</tr>
+<tr class="even">
+<td align="left">20116</td>
+<td align="left">Smoking status</td>
+</tr>
+<tr class="odd">
+<td align="left">20117</td>
+<td align="left">Alcohol drinker status</td>
+</tr>
+<tr class="even">
+<td align="left">738</td>
+<td align="left">Household income</td>
+</tr>
+<tr class="odd">
+<td align="left">6138</td>
+<td align="left">Qualifications</td>
+</tr>
+<tr class="even">
+<td align="left">4080</td>
+<td align="left">Automated systolic blood pressure</td>
+</tr>
+<tr class="odd">
+<td align="left">4079</td>
+<td align="left">Automated diastolic blood pressure</td>
+</tr>
+<tr class="even">
+<td align="left">93</td>
+<td align="left">Manual systolic blood pressure</td>
+</tr>
+<tr class="odd">
+<td align="left">94</td>
+<td align="left">Manual diastolic blood pressure</td>
+</tr>
+</tbody>
+</table>
+<p>You can also use the predefined variable names used by <code>preprocess_baseline()</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="rap-download.html#cb10-1" tabindex="-1"></a><span class="fu">get_variable_info</span>(<span class="st">&quot;demographics&quot;</span>)</span>
+<span id="cb10-2"><a href="rap-download.html#cb10-2" tabindex="-1"></a><span class="fu">get_variable_info</span>(<span class="st">&quot;anthropometrics&quot;</span>)</span>
+<span id="cb10-3"><a href="rap-download.html#cb10-3" tabindex="-1"></a><span class="fu">get_variable_info</span>(<span class="st">&quot;lifestyle&quot;</span>)</span>
+<span id="cb10-4"><a href="rap-download.html#cb10-4" tabindex="-1"></a><span class="fu">get_variable_info</span>(<span class="st">&quot;socioeconomic&quot;</span>)</span>
+<span id="cb10-5"><a href="rap-download.html#cb10-5" tabindex="-1"></a><span class="fu">get_variable_info</span>(<span class="st">&quot;blood_pressure&quot;</span>)</span></code></pre></div>
+</div>
+<div id="preview-before-extracting" class="section level3 hasAnchor" number="2.2.4">
+<h3><span class="header-section-number">2.2.4</span> Preview before extracting<a href="rap-download.html#preview-before-extracting" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Always dry-run large jobs before submission:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="rap-download.html#cb11-1" tabindex="-1"></a>plan <span class="ot">&lt;-</span> <span class="fu">rap_submit_extract</span>(</span>
+<span id="cb11-2"><a href="rap-download.html#cb11-2" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
+<span id="cb11-3"><a href="rap-download.html#cb11-3" tabindex="-1"></a>    <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb11-4"><a href="rap-download.html#cb11-4" tabindex="-1"></a>    <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;height&quot;</span>, <span class="st">&quot;weight&quot;</span>,</span>
+<span id="cb11-5"><a href="rap-download.html#cb11-5" tabindex="-1"></a>    <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb11-6"><a href="rap-download.html#cb11-6" tabindex="-1"></a>    <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>,</span>
+<span id="cb11-7"><a href="rap-download.html#cb11-7" tabindex="-1"></a>    <span class="st">&quot;sbp_auto_1&quot;</span>, <span class="st">&quot;sbp_auto_2&quot;</span>,</span>
+<span id="cb11-8"><a href="rap-download.html#cb11-8" tabindex="-1"></a>    <span class="st">&quot;dbp_auto_1&quot;</span>, <span class="st">&quot;dbp_auto_2&quot;</span></span>
+<span id="cb11-9"><a href="rap-download.html#cb11-9" tabindex="-1"></a>  ),</span>
+<span id="cb11-10"><a href="rap-download.html#cb11-10" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;baseline_demographics&quot;</span>,</span>
+<span id="cb11-11"><a href="rap-download.html#cb11-11" tabindex="-1"></a>  <span class="at">dry_run =</span> <span class="cn">TRUE</span></span>
+<span id="cb11-12"><a href="rap-download.html#cb11-12" tabindex="-1"></a>)</span>
+<span id="cb11-13"><a href="rap-download.html#cb11-13" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="rap-download.html#cb11-14" tabindex="-1"></a>plan<span class="sc">$</span>fields</span>
+<span id="cb11-15"><a href="rap-download.html#cb11-15" tabindex="-1"></a>plan<span class="sc">$</span>matched</span>
+<span id="cb11-16"><a href="rap-download.html#cb11-16" tabindex="-1"></a>plan<span class="sc">$</span>command</span></code></pre></div>
+<p>Use <code>variables</code> for exact columns defined by UKBAnalytica_v2. Use <code>field_id</code> when
+you want all instances and arrays for a UKB field:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="rap-download.html#cb12-1" tabindex="-1"></a>plan <span class="ot">&lt;-</span> <span class="fu">rap_submit_extract</span>(</span>
+<span id="cb12-2"><a href="rap-download.html#cb12-2" tabindex="-1"></a>  <span class="at">field_id =</span> <span class="fu">c</span>(<span class="dv">31</span>, <span class="dv">53</span>, <span class="dv">21022</span>, <span class="dv">21001</span>, <span class="dv">21000</span>, <span class="dv">20116</span>, <span class="dv">20117</span>, <span class="dv">738</span>, <span class="dv">6138</span>, <span class="dv">4080</span>, <span class="dv">4079</span>),</span>
+<span id="cb12-3"><a href="rap-download.html#cb12-3" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;baseline_demographics&quot;</span>,</span>
+<span id="cb12-4"><a href="rap-download.html#cb12-4" tabindex="-1"></a>  <span class="at">dry_run =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-5"><a href="rap-download.html#cb12-5" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="small-synchronous-extraction" class="section level3 hasAnchor" number="2.2.5">
+<h3><span class="header-section-number">2.2.5</span> Small synchronous extraction<a href="rap-download.html#small-synchronous-extraction" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>For a few fields, <code>rap_extract_pheno()</code> can extract data with
+<code>dx extract_dataset</code> and read the CSV directly into R:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="rap-download.html#cb13-1" tabindex="-1"></a>baseline_small <span class="ot">&lt;-</span> <span class="fu">rap_extract_pheno</span>(</span>
+<span id="cb13-2"><a href="rap-download.html#cb13-2" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(<span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>),</span>
+<span id="cb13-3"><a href="rap-download.html#cb13-3" tabindex="-1"></a>  <span class="at">strip_entity_prefix =</span> <span class="cn">TRUE</span></span>
+<span id="cb13-4"><a href="rap-download.html#cb13-4" tabindex="-1"></a>)</span>
+<span id="cb13-5"><a href="rap-download.html#cb13-5" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="rap-download.html#cb13-6" tabindex="-1"></a><span class="fu">dim</span>(baseline_small)</span>
+<span id="cb13-7"><a href="rap-download.html#cb13-7" tabindex="-1"></a><span class="fu">head</span>(baseline_small)</span></code></pre></div>
+<p>Write the result to the current RAP working directory:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="rap-download.html#cb14-1" tabindex="-1"></a>data.table<span class="sc">::</span><span class="fu">fwrite</span>(baseline_small, <span class="st">&quot;baseline_small.csv&quot;</span>)</span></code></pre></div>
+<p>If you want a stable local path in the active RAP session:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="rap-download.html#cb15-1" tabindex="-1"></a>baseline_small <span class="ot">&lt;-</span> <span class="fu">rap_extract_pheno</span>(</span>
+<span id="cb15-2"><a href="rap-download.html#cb15-2" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(<span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>),</span>
+<span id="cb15-3"><a href="rap-download.html#cb15-3" tabindex="-1"></a>  <span class="at">output =</span> <span class="st">&quot;baseline_small.csv&quot;</span>,</span>
+<span id="cb15-4"><a href="rap-download.html#cb15-4" tabindex="-1"></a>  <span class="at">strip_entity_prefix =</span> <span class="cn">TRUE</span></span>
+<span id="cb15-5"><a href="rap-download.html#cb15-5" tabindex="-1"></a>)</span></code></pre></div>
+<p>For large extractions, do not use synchronous mode. Submit a table-exporter job
+instead.</p>
+</div>
+<div id="recommended-demographic-extraction-with-table-exporter" class="section level3 hasAnchor" number="2.2.6">
+<h3><span class="header-section-number">2.2.6</span> Recommended demographic extraction with table-exporter<a href="rap-download.html#recommended-demographic-extraction-with-table-exporter" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Use <code>rap_submit_extract()</code> for regular baseline datasets:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="rap-download.html#cb16-1" tabindex="-1"></a>job <span class="ot">&lt;-</span> <span class="fu">rap_submit_extract</span>(</span>
+<span id="cb16-2"><a href="rap-download.html#cb16-2" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
+<span id="cb16-3"><a href="rap-download.html#cb16-3" tabindex="-1"></a>    <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb16-4"><a href="rap-download.html#cb16-4" tabindex="-1"></a>    <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;height&quot;</span>, <span class="st">&quot;weight&quot;</span>,</span>
+<span id="cb16-5"><a href="rap-download.html#cb16-5" tabindex="-1"></a>    <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb16-6"><a href="rap-download.html#cb16-6" tabindex="-1"></a>    <span class="st">&quot;sleep_duration&quot;</span>,</span>
+<span id="cb16-7"><a href="rap-download.html#cb16-7" tabindex="-1"></a>    <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>,</span>
+<span id="cb16-8"><a href="rap-download.html#cb16-8" tabindex="-1"></a>    <span class="st">&quot;sbp_auto_1&quot;</span>, <span class="st">&quot;sbp_auto_2&quot;</span>,</span>
+<span id="cb16-9"><a href="rap-download.html#cb16-9" tabindex="-1"></a>    <span class="st">&quot;dbp_auto_1&quot;</span>, <span class="st">&quot;dbp_auto_2&quot;</span>,</span>
+<span id="cb16-10"><a href="rap-download.html#cb16-10" tabindex="-1"></a>    <span class="st">&quot;triglycerides&quot;</span>, <span class="st">&quot;ldl&quot;</span>, <span class="st">&quot;hdl&quot;</span>, <span class="st">&quot;hba1c&quot;</span>, <span class="st">&quot;glucose&quot;</span></span>
+<span id="cb16-11"><a href="rap-download.html#cb16-11" tabindex="-1"></a>  ),</span>
+<span id="cb16-12"><a href="rap-download.html#cb16-12" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;baseline_demographics&quot;</span>,</span>
+<span id="cb16-13"><a href="rap-download.html#cb16-13" tabindex="-1"></a>  <span class="at">priority =</span> <span class="st">&quot;low&quot;</span></span>
+<span id="cb16-14"><a href="rap-download.html#cb16-14" tabindex="-1"></a>)</span>
+<span id="cb16-15"><a href="rap-download.html#cb16-15" tabindex="-1"></a></span>
+<span id="cb16-16"><a href="rap-download.html#cb16-16" tabindex="-1"></a>job<span class="sc">$</span>job_id</span>
+<span id="cb16-17"><a href="rap-download.html#cb16-17" tabindex="-1"></a>job<span class="sc">$</span>output</span></code></pre></div>
+<p>This submits a RAP <code>table-exporter</code> job and creates <code>baseline_demographics.csv</code>
+in the RAP project when the job finishes.</p>
+</div>
+<div id="monitor-the-table-exporter-job" class="section level3 hasAnchor" number="2.2.7">
+<h3><span class="header-section-number">2.2.7</span> Monitor the table-exporter job<a href="rap-download.html#monitor-the-table-exporter-job" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>From the same JupyterLab Terminal, use the returned job ID:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb17-1"><a href="rap-download.html#cb17-1" tabindex="-1"></a><span class="ex">dx</span> describe job-xxxx</span></code></pre></div>
+<p>List recent jobs:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb18-1"><a href="rap-download.html#cb18-1" tabindex="-1"></a><span class="ex">dx</span> find jobs <span class="at">--brief</span></span></code></pre></div>
+<p>After completion, check that the output file exists:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb19-1"><a href="rap-download.html#cb19-1" tabindex="-1"></a><span class="ex">dx</span> ls</span>
+<span id="cb19-2"><a href="rap-download.html#cb19-2" tabindex="-1"></a><span class="ex">dx</span> ls /mnt/project</span></code></pre></div>
+<p>Depending on the RAP session and project mount, the completed output can be
+visible in the project file browser, the project root, or <code>/mnt/project</code>.</p>
+</div>
+<div id="read-extracted-data-back-into-r" class="section level3 hasAnchor" number="2.2.8">
+<h3><span class="header-section-number">2.2.8</span> Read extracted data back into R<a href="rap-download.html#read-extracted-data-back-into-r" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>If the file is in the current working directory:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="rap-download.html#cb20-1" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> data.table<span class="sc">::</span><span class="fu">fread</span>(<span class="st">&quot;baseline_demographics.csv&quot;</span>)</span></code></pre></div>
+<p>If the file is visible under <code>/mnt/project</code>:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="rap-download.html#cb21-1" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> data.table<span class="sc">::</span><span class="fu">fread</span>(<span class="st">&quot;/mnt/project/baseline_demographics.csv&quot;</span>)</span></code></pre></div>
+<p>Then continue with UKBAnalytica_v2 preprocessing:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="rap-download.html#cb22-1" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> <span class="fu">preprocess_baseline</span>(</span>
+<span id="cb22-2"><a href="rap-download.html#cb22-2" tabindex="-1"></a>  baseline,</span>
+<span id="cb22-3"><a href="rap-download.html#cb22-3" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
+<span id="cb22-4"><a href="rap-download.html#cb22-4" tabindex="-1"></a>    <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb22-5"><a href="rap-download.html#cb22-5" tabindex="-1"></a>    <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb22-6"><a href="rap-download.html#cb22-6" tabindex="-1"></a>    <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span></span>
+<span id="cb22-7"><a href="rap-download.html#cb22-7" tabindex="-1"></a>  )</span>
+<span id="cb22-8"><a href="rap-download.html#cb22-8" tabindex="-1"></a>)</span>
+<span id="cb22-9"><a href="rap-download.html#cb22-9" tabindex="-1"></a></span>
+<span id="cb22-10"><a href="rap-download.html#cb22-10" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> <span class="fu">calculate_blood_pressure</span>(baseline, <span class="at">type =</span> <span class="st">&quot;sbp&quot;</span>)</span>
+<span id="cb22-11"><a href="rap-download.html#cb22-11" tabindex="-1"></a>baseline <span class="ot">&lt;-</span> <span class="fu">calculate_blood_pressure</span>(baseline, <span class="at">type =</span> <span class="st">&quot;dbp&quot;</span>)</span></code></pre></div>
+</div>
+<div id="minimal-complete-demographic-workflow" class="section level3 hasAnchor" number="2.2.9">
+<h3><span class="header-section-number">2.2.9</span> Minimal complete demographic workflow<a href="rap-download.html#minimal-complete-demographic-workflow" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="rap-download.html#cb23-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb23-2"><a href="rap-download.html#cb23-2" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="rap-download.html#cb23-3" tabindex="-1"></a><span class="fu">rap_find_dataset</span>()</span>
+<span id="cb23-4"><a href="rap-download.html#cb23-4" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="rap-download.html#cb23-5" tabindex="-1"></a>plan <span class="ot">&lt;-</span> <span class="fu">rap_submit_extract</span>(</span>
+<span id="cb23-6"><a href="rap-download.html#cb23-6" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
+<span id="cb23-7"><a href="rap-download.html#cb23-7" tabindex="-1"></a>    <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb23-8"><a href="rap-download.html#cb23-8" tabindex="-1"></a>    <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;height&quot;</span>, <span class="st">&quot;weight&quot;</span>,</span>
+<span id="cb23-9"><a href="rap-download.html#cb23-9" tabindex="-1"></a>    <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb23-10"><a href="rap-download.html#cb23-10" tabindex="-1"></a>    <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>,</span>
+<span id="cb23-11"><a href="rap-download.html#cb23-11" tabindex="-1"></a>    <span class="st">&quot;sbp_auto_1&quot;</span>, <span class="st">&quot;sbp_auto_2&quot;</span>,</span>
+<span id="cb23-12"><a href="rap-download.html#cb23-12" tabindex="-1"></a>    <span class="st">&quot;dbp_auto_1&quot;</span>, <span class="st">&quot;dbp_auto_2&quot;</span></span>
+<span id="cb23-13"><a href="rap-download.html#cb23-13" tabindex="-1"></a>  ),</span>
+<span id="cb23-14"><a href="rap-download.html#cb23-14" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;baseline_demographics&quot;</span>,</span>
+<span id="cb23-15"><a href="rap-download.html#cb23-15" tabindex="-1"></a>  <span class="at">dry_run =</span> <span class="cn">TRUE</span></span>
+<span id="cb23-16"><a href="rap-download.html#cb23-16" tabindex="-1"></a>)</span>
+<span id="cb23-17"><a href="rap-download.html#cb23-17" tabindex="-1"></a></span>
+<span id="cb23-18"><a href="rap-download.html#cb23-18" tabindex="-1"></a>plan<span class="sc">$</span>fields</span>
+<span id="cb23-19"><a href="rap-download.html#cb23-19" tabindex="-1"></a></span>
+<span id="cb23-20"><a href="rap-download.html#cb23-20" tabindex="-1"></a>job <span class="ot">&lt;-</span> <span class="fu">rap_submit_extract</span>(</span>
+<span id="cb23-21"><a href="rap-download.html#cb23-21" tabindex="-1"></a>  <span class="at">variables =</span> <span class="fu">c</span>(</span>
+<span id="cb23-22"><a href="rap-download.html#cb23-22" tabindex="-1"></a>    <span class="st">&quot;sex&quot;</span>, <span class="st">&quot;age&quot;</span>, <span class="st">&quot;ethnicity&quot;</span>,</span>
+<span id="cb23-23"><a href="rap-download.html#cb23-23" tabindex="-1"></a>    <span class="st">&quot;bmi&quot;</span>, <span class="st">&quot;height&quot;</span>, <span class="st">&quot;weight&quot;</span>,</span>
+<span id="cb23-24"><a href="rap-download.html#cb23-24" tabindex="-1"></a>    <span class="st">&quot;smoking&quot;</span>, <span class="st">&quot;drinking&quot;</span>,</span>
+<span id="cb23-25"><a href="rap-download.html#cb23-25" tabindex="-1"></a>    <span class="st">&quot;education&quot;</span>, <span class="st">&quot;income&quot;</span>,</span>
+<span id="cb23-26"><a href="rap-download.html#cb23-26" tabindex="-1"></a>    <span class="st">&quot;sbp_auto_1&quot;</span>, <span class="st">&quot;sbp_auto_2&quot;</span>,</span>
+<span id="cb23-27"><a href="rap-download.html#cb23-27" tabindex="-1"></a>    <span class="st">&quot;dbp_auto_1&quot;</span>, <span class="st">&quot;dbp_auto_2&quot;</span></span>
+<span id="cb23-28"><a href="rap-download.html#cb23-28" tabindex="-1"></a>  ),</span>
+<span id="cb23-29"><a href="rap-download.html#cb23-29" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;baseline_demographics&quot;</span>,</span>
+<span id="cb23-30"><a href="rap-download.html#cb23-30" tabindex="-1"></a>  <span class="at">priority =</span> <span class="st">&quot;low&quot;</span></span>
+<span id="cb23-31"><a href="rap-download.html#cb23-31" tabindex="-1"></a>)</span>
+<span id="cb23-32"><a href="rap-download.html#cb23-32" tabindex="-1"></a></span>
+<span id="cb23-33"><a href="rap-download.html#cb23-33" tabindex="-1"></a>job<span class="sc">$</span>job_id</span></code></pre></div>
+</div>
+</div>
+<div id="legacy-python-helpers" class="section level2 hasAnchor" number="2.3">
+<h2><span class="header-section-number">2.3</span> Legacy Python helpers<a href="rap-download.html#legacy-python-helpers" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="demographic-data" class="section level3 hasAnchor" number="2.3.1">
+<h3><span class="header-section-number">2.3.1</span> Demographic data<a href="rap-download.html#demographic-data" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Download any combination of UKB fields by specifying their field IDs.
+The loader uses Spark via <code>dxdata</code> under the hood.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb24-1"><a href="rap-download.html#cb24-1" tabindex="-1"></a><span class="co"># Pass IDs directly</span></span>
+<span id="cb24-2"><a href="rap-download.html#cb24-2" tabindex="-1"></a><span class="ex">python</span> ukb_data_loader.py demographic <span class="dt">\</span></span>
+<span id="cb24-3"><a href="rap-download.html#cb24-3" tabindex="-1"></a>  <span class="at">--ids</span> 31,53,21022,21001 <span class="dt">\</span></span>
+<span id="cb24-4"><a href="rap-download.html#cb24-4" tabindex="-1"></a>  <span class="at">-o</span> population.csv</span>
+<span id="cb24-5"><a href="rap-download.html#cb24-5" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="rap-download.html#cb24-6" tabindex="-1"></a><span class="co"># Or read IDs from a file (recommended for many fields)</span></span>
+<span id="cb24-7"><a href="rap-download.html#cb24-7" tabindex="-1"></a><span class="ex">python</span> ukb_data_loader.py demographic <span class="dt">\</span></span>
+<span id="cb24-8"><a href="rap-download.html#cb24-8" tabindex="-1"></a>  <span class="at">--id-file</span> field_ids_demographic.txt <span class="dt">\</span></span>
+<span id="cb24-9"><a href="rap-download.html#cb24-9" tabindex="-1"></a>  <span class="at">-o</span> population.csv</span></code></pre></div>
+<p>The ID file supports comments (<code>#</code>), comma-separated and space-separated formats:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode txt"><code class="sourceCode default"><span id="cb25-1"><a href="rap-download.html#cb25-1" tabindex="-1"></a># Demographics</span>
+<span id="cb25-2"><a href="rap-download.html#cb25-2" tabindex="-1"></a>31      # Sex</span>
+<span id="cb25-3"><a href="rap-download.html#cb25-3" tabindex="-1"></a>53      # Date of assessment</span>
+<span id="cb25-4"><a href="rap-download.html#cb25-4" tabindex="-1"></a>21022   # Age at recruitment</span>
+<span id="cb25-5"><a href="rap-download.html#cb25-5" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="rap-download.html#cb25-6" tabindex="-1"></a># Comma separated</span>
+<span id="cb25-7"><a href="rap-download.html#cb25-7" tabindex="-1"></a>20116, 20117, 1289</span></code></pre></div>
+</div>
+<div id="metabolomics-data-nmr" class="section level3 hasAnchor" number="2.3.2">
+<h3><span class="header-section-number">2.3.2</span> Metabolomics data (NMR)<a href="rap-download.html#metabolomics-data-nmr" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Download NMR metabolomics data. You can retrieve all 251 metabolite fields
+or restrict to the curated non-ratio subset of 170 fields.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb26-1"><a href="rap-download.html#cb26-1" tabindex="-1"></a><span class="co"># All metabolite fields</span></span>
+<span id="cb26-2"><a href="rap-download.html#cb26-2" tabindex="-1"></a><span class="ex">python</span> ukb_data_loader.py metabolites <span class="at">-o</span> metabolites_all.csv</span>
+<span id="cb26-3"><a href="rap-download.html#cb26-3" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="rap-download.html#cb26-4" tabindex="-1"></a><span class="co"># Non-ratio subset only</span></span>
+<span id="cb26-5"><a href="rap-download.html#cb26-5" tabindex="-1"></a><span class="ex">python</span> ukb_data_loader.py metabolites <span class="dt">\</span></span>
+<span id="cb26-6"><a href="rap-download.html#cb26-6" tabindex="-1"></a>  <span class="at">--non-ratio</span> <span class="dt">\</span></span>
+<span id="cb26-7"><a href="rap-download.html#cb26-7" tabindex="-1"></a>  <span class="at">-o</span> metabolites_non_ratio.csv</span></code></pre></div>
+</div>
+<div id="proteomics-data-olink" class="section level3 hasAnchor" number="2.3.3">
+<h3><span class="header-section-number">2.3.3</span> Proteomics data (Olink)<a href="rap-download.html#proteomics-data-olink" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Download Olink protein expression data via <code>dx</code> commands.
+The loader handles batching, merging, and progress tracking automatically.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="rap-download.html#cb27-1" tabindex="-1"></a><span class="co"># Default settings</span></span>
+<span id="cb27-2"><a href="rap-download.html#cb27-2" tabindex="-1"></a><span class="ex">python</span> protein_loader.py <span class="at">-o</span> ./protein_data</span>
+<span id="cb27-3"><a href="rap-download.html#cb27-3" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="rap-download.html#cb27-4" tabindex="-1"></a><span class="co"># Custom batch size and delay</span></span>
+<span id="cb27-5"><a href="rap-download.html#cb27-5" tabindex="-1"></a><span class="ex">python</span> protein_loader.py <span class="dt">\</span></span>
+<span id="cb27-6"><a href="rap-download.html#cb27-6" tabindex="-1"></a>  <span class="at">-o</span> ./protein_data <span class="dt">\</span></span>
+<span id="cb27-7"><a href="rap-download.html#cb27-7" tabindex="-1"></a>  <span class="at">--batch-size</span> 100 <span class="dt">\</span></span>
+<span id="cb27-8"><a href="rap-download.html#cb27-8" tabindex="-1"></a>  <span class="at">--delay</span> 3</span>
+<span id="cb27-9"><a href="rap-download.html#cb27-9" tabindex="-1"></a></span>
+<span id="cb27-10"><a href="rap-download.html#cb27-10" tabindex="-1"></a><span class="co"># Skip merging batch files</span></span>
+<span id="cb27-11"><a href="rap-download.html#cb27-11" tabindex="-1"></a><span class="ex">python</span> protein_loader.py <span class="at">-o</span> ./protein_data <span class="at">--no-merge</span></span></code></pre></div>
+</div>
+</div>
+<div id="common-ukb-field-ids" class="section level2 hasAnchor" number="2.4">
+<h2><span class="header-section-number">2.4</span> Common UKB field IDs<a href="rap-download.html#common-ukb-field-ids" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>The table below lists commonly used field IDs for reference:</p>
+<table>
+<colgroup>
+<col width="29%" />
+<col width="32%" />
+<col width="38%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Category</th>
+<th align="left">Field IDs</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Basic demographics</td>
+<td align="left">31, 53, 21022, 21001</td>
+<td align="left">Sex, assessment date, age, BMI</td>
+</tr>
+<tr class="even">
+<td align="left">Lifestyle</td>
+<td align="left">20116, 20117, 1160</td>
+<td align="left">Smoking, alcohol, sleep</td>
+</tr>
+<tr class="odd">
+<td align="left">Blood pressure</td>
+<td align="left">93, 94, 4079, 4080</td>
+<td align="left">Systolic/diastolic BP</td>
+</tr>
+<tr class="even">
+<td align="left">Biomarkers</td>
+<td align="left">30870, 30780, 30760, 30750</td>
+<td align="left">Triglycerides, LDL, HDL, glucose</td>
+</tr>
+<tr class="odd">
+<td align="left">Hospital records</td>
+<td align="left">41270, 41280, 41271, 41281</td>
+<td align="left">ICD-10/9 diagnoses + dates</td>
+</tr>
+<tr class="even">
+<td align="left">Death registry</td>
+<td align="left">40000, 40001, 40002</td>
+<td align="left">Death date, causes</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="typical-output-sizes" class="section level2 hasAnchor" number="2.5">
+<h2><span class="header-section-number">2.5</span> Typical output sizes<a href="rap-download.html#typical-output-sizes" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="13%" />
+<col width="30%" />
+<col width="13%" />
+<col width="19%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Data type</th>
+<th align="left">File</th>
+<th align="left">Approx. size</th>
+<th align="left">Rows</th>
+<th align="left">Columns</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Demographics</td>
+<td align="left">population.csv</td>
+<td align="left">10–500 MB</td>
+<td align="left">~500 K</td>
+<td align="left">variable</td>
+</tr>
+<tr class="even">
+<td align="left">Metabolites (all)</td>
+<td align="left">metabolites.csv</td>
+<td align="left">~300 MB</td>
+<td align="left">~120 K</td>
+<td align="left">251</td>
+</tr>
+<tr class="odd">
+<td align="left">Metabolites (non-ratio)</td>
+<td align="left">metabolites_non_ratio.csv</td>
+<td align="left">~200 MB</td>
+<td align="left">~120 K</td>
+<td align="left">170</td>
+</tr>
+<tr class="even">
+<td align="left">Proteomics</td>
+<td align="left">protein_all_merged.csv</td>
+<td align="left">~800 MB</td>
+<td align="left">~50 K</td>
+<td align="left">~3000</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="troubleshooting" class="section level2 hasAnchor" number="2.6">
+<h2><span class="header-section-number">2.6</span> Troubleshooting<a href="rap-download.html#troubleshooting" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<ul>
+<li><strong><code>dx</code> is not found</strong>: start the workflow inside a RAP JupyterLab Terminal or
+use an environment where DNAnexus <code>dx-toolkit</code> is installed and authenticated.</li>
+<li><strong>No <code>.dataset</code> file is found</strong>: confirm that you opened the correct RAP
+project and that the dataset file is visible in the project root.</li>
+<li><strong>Cannot find the exported CSV</strong>: check the project file browser, <code>dx ls</code>,
+<code>list.files()</code>, and <code>list.files("/mnt/project")</code>. Table-exporter outputs are
+written to the RAP project rather than directly into a local R object.</li>
+<li><strong>Spark initialisation fails</strong>: make sure you are running inside a RAP JupyterLab session.</li>
+<li><strong>Field not found</strong>: some fields require instance/array suffixes (e.g., <code>_i0</code>, <code>_a0</code>).</li>
+<li><strong>Memory issues</strong>: reduce <code>--batch-size</code> for protein downloads.</li>
+<li><strong>Timeout</strong>: increase <code>--delay</code>.</li>
+</ul>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="preprocessing.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": true,
+    "facebook": false,
+    "twitter": false,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": null,
+    "text": null
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["UKBAnalytica_v2.pdf", "UKBAnalytica_v2.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

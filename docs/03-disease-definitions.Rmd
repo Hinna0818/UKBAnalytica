@@ -1,6 +1,6 @@
 # Disease Definitions {#disease-definitions}
 
-UKBAnalytica identifies disease cases from up to eight data sources:
+UKBAnalytica_v2 identifies disease cases from up to eight data sources:
 
 | Source | Code field | Date field |
 |:-------|:-----------|:-----------|

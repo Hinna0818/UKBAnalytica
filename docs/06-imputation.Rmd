@@ -1,6 +1,6 @@
 # Multiple Imputation {#imputation}
 
-Missing data are common in large cohort studies. UKBAnalytica provides
+Missing data are common in large cohort studies. UKBAnalytica_v2 provides
 `run_imputation()`, a wrapper around the
 [mice](https://github.com/amices/mice) package that handles the
 subset-impute-merge workflow in a single call.

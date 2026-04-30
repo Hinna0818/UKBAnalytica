@@ -1,6 +1,6 @@
 # Downloading Data from RAP {#rap-download}
 
-UKBAnalytica provides R-native helpers for extracting phenotype data inside the
+UKBAnalytica_v2 provides R-native helpers for extracting phenotype data inside the
 UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the
 DNAnexus `dx` CLI from R, using `dx extract_dataset` for small synchronous
 extracts and the RAP `table-exporter` app for large cloud-side extracts.
@@ -41,7 +41,7 @@ workflow is RAP JupyterLab -> Terminal -> R.
 R
 ```
 
-If `UKBAnalytica` is already installed in the RAP environment:
+If the UKBAnalytica_v2 release is already installed in the RAP environment:
 
 ```r
 library(UKBAnalytica)
@@ -144,7 +144,7 @@ plan$matched
 plan$command
 ```
 
-Use `variables` for exact columns defined by UKBAnalytica. Use `field_id` when
+Use `variables` for exact columns defined by UKBAnalytica_v2. Use `field_id` when
 you want all instances and arrays for a UKB field:
 
 ```r
@@ -254,7 +254,7 @@ If the file is visible under `/mnt/project`:
 baseline <- data.table::fread("/mnt/project/baseline_demographics.csv")
 ```
 
-Then continue with UKBAnalytica preprocessing:
+Then continue with UKBAnalytica_v2 preprocessing:
 
 ```r
 baseline <- preprocess_baseline(
