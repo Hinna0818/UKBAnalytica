@@ -15,11 +15,33 @@ NULL
 #' @keywords internal
 .check_ml_package <- function(pkg) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
+    auto_install <- isTRUE(getOption("UKBAnalytica.auto_install_ml", FALSE))
+    if (auto_install) {
+      message(sprintf(
+        "Package '%s' is required and not installed. Installing because option UKBAnalytica.auto_install_ml = TRUE.",
+        pkg
+      ))
+      utils::install.packages(pkg)
+    }
+  }
+
+  if (!requireNamespace(pkg, quietly = TRUE)) {
     stop(sprintf(
-      "Package '%s' is required for this function. Install with: install.packages('%s')",
+      "Package '%s' is required for this function. Install with install.packages('%s'), or set options(UKBAnalytica.auto_install_ml = TRUE) before calling the selected model.",
       pkg, pkg
     ), call. = FALSE)
   }
+  invisible(TRUE)
+}
+
+#' Warn about deprecated legacy ML interfaces
+#' @keywords internal
+#' @noRd
+.ukb_ml_deprecated <- function(old, new) {
+  warning(sprintf(
+    "%s() is deprecated; please use %s instead.",
+    old, new
+  ), call. = FALSE)
 }
 
 #' Get model type label
@@ -31,7 +53,9 @@ NULL
     glmnet = "Elastic Net",
     svm = "Support Vector Machine",
     nnet = "Neural Network",
-    logistic = "Logistic Regression"
+    logistic = "Logistic Regression",
+    rpart = "Decision Tree",
+    naive_bayes = "Naive Bayes"
   )
   labels[model]
 }
@@ -111,50 +135,13 @@ if (length(predictors) == 1 && predictors == ".") {
   list(train_idx = train_idx, test_idx = test_idx)
 }
 
-#' Split Data into Training and Internal Validation Sets
-#'
-#' @description
-#' Creates a train/internal-validation split for prospective ML analyses.
-#' Supports optional stratified sampling by a categorical variable (e.g.,
-#' disease status) to preserve class proportions.
-#'
-#' @param df A data.frame or data.table to split.
-#' @param split_ratio Proportion assigned to training set. Must be in (0, 1).
-#'   Default is 0.8.
-#' @param stratify_by Optional character scalar. Column name used for
-#'   stratified sampling. If NULL, performs simple random split.
-#' @param seed Optional random seed for reproducibility.
-#' @param verbose Logical; print split summary messages. Default TRUE.
-#'
-#' @return A named list with two elements:
-#' \describe{
-#'   \item{train}{Training subset of \code{df}.}
-#'   \item{internal_validation}{Internal validation subset of \code{df}.}
-#' }
-#'
-#' @details
-#' For stratified splitting, missing values in \code{stratify_by} are treated
-#' as an additional stratum to avoid dropping observations.
-#'
-#' @examples
-#' \dontrun{
-#' split_obj <- ukb_ml_split_data(
-#'   df = ukb_data,
-#'   split_ratio = 0.8,
-#'   stratify_by = "COPD_history",
-#'   seed = 2026
-#' )
-#'
-#' train_df <- split_obj$train
-#' valid_df <- split_obj$internal_validation
-#' }
-#'
-#' @export
-ukb_ml_split_data <- function(df,
-                              split_ratio = 0.8,
-                              stratify_by = NULL,
-                              seed = NULL,
-                              verbose = TRUE) {
+# Legacy implementation kept for reference; the exported implementation lives
+# in R/ml_workflow.R and preserves this calling style.
+.ukb_ml_split_data_legacy <- function(df,
+                                      split_ratio = 0.8,
+                                      stratify_by = NULL,
+                                      seed = NULL,
+                                      verbose = TRUE) {
 
   if (!is.data.frame(df)) {
     stop("`df` must be a data.frame or data.table", call. = FALSE)
@@ -302,6 +289,7 @@ ukb_ml_model <- function(formula,
                          cv_folds = 5,
                          verbose = TRUE,
                          ...) {
+  .ukb_ml_deprecated("ukb_ml_model", "ukb_ml_workflow()")
   
   model <- match.arg(model)
   task <- match.arg(task)
@@ -588,6 +576,7 @@ ukb_ml_model <- function(formula,
 #'
 #' @export
 ukb_ml_predict <- function(object, newdata = NULL, type = c("response", "prob", "class", "link"), ...) {
+  .ukb_ml_deprecated("ukb_ml_predict", "predict(ml$final_model, newdata = ..., type = ...)")
   UseMethod("ukb_ml_predict")
 }
 
@@ -734,6 +723,7 @@ ukb_ml_predict.ukb_ml <- function(object, newdata = NULL, type = c("response", "
 #'
 #' @export
 ukb_ml_importance <- function(object, type = NULL, ...) {
+  .ukb_ml_deprecated("ukb_ml_importance", "ukb_shap() or ml$feature_result$selected_features")
   
   model <- object$model
   model_type <- object$model_type
@@ -820,6 +810,7 @@ ukb_ml_cv <- function(formula,
                       seed = NULL,
                       verbose = TRUE,
                       ...) {
+  .ukb_ml_deprecated("ukb_ml_cv", "ukb_ml_tune(..., resampling = 'cv') inside ukb_ml_workflow()")
   
   if (!is.null(seed)) set.seed(seed)
   
@@ -1020,6 +1011,7 @@ ukb_ml_compare <- function(...,
                            metrics = NULL,
                            test_data = NULL,
                            plot = TRUE) {
+  .ukb_ml_deprecated("ukb_ml_compare", "multiple ukb_ml_workflow() calls compared by final_test_metrics")
   
   # Collect models
   dots <- list(...)

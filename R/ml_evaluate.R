@@ -34,6 +34,7 @@ ukb_ml_metrics <- function(object,
                            n_boot = 1000,
                            verbose = TRUE,
                            ...) {
+  .ukb_ml_deprecated("ukb_ml_metrics", "ukb_ml_evaluate_test() or ml$final_test_metrics")
   
   ci_method <- match.arg(ci_method)
   task <- object$task
@@ -242,6 +243,7 @@ ukb_ml_roc <- function(object,
                        ci = TRUE,
                        ci_method = c("delong", "bootstrap"),
                        ...) {
+  .ukb_ml_deprecated("ukb_ml_roc", "ukb_ml_evaluate_test() or ml$final_test_predictions")
   
   .check_ml_package("pROC")
   ci_method <- match.arg(ci_method)
@@ -354,6 +356,7 @@ ukb_ml_calibration <- function(object,
                                method = c("none", "loess", "isotonic"),
                                plot = TRUE,
                                ...) {
+  .ukb_ml_deprecated("ukb_ml_calibration", "ukb_ml_evaluate_test() and ml$final_test_predictions")
   
   method <- match.arg(method)
   
@@ -475,6 +478,7 @@ ukb_ml_confusion <- function(object,
                              threshold = 0.5,
                              plot = TRUE,
                              ...) {
+  .ukb_ml_deprecated("ukb_ml_confusion", "ukb_ml_evaluate_test(threshold = ...)")
   
   if (object$task != "classification") {
     stop("Confusion matrix is only for classification models")
@@ -561,6 +565,7 @@ ukb_ml_ks <- function(object,
                       plot = TRUE,
                       n_thresholds = 200,
                       ...) {
+  .ukb_ml_deprecated("ukb_ml_ks", "ukb_ml_evaluate_test() and ml$final_test_predictions")
 
   n_thresholds <- as.integer(n_thresholds)
   if (length(n_thresholds) != 1 || is.na(n_thresholds) || n_thresholds < 2) {
@@ -631,6 +636,7 @@ ukb_ml_pr <- function(object,
                       plot = TRUE,
                       n_thresholds = 200,
                       ...) {
+  .ukb_ml_deprecated("ukb_ml_pr", "ukb_ml_evaluate_test() and ml$final_test_predictions")
 
   n_thresholds <- as.integer(n_thresholds)
   if (length(n_thresholds) != 1 || is.na(n_thresholds) || n_thresholds < 2) {
@@ -714,6 +720,7 @@ ukb_ml_gain_lift <- function(object,
                              plot = TRUE,
                              n_bins = 10,
                              ...) {
+  .ukb_ml_deprecated("ukb_ml_gain_lift", "ukb_ml_evaluate_test() and ml$final_test_predictions")
 
   n_bins <- as.integer(n_bins)
   if (length(n_bins) != 1 || is.na(n_bins) || n_bins < 1) {
@@ -802,6 +809,7 @@ ukb_ml_dca <- function(object,
                        thresholds = seq(0.01, 0.99, by = 0.01),
                        harm       = 0,
                        ...) {
+  .ukb_ml_deprecated("ukb_ml_dca", "ukb_ml_evaluate_test() and ml$final_test_predictions")
 
   if (!is.numeric(thresholds) || length(thresholds) == 0) {
     stop("thresholds must be a non-empty numeric vector")

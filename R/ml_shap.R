@@ -16,12 +16,17 @@ NULL
 #' Calculate SHAP values for model interpretation. SHAP values explain
 #' each feature's contribution to individual predictions.
 #'
-#' @param object A ukb_ml object
-#' @param data Data for SHAP computation. If NULL, uses test data.
+#' @param object A \code{ukb_ml_workflow}, \code{ukb_ml_final}, or legacy
+#'   \code{ukb_ml} object.
+#' @param data Data for SHAP computation. If \code{object} is a
+#'   \code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
+#'   If \code{object} is a \code{ukb_ml_final}, \code{data} is required.
 #' @param nsim Number of Monte Carlo samples for SHAP estimation (default 100)
 #' @param sample_n Optional; subsample observations for large datasets
 #' @param seed Random seed
 #' @param verbose Print progress
+#' @param class_level Optional class to explain for multiclass
+#'   \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.
 #' @param ... Additional arguments
 #'
 #' @return A ukb_shap object containing:
@@ -34,10 +39,10 @@ NULL
 #'
 #' @examples
 #' \dontrun{
-#' # Train model
-#' ml <- ukb_ml_model(diabetes ~ age + bmi + sbp, data, model = "rf")
+#' # Recommended workflow object
+#' ml <- ukb_ml_workflow(diabetes ~ age + bmi + sbp, data, model = "rf")
 #'
-#' # Compute SHAP values
+#' # Compute SHAP values on the frozen test set
 #' shap <- ukb_shap(ml, sample_n = 500)
 #'
 #' # Summary plot
@@ -51,9 +56,45 @@ ukb_shap <- function(object,
                      sample_n = NULL,
                      seed = NULL,
                      verbose = TRUE,
+                     class_level = NULL,
                      ...) {
   
   .check_ml_package("fastshap")
+
+  if (inherits(object, "ukb_ml_workflow")) {
+    if (is.null(object$final_model)) {
+      stop("The workflow does not contain a final model. Run ukb_ml_workflow(..., fit_final = TRUE).", call. = FALSE)
+    }
+    if (is.null(data)) {
+      data <- object$split$test
+    }
+    return(.ukb_shap_final_model(
+      object = object$final_model,
+      data = data,
+      nsim = nsim,
+      sample_n = sample_n,
+      seed = seed,
+      verbose = verbose,
+      class_level = class_level,
+      ...
+    ))
+  }
+
+  if (inherits(object, "ukb_ml_final")) {
+    if (is.null(data)) {
+      stop("`data` is required when calling ukb_shap() on a ukb_ml_final object. You can also call ukb_shap() on the full ukb_ml_workflow object to use its frozen test set.", call. = FALSE)
+    }
+    return(.ukb_shap_final_model(
+      object = object,
+      data = data,
+      nsim = nsim,
+      sample_n = sample_n,
+      seed = seed,
+      verbose = verbose,
+      class_level = class_level,
+      ...
+    ))
+  }
   
   if (!is.null(seed)) set.seed(seed)
   
@@ -107,6 +148,94 @@ ukb_shap <- function(object,
   
   if (verbose) message("SHAP computation complete")
   
+  result
+}
+
+#' Compute SHAP for the new ukb_ml_workflow final model object
+#' @keywords internal
+#' @noRd
+.ukb_shap_final_model <- function(object,
+                                  data,
+                                  nsim = 100,
+                                  sample_n = NULL,
+                                  seed = NULL,
+                                  verbose = TRUE,
+                                  class_level = NULL,
+                                  ...) {
+  if (!inherits(object, "ukb_ml_final")) {
+    stop("`object` must be a ukb_ml_final object.", call. = FALSE)
+  }
+  if (!is.data.frame(data)) {
+    stop("`data` must be a data.frame or data.table.", call. = FALSE)
+  }
+  if (!is.null(seed)) set.seed(seed)
+
+  features <- object$selected_features %||% object$predictors
+  data <- as.data.frame(data)
+  missing_features <- setdiff(features, names(data))
+  if (length(missing_features) > 0L) {
+    stop("SHAP data is missing feature column(s): ", paste(missing_features, collapse = ", "), call. = FALSE)
+  }
+
+  X <- data[, features, drop = FALSE]
+  feature_values <- X
+
+  if (!is.null(sample_n) && sample_n < nrow(X)) {
+    idx <- sample(nrow(X), sample_n)
+    X <- X[idx, , drop = FALSE]
+    feature_values <- feature_values[idx, , drop = FALSE]
+    if (isTRUE(verbose)) message(sprintf("Using %d sampled observations for SHAP", sample_n))
+  }
+
+  if (object$outcome_type == "multiclass") {
+    if (is.null(class_level)) {
+      stop("`class_level` is required for multiclass SHAP explanations.", call. = FALSE)
+    }
+    if (!class_level %in% object$classes) {
+      stop("`class_level` must be one of: ", paste(object$classes, collapse = ", "), call. = FALSE)
+    }
+  }
+
+  pred_wrapper <- function(model, newdata) {
+    if (model$outcome_type == "continuous") {
+      return(as.numeric(.ukb_ml_predict_core(model, newdata, type = "response")))
+    }
+    if (model$outcome_type == "binary") {
+      return(as.numeric(.ukb_ml_predict_core(model, newdata, type = "prob")))
+    }
+    prob <- .ukb_ml_predict_core(model, newdata, type = "prob")
+    as.numeric(prob[, class_level])
+  }
+
+  if (isTRUE(verbose)) {
+    target <- if (object$outcome_type == "multiclass") paste0("class=", class_level) else object$outcome_type
+    message(sprintf("Computing SHAP values for %d observations (%s)...", nrow(X), target))
+  }
+
+  shap_values <- fastshap::explain(
+    object = object,
+    feature_names = features,
+    X = X,
+    pred_wrapper = pred_wrapper,
+    nsim = nsim,
+    ...
+  )
+
+  baseline <- mean(pred_wrapper(object, X), na.rm = TRUE)
+
+  result <- list(
+    shap_values = as.matrix(shap_values),
+    baseline = baseline,
+    feature_names = features,
+    feature_values = feature_values,
+    model_type = object$model,
+    task = if (object$outcome_type == "continuous") "regression" else "classification",
+    outcome_type = object$outcome_type,
+    class_level = class_level
+  )
+
+  class(result) <- "ukb_shap"
+  if (isTRUE(verbose)) message("SHAP computation complete")
   result
 }
 

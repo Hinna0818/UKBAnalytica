@@ -1,0 +1,533 @@
+# Machine Learning Workflow {#machine-learning}
+
+This chapter describes the recommended non-survival machine learning workflow
+in **UKBAnalytica**. The main user-facing function is `ukb_ml_workflow()`.
+It is designed to keep the API simple while enforcing a standard analysis
+structure:
+
+1. Freeze the test set before model development.
+2. Use only training and validation data for feature selection, tuning, and
+   threshold learning.
+3. Refit the final model on the training-development data.
+4. Evaluate once on the frozen test set.
+
+This chapter focuses on binary classification, multiclass classification, and
+continuous outcomes. Time-to-event machine learning remains available through
+`ukb_ml_survival()` and is described separately at the end.
+
+## What users usually need
+
+For most projects, users only need one function:
+
+```{r ml-minimal, eval=FALSE}
+library(UKBAnalytica)
+
+ml <- ukb_ml_workflow(
+  outcome ~ age + sex + bmi + smoking + sbp,
+  data = analysis_dt,
+  model = "logistic",
+  seed = 42
+)
+
+ml$final_test_metrics
+head(ml$final_test_predictions)
+```
+
+This minimal call is useful for a quick baseline model. For a manuscript-ready
+binary classification workflow, use an explicit train/validation/test split and
+learn the classification threshold on validation data:
+
+```{r ml-recommended-binary, eval=FALSE}
+ml <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,
+  data = analysis_dt,
+  model = "rf",
+  split_params = list(
+    split = "train_valid_test",
+    train_ratio = 0.70,
+    validation_ratio = 0.10,
+    test_ratio = 0.20
+  ),
+  feature_select = "filter",
+  feature_params = list(max_features = 50),
+  tune = TRUE,
+  tune_params = list(
+    resampling = "validation",
+    metric = "auc",
+    param_grid = data.frame(
+      num.trees = c(300, 500),
+      mtry = c(3, 5),
+      min.node.size = c(5, 10)
+    )
+  ),
+  threshold_method = "youden",
+  seed = 42
+)
+
+ml$final_test_metrics
+head(ml$final_test_predictions)
+```
+
+The test set is not used during feature selection, tuning, or threshold
+learning. It is used only by `ukb_ml_evaluate_test()` inside the final step.
+
+## Prepare an ML-ready dataset
+
+Start from an analysis-ready table. For incident disease prediction, this is
+usually the wide table returned by `build_survival_dataset()`. Keep one row per
+participant and include only variables available at prediction time.
+
+```{r ml-prepare, eval=FALSE}
+library(data.table)
+library(UKBAnalytica)
+
+ml_dt <- as.data.table(analysis_dt)[
+  ,
+  .(
+    eid,
+    outcome_status,
+    age,
+    sex,
+    bmi,
+    smoking,
+    sbp,
+    dbp,
+    diabetes_history,
+    hypertension_history
+  )
+]
+
+ml_dt <- ukb_clean_missing(ml_dt)
+ukb_snapshot(ml_dt, label = "ml_input")
+```
+
+Keep the outcome and predictors conceptually separated:
+
+| Role | Example | Rule |
+|:-----|:--------|:-----|
+| Outcome | `outcome_status`, `diabetes`, `biomarker_value` | The target to predict |
+| Predictors | `age`, `sex`, `bmi`, biomarkers | Must be known before the prediction time |
+| ID | `eid` | Used to check overlap; do not use as a predictor |
+| Leakage variables | follow-up time, diagnosis date after baseline | Do not include as predictors |
+
+If you use `outcome_status` from `build_survival_dataset()`, make sure the
+predictor set does not include follow-up information or post-baseline diagnosis
+variables.
+
+## Model choices
+
+`ukb_ml_workflow()` supports the following non-survival models:
+
+| `model` | Outcome type | Best use |
+|:--------|:-------------|:---------|
+| `"logistic"` | Binary | Baseline, interpretable classifier |
+| `"linear"` | Continuous | Baseline regression |
+| `"rf"` | Binary, multiclass, continuous | Robust nonlinear tabular model |
+| `"xgboost"` | Binary, multiclass, continuous | Gradient boosting for stronger prediction |
+| `"glmnet"` | Binary, multiclass, continuous | Regularized model and sparse features |
+| `"svm"` | Binary, multiclass, continuous | Nonlinear boundaries in smaller datasets |
+| `"nnet"` | Binary, multiclass, continuous | Simple neural network or multinomial model |
+| `"rpart"` | Binary, multiclass, continuous | Lightweight decision tree baseline |
+| `"naive_bayes"` | Binary, multiclass | Fast probabilistic classifier |
+
+Outcome type is inferred automatically in common cases:
+
+| Outcome values | Inferred `outcome_type` |
+|:---------------|:------------------------|
+| Two-level factor or character | `"binary"` |
+| Numeric 0/1 | `"binary"` |
+| Factor or character with 3+ levels | `"multiclass"` |
+| Numeric with many values | `"continuous"` |
+
+If the outcome is ambiguous, set `outcome_type` explicitly.
+
+## Binary classification
+
+Binary classification is the most common use case. Use a factor with the
+negative class first and the positive class second when you want full control.
+
+```{r ml-binary, eval=FALSE}
+ml_dt$outcome_status <- factor(
+  ml_dt$outcome_status,
+  levels = c(0, 1),
+  labels = c("control", "case")
+)
+
+ml <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,
+  data = ml_dt,
+  model = "logistic",
+  split_params = list(split = "train_valid_test"),
+  tune = TRUE,
+  tune_params = list(resampling = "validation", metric = "auc"),
+  threshold_method = "youden",
+  seed = 42
+)
+
+ml$final_test_metrics[c("auc", "accuracy", "sensitivity", "specificity", "f1")]
+ml$threshold_result
+```
+
+For binary outcomes, `final_test_predictions` contains:
+
+| Column | Meaning |
+|:-------|:--------|
+| `truth` | Observed class in the test set |
+| `prob` | Predicted probability for the positive class |
+| `pred_class` | Class after applying the fixed threshold |
+
+## Continuous outcomes
+
+Use `model = "linear"` for a baseline model or `model = "rf"`/`"xgboost"` for
+nonlinear prediction.
+
+```{r ml-continuous, eval=FALSE}
+ml_reg <- ukb_ml_workflow(
+  biomarker_value ~ age + sex + bmi + smoking + sbp,
+  data = ml_dt,
+  model = "linear",
+  outcome_type = "continuous",
+  split_params = list(split = "train_test", train_ratio = 0.75),
+  threshold_method = "none",
+  seed = 42
+)
+
+ml_reg$final_test_metrics[c("rmse", "mae", "rsquared")]
+head(ml_reg$final_test_predictions)
+```
+
+Continuous predictions are reported in the `prediction` column.
+
+## Multiclass outcomes
+
+For multiclass classification, set `threshold_method = "none"` because a single
+binary threshold is not meaningful.
+
+```{r ml-multiclass, eval=FALSE}
+ml_multi <- ukb_ml_workflow(
+  disease_subtype ~ age + sex + bmi + smoking + sbp,
+  data = ml_dt,
+  model = "nnet",
+  outcome_type = "multiclass",
+  split_params = list(split = "train_valid_test"),
+  tune = TRUE,
+  tune_params = list(
+    resampling = "validation",
+    metric = "macro_f1",
+    param_grid = data.frame(decay = c(0, 0.01, 0.05))
+  ),
+  threshold_method = "none",
+  seed = 42
+)
+
+ml_multi$final_test_metrics[c("accuracy", "macro_f1", "logloss")]
+head(ml_multi$final_test_predictions)
+```
+
+Multiclass predictions include `pred_class` plus one probability column per
+class.
+
+## When train/test files already exist
+
+If another workflow has already created `train_df`, `valid_df`, and `test_df`,
+register them with `ukb_ml_as_split()`. This function checks duplicated or
+overlapping IDs when `id_col` is supplied.
+
+```{r ml-manual-split, eval=FALSE}
+split_obj <- ukb_ml_as_split(
+  train_data = train_df,
+  validation_data = valid_df,
+  test_data = test_df,
+  id_col = "eid",
+  outcome = "outcome_status",
+  outcome_type = "binary"
+)
+
+ml <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp,
+  split = split_obj,
+  model = "rf",
+  threshold_method = "youden",
+  seed = 42
+)
+```
+
+This is useful when the cohort split must be fixed across multiple packages,
+teams, or external validation analyses.
+
+## Feature selection
+
+Feature selection is optional and is always performed without touching the test
+set.
+
+| `feature_select` | Meaning | Notes |
+|:-----------------|:--------|:------|
+| `"none"` | Use all formula predictors | Recommended for small predictor sets |
+| `"filter"` | Rank features by simple univariate signal | Fast baseline for many predictors |
+| `"glmnet"` | Select nonzero regularized coefficients | Good for sparse linear signals |
+| `"boruta"` | Boruta all-relevant feature selection | Requires `Boruta`; can be slower |
+
+Example:
+
+```{r ml-feature, eval=FALSE}
+ml <- ukb_ml_workflow(
+  outcome_status ~ .,
+  data = ml_dt[, setdiff(names(ml_dt), "eid"), with = FALSE],
+  model = "rf",
+  feature_select = "glmnet",
+  feature_params = list(max_features = 100),
+  threshold_method = "youden",
+  seed = 42
+)
+
+ml$feature_result$selected_features
+```
+
+Use `feature_select = "none"` when you already have a clinically defined
+predictor set and do not want data-driven feature selection.
+
+## Hyperparameter tuning
+
+`ukb_ml_tune()` is called internally when `tune = TRUE`. The easiest standard
+setup is validation tuning:
+
+```{r ml-tune-validation, eval=FALSE}
+ml <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp,
+  data = ml_dt,
+  model = "xgboost",
+  split_params = list(split = "train_valid_test"),
+  tune = TRUE,
+  tune_params = list(
+    resampling = "validation",
+    metric = "auc",
+    param_grid = data.frame(
+      nrounds = c(50, 100),
+      max_depth = c(2, 4),
+      eta = c(0.05, 0.10)
+    )
+  ),
+  threshold_method = "youden",
+  seed = 42
+)
+```
+
+If you do not create a validation set, use cross-validation inside the training
+set:
+
+```{r ml-tune-cv, eval=FALSE}
+ml <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp,
+  data = ml_dt,
+  model = "rf",
+  split_params = list(split = "train_test"),
+  tune = TRUE,
+  tune_params = list(resampling = "cv", folds = 5, metric = "auc"),
+  threshold_method = "youden",
+  seed = 42
+)
+```
+
+Do not use test-set metrics to choose hyperparameters.
+
+## Output object
+
+`ukb_ml_workflow()` returns a list-like `ukb_ml_workflow` object:
+
+| Element | Content |
+|:--------|:--------|
+| `split` | Frozen `ukb_ml_split` object |
+| `feature_result` | Selected features and feature-selection metadata |
+| `tune_result` | Candidate grid, best parameters, best development-set score |
+| `threshold_result` | Binary threshold learned from validation, CV OOF, or train data |
+| `final_model` | Refit final model |
+| `final_test_metrics` | Test-set metrics computed once |
+| `final_test_predictions` | Row-level test-set predictions |
+
+Common inspection commands:
+
+```{r ml-output, eval=FALSE}
+print(ml)
+
+ml$feature_result$selected_features
+ml$tune_result$best_params
+ml$threshold_result
+ml$final_test_metrics
+
+test_pred <- ml$final_test_predictions
+```
+
+Predict on a new RAP-side dataset with the final model:
+
+```{r ml-predict-new, eval=FALSE}
+new_prob <- predict(ml$final_model, newdata = new_participants, type = "prob")
+new_class <- predict(ml$final_model, newdata = new_participants, type = "class")
+```
+
+For continuous outcomes, use `type = "response"`.
+
+## SHAP interpretation
+
+Use `ukb_shap()` directly on the workflow object. If `data` is not supplied,
+the frozen test set stored in `ml$split$test` is used, so the interpretation is
+aligned with the final reported performance.
+
+```{r ml-shap, eval=FALSE}
+shap <- ukb_shap(
+  ml,
+  sample_n = 500,
+  nsim = 100,
+  seed = 42
+)
+
+ukb_shap_summary(shap)
+plot_shap_summary(shap)
+```
+
+You can also explain a final model on a specific external dataset:
+
+```{r ml-shap-final, eval=FALSE}
+external_shap <- ukb_shap(
+  ml$final_model,
+  data = external_validation_df,
+  sample_n = 500,
+  seed = 42
+)
+```
+
+For multiclass models, choose the class probability to explain:
+
+```{r ml-shap-multiclass, eval=FALSE}
+shap_case <- ukb_shap(ml_multi, class_level = "case", sample_n = 500)
+```
+
+## Advanced: run the workflow step by step
+
+Most users should use `ukb_ml_workflow()`. The lower-level functions are useful
+when you need to save intermediate objects or compare multiple models on the
+same frozen split.
+
+```{r ml-stepwise, eval=FALSE}
+split_obj <- ukb_ml_split_data(
+  ml_dt,
+  outcome = "outcome_status",
+  split = "train_valid_test",
+  seed = 42
+)
+
+features <- ukb_ml_feature_select(
+  split_obj,
+  outcome_status ~ age + sex + bmi + smoking + sbp,
+  method = "filter",
+  max_features = 50,
+  seed = 42
+)
+
+tuned <- ukb_ml_tune(
+  split_obj,
+  formula = features$formula,
+  model = "rf",
+  resampling = "validation",
+  metric = "auc",
+  seed = 42
+)
+
+final <- ukb_ml_fit_final(
+  split_obj,
+  formula = features$formula,
+  model = "rf",
+  best_params = tuned$best_params,
+  feature_spec = features,
+  seed = 42
+)
+
+test_eval <- ukb_ml_evaluate_test(final, split_obj)
+test_eval$metrics
+```
+
+## Legacy quick-model interface
+
+`ukb_ml_model()`, `ukb_ml_cv()`, `ukb_ml_metrics()`, `ukb_ml_roc()`,
+and `ukb_ml_compare()` remain available for backward compatibility, but they
+now emit a deprecation warning. For new analyses intended for reporting, use
+`ukb_ml_workflow()` because it makes the frozen-test design explicit.
+
+`ukb_shap()` is not deprecated. It now works with both new workflow objects and
+legacy `ukb_ml` objects.
+
+```{r ml-legacy, eval=FALSE}
+ml_rf <- ukb_ml_model(
+  outcome_status ~ age + sex + bmi + smoking,
+  data = ml_dt,
+  model = "rf",
+  task = "classification",
+  split_ratio = 0.8,
+  seed = 42
+)
+
+ukb_ml_metrics(ml_rf, ci = TRUE)
+ukb_ml_roc(ml_rf)
+```
+
+## Survival machine learning
+
+The frozen-test workflow above is for non-survival outcomes. For time-to-event
+prediction, use the existing survival ML interface.
+
+```{r ml-survival, eval=FALSE}
+surv_rf <- ukb_ml_survival(
+  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,
+  data = analysis_dt,
+  model = "rsf",
+  params = list(ntree = 500),
+  seed = 42
+)
+
+print(surv_rf)
+ukb_ml_survival_importance(surv_rf)
+```
+
+## Practical checklist
+
+Before reporting ML results, check the following:
+
+1. The test set was created before feature selection and tuning.
+2. `eid`, diagnosis dates, follow-up time, and post-baseline variables are not
+   used as predictors.
+3. The outcome type is correct (`binary`, `multiclass`, or `continuous`).
+4. Binary positive class is the second factor level if you set factor levels
+   manually.
+5. Hyperparameters and thresholds are chosen on train/validation or CV only.
+6. `final_test_metrics` are reported as final frozen-test performance.
+
+## Optional packages
+
+Install only the model backends you plan to use. UKBAnalytica checks optional
+packages only when the selected model or helper needs them. It does not install
+extra ML dependencies unless you explicitly opt in:
+
+```{r ml-auto-install, eval=FALSE}
+options(UKBAnalytica.auto_install_ml = TRUE)
+```
+
+The default is `FALSE`, which is safer on RAP and HPC systems because users can
+control the package library and CRAN/Bioconductor mirror themselves.
+
+```{r ml-install, eval=FALSE}
+install.packages(c(
+  "ranger",      # random forest
+  "xgboost",     # gradient boosting
+  "glmnet",      # regularized regression and glmnet feature selection
+  "e1071",       # SVM and naive Bayes
+  "nnet",        # neural network / multinomial regression
+  "rpart",       # decision tree
+  "Boruta",      # Boruta feature selection
+  "fastshap",    # SHAP explanations
+  "pROC",        # legacy ROC helpers
+  "randomForestSRC"  # survival random forest
+))
+```
+
+`logistic` and `linear` models use base R and do not require extra model
+backend packages. `naive_bayes` reuses `e1071`, so no separate package is
+needed if you already installed it for SVM.

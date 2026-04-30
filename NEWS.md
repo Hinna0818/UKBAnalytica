@@ -15,6 +15,16 @@
 - Added `ukb_clean_missing()` for converting common UKB non-response labels and numeric missing codes into analysis-ready values.
 - Added `ukb_snapshot()` to record row/column counts, missingness, complete rows, object size, and deltas across analysis pipeline checkpoints.
 
+### Machine learning
+- Added the high-level `ukb_ml_workflow()` API for binary, multiclass, and continuous non-survival ML with a frozen final test set.
+- Added standardized ML split, feature selection, tuning, threshold-learning, final-refit, and frozen-test evaluation helpers: `ukb_ml_as_split()`, enhanced `ukb_ml_split_data()`, `ukb_ml_feature_select()`, `ukb_ml_tune()`, `ukb_ml_threshold()`, `ukb_ml_fit_final()`, and `ukb_ml_evaluate_test()`.
+- Preserved the legacy `split_ratio` style in `ukb_ml_split_data()` by keeping `$internal_validation` as an alias for the held-out split.
+- Extended `ukb_shap()` to support `ukb_ml_workflow` and `ukb_ml_final` objects, defaulting to the frozen test set for workflow objects.
+- Added lightweight `rpart` decision tree and `naive_bayes` model backends to `ukb_ml_workflow()`.
+- Added optional lazy ML dependency installation via `options(UKBAnalytica.auto_install_ml = TRUE)`; by default, optional model packages are checked only when the selected model needs them and are not installed automatically.
+- Marked legacy ML model, CV, prediction, importance, comparison, and evaluation helpers as deprecated with pointers to the new workflow APIs.
+- Added simulated-data tests for binary classification, multiclass classification, continuous regression, manual split validation, and threshold behavior.
+
 ### RAP phenotype extraction
 - Added R-native RAP phenotype extraction helpers that wrap DNAnexus `dx extract_dataset` and RAP `table-exporter`.
 - Added `rap_find_dataset()`, `rap_list_fields()`, `rap_plan_extract()`, `rap_extract_pheno()`, and `rap_submit_extract()`.
@@ -25,6 +35,7 @@
 ### Documentation and tests
 - Expanded the RAP download chapter with a complete RAP JupyterLab -> Terminal -> R workflow, including output paths such as `/mnt/project`.
 - Updated README examples to recommend R-native RAP extraction for new users.
+- Split machine learning into a dedicated documentation chapter focused on the simplest standard `ukb_ml_workflow()` path.
 - Added offline tests for RAP extraction field parsing, field planning, predefined-variable mapping, and table-exporter dry-run formatting.
 
 ## UKBAnalytica 0.6.2.1（2026-04-24）

@@ -12,8 +12,8 @@ bibliography: []
 description: |
   A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
   Research Analysis Platform (RAP) data, including data download, preprocessing,
-  disease phenotyping, survival analysis, multiple imputation, and proteomics
-  enrichment analysis.
+  disease phenotyping, survival analysis, multiple imputation, machine learning,
+  and proteomics enrichment analysis.
 link-citations: yes
 github-repo: Hinna0818/UKBAnalytica_v2
 ---
@@ -37,6 +37,7 @@ survival datasets.
 - Includes predefined definitions for common cardiovascular and metabolic diseases.
 - Provides standardized preprocessing for common UKB baseline variables.
 - **Advanced analysis modules**: subgroup analysis, propensity score methods, mediation analysis, and multiple imputation pooling.
+- **Machine learning workflow**: frozen-test ML for binary, multiclass, and continuous outcomes.
 - Includes sensitivity preprocessing helpers for restricted-dataset regression analyses.
 
 ## Recent survival updates (v0.6.2)
@@ -67,7 +68,8 @@ The package covers the following workflow:
 6. **Multiple imputation** -- Impute missing covariates and merge results back to the full dataset.
 7. **Main analysis** -- Correlation analysis, regression models, and sensitivity preprocessing.
 8. **Advanced analysis** -- Subgroup analysis, propensity score, mediation, MI pooling.
-9. **Proteomics enrichment** -- Convert RAP-exported Olink protein names to gene symbols and run GO/KEGG ORA.
+9. **Machine learning** -- Frozen-test ML workflows for binary, multiclass, and continuous outcomes.
+10. **Proteomics enrichment** -- Convert RAP-exported Olink protein names to gene symbols and run GO/KEGG ORA.
 
 The remaining chapters walk through each step with code examples.
 
@@ -103,16 +105,24 @@ The remaining chapters walk through each step with code examples.
 
 | Function | Description |
 |:---------|:------------|
-| `ukb_ml_model()` | Train ML models (RF, XGBoost, GLMNet, SVM, NNet) |
-| `ukb_ml_predict()` | Generate predictions from ML model |
-| `ukb_ml_cv()` | Cross-validation for ML models |
-| `ukb_ml_compare()` | Compare multiple ML models |
-| `ukb_ml_metrics()` | Calculate performance metrics |
-| `ukb_ml_roc()` | ROC curve analysis |
-| `ukb_ml_calibration()` | Calibration curve analysis |
-| `ukb_ml_confusion()` | Confusion matrix |
-| `ukb_ml_importance()` | Variable importance |
-| `ukb_shap()` | Compute SHAP values |
+| `ukb_ml_workflow()` | Recommended end-to-end ML workflow with frozen-test evaluation |
+| `ukb_ml_split_data()` | Create train/test or train/validation/test splits |
+| `ukb_ml_as_split()` | Register user-supplied train/test splits |
+| `ukb_ml_feature_select()` | Select features using training-development data only |
+| `ukb_ml_tune()` | Tune hyperparameters without touching the test set |
+| `ukb_ml_threshold()` | Learn binary classification thresholds |
+| `ukb_ml_fit_final()` | Refit final ML models on training-development data |
+| `ukb_ml_evaluate_test()` | Evaluate once on the frozen test set |
+| `ukb_ml_model()` | Deprecated legacy quick-model interface |
+| `ukb_ml_predict()` | Deprecated legacy prediction helper |
+| `ukb_ml_cv()` | Deprecated legacy cross-validation helper |
+| `ukb_ml_compare()` | Deprecated legacy model-comparison helper |
+| `ukb_ml_metrics()` | Deprecated legacy performance metrics helper |
+| `ukb_ml_roc()` | Deprecated legacy ROC helper |
+| `ukb_ml_calibration()` | Deprecated legacy calibration helper |
+| `ukb_ml_confusion()` | Deprecated legacy confusion-matrix helper |
+| `ukb_ml_importance()` | Deprecated legacy variable-importance helper |
+| `ukb_shap()` | Compute SHAP values for workflow or legacy ML objects |
 | `ukb_ml_survival()` | Survival ML models (RSF, GBM, CoxNet) |
 | `plot_shap_summary()` | SHAP summary plot |
 | `plot_shap_dependence()` | SHAP dependence plot |

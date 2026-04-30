@@ -13,5 +13,6 @@ rmd_files:
   - 06-imputation.Rmd
   - 07-main-analysis.Rmd
   - 08-advanced-analysis.Rmd
+  - 09-machine-learning.Rmd
   - 09-proteomics-enrichment.Rmd
 output_dir: "_book"

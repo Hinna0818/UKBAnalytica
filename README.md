@@ -168,6 +168,10 @@ ml <- ukb_ml_workflow(
 ml$final_test_metrics
 head(ml$final_test_predictions)
 
+# SHAP now works directly on the workflow object and defaults to its frozen test set
+shap <- ukb_shap(ml, sample_n = 500, nsim = 100, seed = 42)
+ukb_shap_summary(shap)
+
 # Manual split is also supported when train/test files already exist
 split_obj <- ukb_ml_as_split(
   train_data = train_df,
@@ -185,8 +189,8 @@ ml_manual <- ukb_ml_workflow(
   seed = 42
 )
 
-# Lower-level legacy helpers remain available for quick exploration:
-# ukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc(), ukb_shap().
+# Lower-level legacy helpers remain available but are deprecated:
+# ukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc().
 
 # Survival ML
 surv_rf <- ukb_ml_survival(

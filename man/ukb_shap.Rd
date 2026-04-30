@@ -11,13 +11,17 @@ ukb_shap(
   sample_n = NULL,
   seed = NULL,
   verbose = TRUE,
+  class_level = NULL,
   ...
 )
 }
 \arguments{
-\item{object}{A ukb_ml object}
+\item{object}{A \code{ukb_ml_workflow}, \code{ukb_ml_final}, or legacy
+\code{ukb_ml} object.}
 
-\item{data}{Data for SHAP computation. If NULL, uses test data.}
+\item{data}{Data for SHAP computation. If \code{object} is a
+\code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
+If \code{object} is a \code{ukb_ml_final}, \code{data} is required.}
 
 \item{nsim}{Number of Monte Carlo samples for SHAP estimation (default 100)}
 
@@ -26,6 +30,9 @@ ukb_shap(
 \item{seed}{Random seed}
 
 \item{verbose}{Print progress}
+
+\item{class_level}{Optional class to explain for multiclass
+\code{ukb_ml_workflow}/\code{ukb_ml_final} objects.}
 
 \item{...}{Additional arguments}
 }
@@ -44,10 +51,10 @@ each feature's contribution to individual predictions.
 }
 \examples{
 \dontrun{
-# Train model
-ml <- ukb_ml_model(diabetes ~ age + bmi + sbp, data, model = "rf")
+# Recommended workflow object
+ml <- ukb_ml_workflow(diabetes ~ age + bmi + sbp, data, model = "rf")
 
-# Compute SHAP values
+# Compute SHAP values on the frozen test set
 shap <- ukb_shap(ml, sample_n = 500)
 
 # Summary plot

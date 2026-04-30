@@ -221,7 +221,7 @@ multi_results <- run_multi_mediator(
 plot_mediation_forest(multi_results, effect_type = "tnie")
 ```
 
-### Visualization
+### Visualization {#mediation-visualization}
 
 ```{r mediation-plot, eval=FALSE}
 # Effect bar chart
@@ -317,7 +317,7 @@ pooled_diff <- pool_custom_estimates(
 summary(pooled_diff)
 ```
 
-### Visualization
+### Visualization {#mi-visualization}
 
 ```{r mi-viz, eval=FALSE}
 # Forest plot of pooled estimates
@@ -437,204 +437,18 @@ plot_mi_pooled(pooled)
 
 ## Summary
 
-This chapter covered five advanced analysis modules:
+This chapter covered four advanced statistical modules:
 
 1. **Subgroup Analysis**: `run_subgroup_analysis()`, `run_multi_subgroup()`
 2. **Propensity Score**: `estimate_propensity_score()`, `match_propensity()`, `calculate_weights()`
 3. **Mediation Analysis**: `run_mediation()`, `run_multi_mediator()`
 4. **MI Pooling**: `pool_mi_models()`, `pool_custom_estimates()`
-5. **Machine Learning**: `ukb_ml_model()`, `ukb_shap()`, `ukb_ml_survival()`
 
-Each module includes dedicated visualization functions and integrates with the standard UKBAnalytica workflow.
-
----
-
-## Machine Learning Module {#machine-learning}
-
-The ML module provides a unified interface for training, evaluating, and interpreting machine learning models for UK Biobank data analysis.
-
-### Supported Models
-
-| Model | Type | Use Case |
-|-------|------|----------|
-| `rf` | Random Forest | General classification/regression |
-| `xgboost` | Gradient Boosting | High-performance prediction |
-| `glmnet` | Elastic Net | Feature selection, regularization |
-| `svm` | Support Vector Machine | Complex boundaries |
-| `nnet` | Neural Network | Non-linear patterns |
-| `logistic` | Logistic/Linear | Baseline comparison |
-
-### Basic Usage
-
-```{r ml-basic, eval=FALSE}
-library(UKBAnalytica)
-
-# Train a Random Forest classifier
-ml_rf <- ukb_ml_model(
-  diabetes ~ age + bmi + sbp + smoking + alcohol,
-  data = ukb_data,
-  model = "rf",
-  task = "classification",
-  split_ratio = 0.8,
-  seed = 42
-)
-
-# View results
-print(ml_rf)
-#> UKB Machine Learning Model
-#> ==========================
-#> Model: Random Forest
-#> Task: classification
-#> Test AUC: 0.782
-
-# Variable importance
-ukb_ml_importance(ml_rf)
-```
-
-### Model Evaluation
-
-```{r ml-eval, eval=FALSE}
-# Detailed metrics with confidence intervals
-metrics <- ukb_ml_metrics(ml_rf, ci = TRUE, ci_method = "delong")
-
-# ROC curve
-roc_result <- ukb_ml_roc(ml_rf)
-print(roc_result)
-
-# Calibration curve
-cal_result <- ukb_ml_calibration(ml_rf)
-plot(cal_result)
-
-# Confusion matrix
-cm_result <- ukb_ml_confusion(ml_rf, threshold = 0.5)
-print(cm_result)
-```
-
-### Cross-Validation
-
-```{r ml-cv, eval=FALSE}
-# 5-fold cross-validation
-cv_result <- ukb_ml_cv(
-  diabetes ~ age + bmi + sbp + smoking,
-  data = ukb_data,
-  model = "rf",
-  task = "classification",
-  folds = 5,
-  repeats = 3,
-  seed = 42
-)
-
-print(cv_result)
-#> Metrics (Mean +/- SD):
-#>   auc: 0.781 +/- 0.023
-#>   accuracy: 0.742 +/- 0.018
-```
-
-### Model Comparison
-
-```{r ml-compare, eval=FALSE}
-# Train multiple models
-ml_rf <- ukb_ml_model(outcome ~ ., data, model = "rf")
-ml_xgb <- ukb_ml_model(outcome ~ ., data, model = "xgboost")
-ml_lasso <- ukb_ml_model(outcome ~ ., data, model = "glmnet")
-
-# Compare performance
-comparison <- ukb_ml_compare(ml_rf, ml_xgb, ml_lasso)
-print(comparison)
-plot(comparison)
-```
-
-### SHAP Interpretation
-
-```{r ml-shap, eval=FALSE}
-# Requires: install.packages("fastshap")
-
-# Compute SHAP values
-shap <- ukb_shap(ml_rf, sample_n = 1000, nsim = 100)
-print(shap)
-
-# Summary plot (global importance)
-plot_shap_summary(shap, type = "beeswarm")
-plot_shap_summary(shap, type = "bar")
-
-# Dependence plot (single feature)
-plot_shap_dependence(shap, feature = "age", color_feature = "sex")
-
-# Force plot (single observation)
-plot_shap_force(shap, row_id = 1, max_features = 10)
-```
-
-### Survival ML Models
-
-```{r ml-survival, eval=FALSE}
-# Requires: install.packages("randomForestSRC")
-
-# Random Survival Forest
-surv_rf <- ukb_ml_survival(
-  Surv(time, event) ~ age + sex + bmi + smoking + diabetes,
-  data = ukb_data,
-  model = "rsf",
-  params = list(ntree = 500)
-)
-
-print(surv_rf)
-#> Test C-index: 0.752
-
-# Predict survival probabilities
-pred <- ukb_ml_survival_predict(surv_rf, times = c(1, 3, 5, 10))
-
-# Variable importance
-ukb_ml_survival_importance(surv_rf)
-
-# SHAP for survival model
-surv_shap <- ukb_ml_survival_shap(surv_rf, time_point = 5, sample_n = 500)
-plot_shap_summary(surv_shap)
-```
-
-### Integration with Other Modules
-
-```{r ml-integration, eval=FALSE}
-# Use ML for propensity score estimation
-ps_ml <- ukb_ml_model(
-  treatment ~ age + sex + bmi + smoking,
-  data = ukb_data,
-  model = "xgboost",
-  task = "classification",
-  verbose = FALSE
-)
-
-# Extract predicted probabilities as PS
-ukb_data$ps_ml <- ukb_ml_predict(ps_ml, newdata = ukb_data, type = "prob")[, 2]
-
-# Use for IPTW analysis
-ukb_data$weight <- ifelse(
-  ukb_data$treatment == 1,
-  1 / ukb_data$ps_ml,
-  1 / (1 - ukb_data$ps_ml)
-)
-```
-
-### Required Packages
-
-| Function | Required Package |
-|----------|------------------|
-| `ukb_ml_model(model = "rf")` | `ranger` |
-| `ukb_ml_model(model = "xgboost")` | `xgboost` |
-| `ukb_ml_model(model = "glmnet")` | `glmnet` |
-| `ukb_ml_model(model = "svm")` | `e1071` |
-| `ukb_ml_model(model = "nnet")` | `nnet` |
-| `ukb_ml_roc()` | `pROC` |
-| `ukb_shap()` | `fastshap` |
-| `ukb_ml_survival(model = "rsf")` | `randomForestSRC` |
-
-Install with:
-```{r install-ml, eval=FALSE}
-install.packages(c("ranger", "xgboost", "glmnet", "pROC", "fastshap", "randomForestSRC"))
-```
+Each module includes dedicated visualization functions and integrates with the standard UKBAnalytica workflow. Machine learning now has a separate chapter because the recommended API is a full frozen-test workflow rather than a single model-fitting helper.
 
 ---
 
-### Required Packages (All Modules)
+## Required Packages
 
 | Module | Required Package |
 |--------|------------------|
@@ -643,20 +457,10 @@ install.packages(c("ranger", "xgboost", "glmnet", "pROC", "fastshap", "randomFor
 | Mediation Analysis | `regmedint` |
 | MI Pooling | `mitools` |
 | Cox Models | `survival` |
-| Random Forest | `ranger` |
-| XGBoost | `xgboost` |
-| Elastic Net | `glmnet` |
-| SVM | `e1071` |
-| Neural Network | `nnet` |
-| ROC Analysis | `pROC` |
-| SHAP | `fastshap` |
-| Survival ML | `randomForestSRC` |
 
 Install all with:
 ```{r install-deps, eval=FALSE}
 install.packages(c(
-  "MatchIt", "gbm", "regmedint", "mitools", "survival",
-  "ranger", "xgboost", "glmnet", "e1071", "nnet",
-  "pROC", "fastshap", "randomForestSRC"
+  "MatchIt", "gbm", "regmedint", "mitools", "survival"
 ))
 ```
