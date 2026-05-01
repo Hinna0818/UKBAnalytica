@@ -192,13 +192,19 @@ ml_manual <- ukb_ml_workflow(
 # Lower-level legacy helpers remain available but are deprecated:
 # ukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc().
 
-# Survival ML
-surv_rf <- ukb_ml_survival(
+# Survival ML uses the same frozen-test workflow pattern
+surv_ml <- ukb_ml_survival_workflow(
   Surv(time, event) ~ age + sex + bmi,
   data = ukb_data,
-  model = "rsf"
+  model = "cox",
+  split_params = list(split = "train_valid_test"),
+  feature_select = "filter",
+  tune = TRUE,
+  tune_params = list(resampling = "validation"),
+  evaluation_times = c(1, 3, 5),
+  seed = 42
 )
-print(surv_rf)  # C-index
+surv_ml$final_test_metrics
 ```
 
 ## Advanced Analysis Example

@@ -13,7 +13,8 @@ ukb_ml_survival_predict(
 )
 }
 \arguments{
-\item{object}{A ukb_ml_surv object}
+\item{object}{A \code{ukb_ml_survival_workflow},
+\code{ukb_ml_survival_final}, or legacy \code{ukb_ml_surv} object.}
 
 \item{newdata}{Optional new data}
 
@@ -27,5 +28,5 @@ ukb_ml_survival_predict(
 Matrix of predictions (observations x time points)
 }
 \description{
-Generate predictions from a survival ML model.
+Generate predictions from a survival ML model or survival ML workflow.
 }

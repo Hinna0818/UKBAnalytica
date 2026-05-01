@@ -11,9 +11,10 @@ structure:
 3. Refit the final model on the training-development data.
 4. Evaluate once on the frozen test set.
 
-This chapter focuses on binary classification, multiclass classification, and
-continuous outcomes. Time-to-event machine learning remains available through
-`ukb_ml_survival()` and is described separately at the end.
+This chapter covers binary classification, multiclass classification,
+continuous outcomes, and time-to-event prediction. For survival ML, use
+`ukb_ml_survival_workflow()`; the legacy `ukb_ml_survival()` interface remains
+available only for backward compatibility.
 
 ## What users usually need
 
@@ -471,21 +472,94 @@ ukb_ml_roc(ml_rf)
 
 ## Survival machine learning
 
-The frozen-test workflow above is for non-survival outcomes. For time-to-event
-prediction, use the existing survival ML interface.
+For time-to-event prediction, use `ukb_ml_survival_workflow()`. It follows the
+same structure as `ukb_ml_workflow()`:
+
+1. Freeze the survival test set.
+2. Select features and tune hyperparameters using only training/validation data.
+3. Refit the final model on training plus validation data.
+4. Evaluate once on the frozen test set.
+
+The simplest baseline uses a Cox model and requires only the `survival`
+backend:
 
 ```{r ml-survival, eval=FALSE}
-surv_rf <- ukb_ml_survival(
+surv_ml <- ukb_ml_survival_workflow(
   Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,
   data = analysis_dt,
-  model = "rsf",
-  params = list(ntree = 500),
+  model = "cox",
+  split_params = list(
+    split = "train_valid_test",
+    train_ratio = 0.70,
+    validation_ratio = 0.10,
+    test_ratio = 0.20
+  ),
+  feature_select = "filter",
+  feature_params = list(max_features = 50),
+  tune = TRUE,
+  tune_params = list(resampling = "validation"),
+  evaluation_times = c(1, 3, 5, 10),
   seed = 42
 )
 
-print(surv_rf)
-ukb_ml_survival_importance(surv_rf)
+surv_ml$final_test_metrics
+head(surv_ml$final_test_predictions)
 ```
+
+Supported survival models:
+
+| `model` | Backend | Best use |
+|:--------|:--------|:---------|
+| `"cox"` | `survival` | Interpretable baseline survival model |
+| `"coxnet"` | `glmnet` | Regularized high-dimensional Cox model |
+| `"rsf"` | `randomForestSRC` | Nonlinear random survival forest |
+| `"gbm_surv"` | `gbm` | Gradient-boosted Cox model |
+
+The final metrics include Harrell's C-index and naive time-specific Brier
+scores at `evaluation_times`. The Brier scores are not IPCW-adjusted; use them
+as quick model checks, not as the only censoring-aware performance statistic.
+
+Predict survival probabilities or risk scores from the final model:
+
+```{r ml-survival-predict, eval=FALSE}
+surv_prob <- predict(
+  surv_ml,
+  newdata = external_validation_df,
+  times = c(1, 3, 5),
+  type = "survival"
+)
+
+risk_score <- predict(surv_ml$final_model, newdata = external_validation_df, type = "risk")
+```
+
+If train/validation/test data already exist, register them explicitly:
+
+```{r ml-survival-manual-split, eval=FALSE}
+surv_split <- ukb_ml_survival_as_split(
+  train_data = train_df,
+  validation_data = valid_df,
+  test_data = test_df,
+  time = "outcome_surv_time",
+  event = "outcome_status",
+  id_col = "eid"
+)
+
+surv_ml <- ukb_ml_survival_workflow(
+  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,
+  split = surv_split,
+  model = "cox",
+  evaluation_times = c(1, 3, 5),
+  seed = 42
+)
+```
+
+Lower-level survival workflow helpers mirror the non-survival API:
+`ukb_ml_survival_split_data()`, `ukb_ml_survival_as_split()`,
+`ukb_ml_survival_feature_select()`, `ukb_ml_survival_tune()`,
+`ukb_ml_survival_fit_final()`, and `ukb_ml_survival_evaluate_test()`.
+
+`ukb_ml_survival()` now emits a deprecation warning. Use
+`ukb_ml_survival_workflow()` for new analyses.
 
 ## Practical checklist
 
@@ -499,6 +573,8 @@ Before reporting ML results, check the following:
    manually.
 5. Hyperparameters and thresholds are chosen on train/validation or CV only.
 6. `final_test_metrics` are reported as final frozen-test performance.
+7. For survival ML, `outcome_surv_time` and `outcome_status` are used only as
+   the left-hand side of `Surv(time, event)`, not as predictors.
 
 ## Optional packages
 
@@ -524,10 +600,14 @@ install.packages(c(
   "Boruta",      # Boruta feature selection
   "fastshap",    # SHAP explanations
   "pROC",        # legacy ROC helpers
-  "randomForestSRC"  # survival random forest
+  "survival",    # Cox and survival metrics
+  "gbm",         # boosted survival model
+  "randomForestSRC"  # random survival forest
 ))
 ```
 
 `logistic` and `linear` models use base R and do not require extra model
 backend packages. `naive_bayes` reuses `e1071`, so no separate package is
-needed if you already installed it for SVM.
+needed if you already installed it for SVM. For survival ML, `model = "cox"`
+uses `survival`, `model = "coxnet"` uses `glmnet`, `model = "gbm_surv"` uses
+`gbm`, and `model = "rsf"` uses `randomForestSRC`.

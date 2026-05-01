@@ -372,14 +372,14 @@ often appear as lower-case names with an Olink prefix such as
 <h2><span class="header-section-number">11.1</span> Required packages<a href="proteomics-enrichment.html#required-packages-1" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>The enrichment functions rely on optional Bioconductor packages. Install them
 before running this chapter.</p>
-<div class="sourceCode" id="cb113"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb113-1"><a href="proteomics-enrichment.html#cb113-1" tabindex="-1"></a><span class="co"># CRAN helper</span></span>
-<span id="cb113-2"><a href="proteomics-enrichment.html#cb113-2" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;BiocManager&quot;</span>)</span>
-<span id="cb113-3"><a href="proteomics-enrichment.html#cb113-3" tabindex="-1"></a></span>
-<span id="cb113-4"><a href="proteomics-enrichment.html#cb113-4" tabindex="-1"></a><span class="co"># Bioconductor packages used by UKBAnalytica_v2 enrichment helpers</span></span>
-<span id="cb113-5"><a href="proteomics-enrichment.html#cb113-5" tabindex="-1"></a>BiocManager<span class="sc">::</span><span class="fu">install</span>(<span class="fu">c</span>(<span class="st">&quot;clusterProfiler&quot;</span>, <span class="st">&quot;AnnotationDbi&quot;</span>, <span class="st">&quot;org.Hs.eg.db&quot;</span>))</span>
-<span id="cb113-6"><a href="proteomics-enrichment.html#cb113-6" tabindex="-1"></a></span>
-<span id="cb113-7"><a href="proteomics-enrichment.html#cb113-7" tabindex="-1"></a><span class="co"># Optional plotting package used by plot_go_ora_bar() and plot_enrichment_lollipop()</span></span>
-<span id="cb113-8"><a href="proteomics-enrichment.html#cb113-8" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;Hinna0818/TCMDATA&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb115"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb115-1"><a href="proteomics-enrichment.html#cb115-1" tabindex="-1"></a><span class="co"># CRAN helper</span></span>
+<span id="cb115-2"><a href="proteomics-enrichment.html#cb115-2" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;BiocManager&quot;</span>)</span>
+<span id="cb115-3"><a href="proteomics-enrichment.html#cb115-3" tabindex="-1"></a></span>
+<span id="cb115-4"><a href="proteomics-enrichment.html#cb115-4" tabindex="-1"></a><span class="co"># Bioconductor packages used by UKBAnalytica_v2 enrichment helpers</span></span>
+<span id="cb115-5"><a href="proteomics-enrichment.html#cb115-5" tabindex="-1"></a>BiocManager<span class="sc">::</span><span class="fu">install</span>(<span class="fu">c</span>(<span class="st">&quot;clusterProfiler&quot;</span>, <span class="st">&quot;AnnotationDbi&quot;</span>, <span class="st">&quot;org.Hs.eg.db&quot;</span>))</span>
+<span id="cb115-6"><a href="proteomics-enrichment.html#cb115-6" tabindex="-1"></a></span>
+<span id="cb115-7"><a href="proteomics-enrichment.html#cb115-7" tabindex="-1"></a><span class="co"># Optional plotting package used by plot_go_ora_bar() and plot_enrichment_lollipop()</span></span>
+<span id="cb115-8"><a href="proteomics-enrichment.html#cb115-8" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;Hinna0818/TCMDATA&quot;</span>)</span></code></pre></div>
 </div>
 <div id="supported-protein-name-formats" class="section level2 hasAnchor" number="11.2">
 <h2><span class="header-section-number">11.2</span> Supported protein name formats<a href="proteomics-enrichment.html#supported-protein-name-formats" class="anchor-section" aria-label="Anchor link to header"></a></h2>
@@ -397,16 +397,16 @@ separate gene symbols.</li>
 <p>Use <code>protein_to_gene_symbol()</code> when you already have a vector of selected
 proteins, for example after filtering differential proteins or selecting a
 protein panel of interest.</p>
-<div class="sourceCode" id="cb114"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb114-1"><a href="proteomics-enrichment.html#cb114-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
-<span id="cb114-2"><a href="proteomics-enrichment.html#cb114-2" tabindex="-1"></a></span>
-<span id="cb114-3"><a href="proteomics-enrichment.html#cb114-3" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb114-4"><a href="proteomics-enrichment.html#cb114-4" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.eno2&quot;</span>,</span>
-<span id="cb114-5"><a href="proteomics-enrichment.html#cb114-5" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.eno3&quot;</span>,</span>
-<span id="cb114-6"><a href="proteomics-enrichment.html#cb114-6" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.enoph1&quot;</span>,</span>
-<span id="cb114-7"><a href="proteomics-enrichment.html#cb114-7" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.enox2&quot;</span></span>
-<span id="cb114-8"><a href="proteomics-enrichment.html#cb114-8" tabindex="-1"></a>)</span>
-<span id="cb114-9"><a href="proteomics-enrichment.html#cb114-9" tabindex="-1"></a></span>
-<span id="cb114-10"><a href="proteomics-enrichment.html#cb114-10" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(proteins)</span></code></pre></div>
+<div class="sourceCode" id="cb116"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb116-1"><a href="proteomics-enrichment.html#cb116-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb116-2"><a href="proteomics-enrichment.html#cb116-2" tabindex="-1"></a></span>
+<span id="cb116-3"><a href="proteomics-enrichment.html#cb116-3" tabindex="-1"></a>proteins <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb116-4"><a href="proteomics-enrichment.html#cb116-4" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.eno2&quot;</span>,</span>
+<span id="cb116-5"><a href="proteomics-enrichment.html#cb116-5" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.eno3&quot;</span>,</span>
+<span id="cb116-6"><a href="proteomics-enrichment.html#cb116-6" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.enoph1&quot;</span>,</span>
+<span id="cb116-7"><a href="proteomics-enrichment.html#cb116-7" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.enox2&quot;</span></span>
+<span id="cb116-8"><a href="proteomics-enrichment.html#cb116-8" tabindex="-1"></a>)</span>
+<span id="cb116-9"><a href="proteomics-enrichment.html#cb116-9" tabindex="-1"></a></span>
+<span id="cb116-10"><a href="proteomics-enrichment.html#cb116-10" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(proteins)</span></code></pre></div>
 <p>Expected output:</p>
 <table>
 <thead>
@@ -440,16 +440,16 @@ protein panel of interest.</p>
 </tbody>
 </table>
 <p>You can also pass a data.frame together with <code>protein_col</code>.</p>
-<div class="sourceCode" id="cb115"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb115-1"><a href="proteomics-enrichment.html#cb115-1" tabindex="-1"></a>res_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb115-2"><a href="proteomics-enrichment.html#cb115-2" tabindex="-1"></a>  <span class="at">protein =</span> <span class="fu">c</span>(</span>
-<span id="cb115-3"><a href="proteomics-enrichment.html#cb115-3" tabindex="-1"></a>    <span class="st">&quot;olink_instance_0.il6&quot;</span>,</span>
-<span id="cb115-4"><a href="proteomics-enrichment.html#cb115-4" tabindex="-1"></a>    <span class="st">&quot;olink_instance_0.tnf&quot;</span>,</span>
-<span id="cb115-5"><a href="proteomics-enrichment.html#cb115-5" tabindex="-1"></a>    <span class="st">&quot;IL12A_IL12B;Interleukin-12&quot;</span></span>
-<span id="cb115-6"><a href="proteomics-enrichment.html#cb115-6" tabindex="-1"></a>  ),</span>
-<span id="cb115-7"><a href="proteomics-enrichment.html#cb115-7" tabindex="-1"></a>  <span class="at">logFC =</span> <span class="fu">c</span>(<span class="fl">0.82</span>, <span class="fl">0.76</span>, <span class="fl">0.55</span>)</span>
-<span id="cb115-8"><a href="proteomics-enrichment.html#cb115-8" tabindex="-1"></a>)</span>
-<span id="cb115-9"><a href="proteomics-enrichment.html#cb115-9" tabindex="-1"></a></span>
-<span id="cb115-10"><a href="proteomics-enrichment.html#cb115-10" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(res_df, <span class="at">protein_col =</span> <span class="st">&quot;protein&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb117-1"><a href="proteomics-enrichment.html#cb117-1" tabindex="-1"></a>res_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb117-2"><a href="proteomics-enrichment.html#cb117-2" tabindex="-1"></a>  <span class="at">protein =</span> <span class="fu">c</span>(</span>
+<span id="cb117-3"><a href="proteomics-enrichment.html#cb117-3" tabindex="-1"></a>    <span class="st">&quot;olink_instance_0.il6&quot;</span>,</span>
+<span id="cb117-4"><a href="proteomics-enrichment.html#cb117-4" tabindex="-1"></a>    <span class="st">&quot;olink_instance_0.tnf&quot;</span>,</span>
+<span id="cb117-5"><a href="proteomics-enrichment.html#cb117-5" tabindex="-1"></a>    <span class="st">&quot;IL12A_IL12B;Interleukin-12&quot;</span></span>
+<span id="cb117-6"><a href="proteomics-enrichment.html#cb117-6" tabindex="-1"></a>  ),</span>
+<span id="cb117-7"><a href="proteomics-enrichment.html#cb117-7" tabindex="-1"></a>  <span class="at">logFC =</span> <span class="fu">c</span>(<span class="fl">0.82</span>, <span class="fl">0.76</span>, <span class="fl">0.55</span>)</span>
+<span id="cb117-8"><a href="proteomics-enrichment.html#cb117-8" tabindex="-1"></a>)</span>
+<span id="cb117-9"><a href="proteomics-enrichment.html#cb117-9" tabindex="-1"></a></span>
+<span id="cb117-10"><a href="proteomics-enrichment.html#cb117-10" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(res_df, <span class="at">protein_col =</span> <span class="st">&quot;protein&quot;</span>)</span></code></pre></div>
 <p>In this example, <code>IL12A_IL12B</code> will be expanded into two rows: <code>IL12A</code> and
 <code>IL12B</code>.</p>
 </div>
@@ -457,30 +457,30 @@ protein panel of interest.</p>
 <h2><span class="header-section-number">11.4</span> GO over-representation analysis<a href="proteomics-enrichment.html#go-over-representation-analysis" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p><code>run_protein_ora()</code> converts protein identifiers to gene symbols and runs GO ORA
 through <code>clusterProfiler::enrichGO()</code>.</p>
-<div class="sourceCode" id="cb116"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb116-1"><a href="proteomics-enrichment.html#cb116-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
-<span id="cb116-2"><a href="proteomics-enrichment.html#cb116-2" tabindex="-1"></a></span>
-<span id="cb116-3"><a href="proteomics-enrichment.html#cb116-3" tabindex="-1"></a>inflam_proteins <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb116-4"><a href="proteomics-enrichment.html#cb116-4" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il6&quot;</span>,</span>
-<span id="cb116-5"><a href="proteomics-enrichment.html#cb116-5" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.tnf&quot;</span>,</span>
-<span id="cb116-6"><a href="proteomics-enrichment.html#cb116-6" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il1b&quot;</span>,</span>
-<span id="cb116-7"><a href="proteomics-enrichment.html#cb116-7" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ifng&quot;</span>,</span>
-<span id="cb116-8"><a href="proteomics-enrichment.html#cb116-8" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl2&quot;</span>,</span>
-<span id="cb116-9"><a href="proteomics-enrichment.html#cb116-9" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl3&quot;</span>,</span>
-<span id="cb116-10"><a href="proteomics-enrichment.html#cb116-10" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl4&quot;</span>,</span>
-<span id="cb116-11"><a href="proteomics-enrichment.html#cb116-11" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.cxcl10&quot;</span>,</span>
-<span id="cb116-12"><a href="proteomics-enrichment.html#cb116-12" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il10&quot;</span>,</span>
-<span id="cb116-13"><a href="proteomics-enrichment.html#cb116-13" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il6r&quot;</span>,</span>
-<span id="cb116-14"><a href="proteomics-enrichment.html#cb116-14" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.tlr4&quot;</span>,</span>
-<span id="cb116-15"><a href="proteomics-enrichment.html#cb116-15" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.icam1&quot;</span></span>
-<span id="cb116-16"><a href="proteomics-enrichment.html#cb116-16" tabindex="-1"></a>)</span>
-<span id="cb116-17"><a href="proteomics-enrichment.html#cb116-17" tabindex="-1"></a></span>
-<span id="cb116-18"><a href="proteomics-enrichment.html#cb116-18" tabindex="-1"></a>go_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ora</span>(</span>
-<span id="cb116-19"><a href="proteomics-enrichment.html#cb116-19" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
-<span id="cb116-20"><a href="proteomics-enrichment.html#cb116-20" tabindex="-1"></a>  <span class="at">ont =</span> <span class="st">&quot;ALL&quot;</span></span>
-<span id="cb116-21"><a href="proteomics-enrichment.html#cb116-21" tabindex="-1"></a>)</span>
-<span id="cb116-22"><a href="proteomics-enrichment.html#cb116-22" tabindex="-1"></a></span>
-<span id="cb116-23"><a href="proteomics-enrichment.html#cb116-23" tabindex="-1"></a>go_res<span class="sc">$</span>gene_symbols</span>
-<span id="cb116-24"><a href="proteomics-enrichment.html#cb116-24" tabindex="-1"></a><span class="fu">as.data.frame</span>(go_res<span class="sc">$</span>ora_result)[, <span class="fu">c</span>(<span class="st">&quot;ID&quot;</span>, <span class="st">&quot;Description&quot;</span>, <span class="st">&quot;p.adjust&quot;</span>, <span class="st">&quot;Count&quot;</span>)]</span></code></pre></div>
+<div class="sourceCode" id="cb118"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb118-1"><a href="proteomics-enrichment.html#cb118-1" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb118-2"><a href="proteomics-enrichment.html#cb118-2" tabindex="-1"></a></span>
+<span id="cb118-3"><a href="proteomics-enrichment.html#cb118-3" tabindex="-1"></a>inflam_proteins <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb118-4"><a href="proteomics-enrichment.html#cb118-4" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il6&quot;</span>,</span>
+<span id="cb118-5"><a href="proteomics-enrichment.html#cb118-5" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.tnf&quot;</span>,</span>
+<span id="cb118-6"><a href="proteomics-enrichment.html#cb118-6" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il1b&quot;</span>,</span>
+<span id="cb118-7"><a href="proteomics-enrichment.html#cb118-7" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ifng&quot;</span>,</span>
+<span id="cb118-8"><a href="proteomics-enrichment.html#cb118-8" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl2&quot;</span>,</span>
+<span id="cb118-9"><a href="proteomics-enrichment.html#cb118-9" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl3&quot;</span>,</span>
+<span id="cb118-10"><a href="proteomics-enrichment.html#cb118-10" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.ccl4&quot;</span>,</span>
+<span id="cb118-11"><a href="proteomics-enrichment.html#cb118-11" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.cxcl10&quot;</span>,</span>
+<span id="cb118-12"><a href="proteomics-enrichment.html#cb118-12" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il10&quot;</span>,</span>
+<span id="cb118-13"><a href="proteomics-enrichment.html#cb118-13" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.il6r&quot;</span>,</span>
+<span id="cb118-14"><a href="proteomics-enrichment.html#cb118-14" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.tlr4&quot;</span>,</span>
+<span id="cb118-15"><a href="proteomics-enrichment.html#cb118-15" tabindex="-1"></a>  <span class="st">&quot;olink_instance_0.icam1&quot;</span></span>
+<span id="cb118-16"><a href="proteomics-enrichment.html#cb118-16" tabindex="-1"></a>)</span>
+<span id="cb118-17"><a href="proteomics-enrichment.html#cb118-17" tabindex="-1"></a></span>
+<span id="cb118-18"><a href="proteomics-enrichment.html#cb118-18" tabindex="-1"></a>go_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ora</span>(</span>
+<span id="cb118-19"><a href="proteomics-enrichment.html#cb118-19" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
+<span id="cb118-20"><a href="proteomics-enrichment.html#cb118-20" tabindex="-1"></a>  <span class="at">ont =</span> <span class="st">&quot;ALL&quot;</span></span>
+<span id="cb118-21"><a href="proteomics-enrichment.html#cb118-21" tabindex="-1"></a>)</span>
+<span id="cb118-22"><a href="proteomics-enrichment.html#cb118-22" tabindex="-1"></a></span>
+<span id="cb118-23"><a href="proteomics-enrichment.html#cb118-23" tabindex="-1"></a>go_res<span class="sc">$</span>gene_symbols</span>
+<span id="cb118-24"><a href="proteomics-enrichment.html#cb118-24" tabindex="-1"></a><span class="fu">as.data.frame</span>(go_res<span class="sc">$</span>ora_result)[, <span class="fu">c</span>(<span class="st">&quot;ID&quot;</span>, <span class="st">&quot;Description&quot;</span>, <span class="st">&quot;p.adjust&quot;</span>, <span class="st">&quot;Count&quot;</span>)]</span></code></pre></div>
 <p>If you want to draw the ontology-colored GO bar plot, use <code>ont = "ALL"</code> so the
 result contains the <code>ONTOLOGY</code> column required by <code>plot_go_ora_bar()</code>.</p>
 </div>
@@ -488,78 +488,78 @@ result contains the <code>ONTOLOGY</code> column required by <code>plot_go_ora_b
 <h2><span class="header-section-number">11.5</span> KEGG over-representation analysis<a href="proteomics-enrichment.html#kegg-over-representation-analysis" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p><code>run_protein_kegg_ora()</code> automatically converts gene symbols to Entrez IDs and
 then calls <code>clusterProfiler::enrichKEGG()</code>.</p>
-<div class="sourceCode" id="cb117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb117-1"><a href="proteomics-enrichment.html#cb117-1" tabindex="-1"></a>kegg_res <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
-<span id="cb117-2"><a href="proteomics-enrichment.html#cb117-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins</span>
-<span id="cb117-3"><a href="proteomics-enrichment.html#cb117-3" tabindex="-1"></a>)</span>
-<span id="cb117-4"><a href="proteomics-enrichment.html#cb117-4" tabindex="-1"></a></span>
-<span id="cb117-5"><a href="proteomics-enrichment.html#cb117-5" tabindex="-1"></a>kegg_res<span class="sc">$</span>entrez_ids</span>
-<span id="cb117-6"><a href="proteomics-enrichment.html#cb117-6" tabindex="-1"></a><span class="fu">as.data.frame</span>(kegg_res<span class="sc">$</span>ora_result)[, <span class="fu">c</span>(<span class="st">&quot;ID&quot;</span>, <span class="st">&quot;Description&quot;</span>, <span class="st">&quot;p.adjust&quot;</span>, <span class="st">&quot;Count&quot;</span>)]</span></code></pre></div>
+<div class="sourceCode" id="cb119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb119-1"><a href="proteomics-enrichment.html#cb119-1" tabindex="-1"></a>kegg_res <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
+<span id="cb119-2"><a href="proteomics-enrichment.html#cb119-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins</span>
+<span id="cb119-3"><a href="proteomics-enrichment.html#cb119-3" tabindex="-1"></a>)</span>
+<span id="cb119-4"><a href="proteomics-enrichment.html#cb119-4" tabindex="-1"></a></span>
+<span id="cb119-5"><a href="proteomics-enrichment.html#cb119-5" tabindex="-1"></a>kegg_res<span class="sc">$</span>entrez_ids</span>
+<span id="cb119-6"><a href="proteomics-enrichment.html#cb119-6" tabindex="-1"></a><span class="fu">as.data.frame</span>(kegg_res<span class="sc">$</span>ora_result)[, <span class="fu">c</span>(<span class="st">&quot;ID&quot;</span>, <span class="st">&quot;Description&quot;</span>, <span class="st">&quot;p.adjust&quot;</span>, <span class="st">&quot;Count&quot;</span>)]</span></code></pre></div>
 <p>By default the function uses the human KEGG code <code>hsa</code>. If you are working with
 very small protein sets and obtain no results, you can temporarily reduce
 <code>minGSSize</code> for exploratory checks.</p>
-<div class="sourceCode" id="cb118"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb118-1"><a href="proteomics-enrichment.html#cb118-1" tabindex="-1"></a>kegg_res_small <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
-<span id="cb118-2"><a href="proteomics-enrichment.html#cb118-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
-<span id="cb118-3"><a href="proteomics-enrichment.html#cb118-3" tabindex="-1"></a>  <span class="at">minGSSize =</span> <span class="dv">2</span></span>
-<span id="cb118-4"><a href="proteomics-enrichment.html#cb118-4" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb120"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb120-1"><a href="proteomics-enrichment.html#cb120-1" tabindex="-1"></a>kegg_res_small <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
+<span id="cb120-2"><a href="proteomics-enrichment.html#cb120-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
+<span id="cb120-3"><a href="proteomics-enrichment.html#cb120-3" tabindex="-1"></a>  <span class="at">minGSSize =</span> <span class="dv">2</span></span>
+<span id="cb120-4"><a href="proteomics-enrichment.html#cb120-4" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="use-a-custom-background-universe" class="section level2 hasAnchor" number="11.6">
 <h2><span class="header-section-number">11.6</span> Use a custom background universe<a href="proteomics-enrichment.html#use-a-custom-background-universe" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>When you perform enrichment on a subset of proteins from a measured Olink panel,
 it is often better to use the assayed proteins as the background rather than the
 whole genome.</p>
-<div class="sourceCode" id="cb119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb119-1"><a href="proteomics-enrichment.html#cb119-1" tabindex="-1"></a><span class="co"># Example: all assayed Olink proteins in your matrix</span></span>
-<span id="cb119-2"><a href="proteomics-enrichment.html#cb119-2" tabindex="-1"></a>all_proteins <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="st">&quot;^olink_instance_0</span><span class="sc">\\</span><span class="st">.&quot;</span>, <span class="fu">names</span>(protein_df), <span class="at">value =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb119-3"><a href="proteomics-enrichment.html#cb119-3" tabindex="-1"></a></span>
-<span id="cb119-4"><a href="proteomics-enrichment.html#cb119-4" tabindex="-1"></a>go_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ora</span>(</span>
-<span id="cb119-5"><a href="proteomics-enrichment.html#cb119-5" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
-<span id="cb119-6"><a href="proteomics-enrichment.html#cb119-6" tabindex="-1"></a>  <span class="at">universe =</span> all_proteins,</span>
-<span id="cb119-7"><a href="proteomics-enrichment.html#cb119-7" tabindex="-1"></a>  <span class="at">ont =</span> <span class="st">&quot;ALL&quot;</span></span>
-<span id="cb119-8"><a href="proteomics-enrichment.html#cb119-8" tabindex="-1"></a>)</span>
-<span id="cb119-9"><a href="proteomics-enrichment.html#cb119-9" tabindex="-1"></a></span>
-<span id="cb119-10"><a href="proteomics-enrichment.html#cb119-10" tabindex="-1"></a>kegg_res <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
-<span id="cb119-11"><a href="proteomics-enrichment.html#cb119-11" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
-<span id="cb119-12"><a href="proteomics-enrichment.html#cb119-12" tabindex="-1"></a>  <span class="at">universe =</span> all_proteins</span>
-<span id="cb119-13"><a href="proteomics-enrichment.html#cb119-13" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb121"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb121-1"><a href="proteomics-enrichment.html#cb121-1" tabindex="-1"></a><span class="co"># Example: all assayed Olink proteins in your matrix</span></span>
+<span id="cb121-2"><a href="proteomics-enrichment.html#cb121-2" tabindex="-1"></a>all_proteins <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="st">&quot;^olink_instance_0</span><span class="sc">\\</span><span class="st">.&quot;</span>, <span class="fu">names</span>(protein_df), <span class="at">value =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb121-3"><a href="proteomics-enrichment.html#cb121-3" tabindex="-1"></a></span>
+<span id="cb121-4"><a href="proteomics-enrichment.html#cb121-4" tabindex="-1"></a>go_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ora</span>(</span>
+<span id="cb121-5"><a href="proteomics-enrichment.html#cb121-5" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
+<span id="cb121-6"><a href="proteomics-enrichment.html#cb121-6" tabindex="-1"></a>  <span class="at">universe =</span> all_proteins,</span>
+<span id="cb121-7"><a href="proteomics-enrichment.html#cb121-7" tabindex="-1"></a>  <span class="at">ont =</span> <span class="st">&quot;ALL&quot;</span></span>
+<span id="cb121-8"><a href="proteomics-enrichment.html#cb121-8" tabindex="-1"></a>)</span>
+<span id="cb121-9"><a href="proteomics-enrichment.html#cb121-9" tabindex="-1"></a></span>
+<span id="cb121-10"><a href="proteomics-enrichment.html#cb121-10" tabindex="-1"></a>kegg_res <span class="ot">&lt;-</span> <span class="fu">run_protein_kegg_ora</span>(</span>
+<span id="cb121-11"><a href="proteomics-enrichment.html#cb121-11" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
+<span id="cb121-12"><a href="proteomics-enrichment.html#cb121-12" tabindex="-1"></a>  <span class="at">universe =</span> all_proteins</span>
+<span id="cb121-13"><a href="proteomics-enrichment.html#cb121-13" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="plot-enrichment-results" class="section level2 hasAnchor" number="11.7">
 <h2><span class="header-section-number">11.7</span> Plot enrichment results<a href="proteomics-enrichment.html#plot-enrichment-results" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>The package provides two thin wrappers around plotting functions from
 <strong>TCMDATA</strong>.</p>
-<div class="sourceCode" id="cb120"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb120-1"><a href="proteomics-enrichment.html#cb120-1" tabindex="-1"></a><span class="co"># GO bar plot</span></span>
-<span id="cb120-2"><a href="proteomics-enrichment.html#cb120-2" tabindex="-1"></a><span class="fu">plot_go_ora_bar</span>(</span>
-<span id="cb120-3"><a href="proteomics-enrichment.html#cb120-3" tabindex="-1"></a>  go_res,</span>
-<span id="cb120-4"><a href="proteomics-enrichment.html#cb120-4" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">5</span>,</span>
-<span id="cb120-5"><a href="proteomics-enrichment.html#cb120-5" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;GO enrichment of inflammatory proteins&quot;</span></span>
-<span id="cb120-6"><a href="proteomics-enrichment.html#cb120-6" tabindex="-1"></a>)</span>
-<span id="cb120-7"><a href="proteomics-enrichment.html#cb120-7" tabindex="-1"></a></span>
-<span id="cb120-8"><a href="proteomics-enrichment.html#cb120-8" tabindex="-1"></a><span class="co"># General lollipop plot for enrichment results</span></span>
-<span id="cb120-9"><a href="proteomics-enrichment.html#cb120-9" tabindex="-1"></a><span class="fu">plot_enrichment_lollipop</span>(</span>
-<span id="cb120-10"><a href="proteomics-enrichment.html#cb120-10" tabindex="-1"></a>  go_res,</span>
-<span id="cb120-11"><a href="proteomics-enrichment.html#cb120-11" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">10</span>,</span>
-<span id="cb120-12"><a href="proteomics-enrichment.html#cb120-12" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;GO ORA lollipop plot&quot;</span></span>
-<span id="cb120-13"><a href="proteomics-enrichment.html#cb120-13" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb122"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb122-1"><a href="proteomics-enrichment.html#cb122-1" tabindex="-1"></a><span class="co"># GO bar plot</span></span>
+<span id="cb122-2"><a href="proteomics-enrichment.html#cb122-2" tabindex="-1"></a><span class="fu">plot_go_ora_bar</span>(</span>
+<span id="cb122-3"><a href="proteomics-enrichment.html#cb122-3" tabindex="-1"></a>  go_res,</span>
+<span id="cb122-4"><a href="proteomics-enrichment.html#cb122-4" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">5</span>,</span>
+<span id="cb122-5"><a href="proteomics-enrichment.html#cb122-5" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;GO enrichment of inflammatory proteins&quot;</span></span>
+<span id="cb122-6"><a href="proteomics-enrichment.html#cb122-6" tabindex="-1"></a>)</span>
+<span id="cb122-7"><a href="proteomics-enrichment.html#cb122-7" tabindex="-1"></a></span>
+<span id="cb122-8"><a href="proteomics-enrichment.html#cb122-8" tabindex="-1"></a><span class="co"># General lollipop plot for enrichment results</span></span>
+<span id="cb122-9"><a href="proteomics-enrichment.html#cb122-9" tabindex="-1"></a><span class="fu">plot_enrichment_lollipop</span>(</span>
+<span id="cb122-10"><a href="proteomics-enrichment.html#cb122-10" tabindex="-1"></a>  go_res,</span>
+<span id="cb122-11"><a href="proteomics-enrichment.html#cb122-11" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">10</span>,</span>
+<span id="cb122-12"><a href="proteomics-enrichment.html#cb122-12" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;GO ORA lollipop plot&quot;</span></span>
+<span id="cb122-13"><a href="proteomics-enrichment.html#cb122-13" tabindex="-1"></a>)</span></code></pre></div>
 <p><code>plot_enrichment_lollipop()</code> also works on KEGG enrichment results.</p>
-<div class="sourceCode" id="cb121"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb121-1"><a href="proteomics-enrichment.html#cb121-1" tabindex="-1"></a><span class="fu">plot_enrichment_lollipop</span>(</span>
-<span id="cb121-2"><a href="proteomics-enrichment.html#cb121-2" tabindex="-1"></a>  kegg_res,</span>
-<span id="cb121-3"><a href="proteomics-enrichment.html#cb121-3" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">10</span>,</span>
-<span id="cb121-4"><a href="proteomics-enrichment.html#cb121-4" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;KEGG ORA lollipop plot&quot;</span></span>
-<span id="cb121-5"><a href="proteomics-enrichment.html#cb121-5" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb123"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb123-1"><a href="proteomics-enrichment.html#cb123-1" tabindex="-1"></a><span class="fu">plot_enrichment_lollipop</span>(</span>
+<span id="cb123-2"><a href="proteomics-enrichment.html#cb123-2" tabindex="-1"></a>  kegg_res,</span>
+<span id="cb123-3"><a href="proteomics-enrichment.html#cb123-3" tabindex="-1"></a>  <span class="at">top_n =</span> <span class="dv">10</span>,</span>
+<span id="cb123-4"><a href="proteomics-enrichment.html#cb123-4" tabindex="-1"></a>  <span class="at">plot_title =</span> <span class="st">&quot;KEGG ORA lollipop plot&quot;</span></span>
+<span id="cb123-5"><a href="proteomics-enrichment.html#cb123-5" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="use-a-custom-mapping-table" class="section level2 hasAnchor" number="11.8">
 <h2><span class="header-section-number">11.8</span> Use a custom mapping table<a href="proteomics-enrichment.html#use-a-custom-mapping-table" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>If your upstream proteomics workflow outputs UniProt IDs, panel-specific names,
 or another naming convention, you can provide a custom mapping table first and
 then let <code>clusterProfiler::bitr()</code> handle the remaining unmatched identifiers.</p>
-<div class="sourceCode" id="cb122"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb122-1"><a href="proteomics-enrichment.html#cb122-1" tabindex="-1"></a>custom_map <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb122-2"><a href="proteomics-enrichment.html#cb122-2" tabindex="-1"></a>  <span class="at">protein =</span> <span class="fu">c</span>(<span class="st">&quot;P05231&quot;</span>, <span class="st">&quot;P01375&quot;</span>),</span>
-<span id="cb122-3"><a href="proteomics-enrichment.html#cb122-3" tabindex="-1"></a>  <span class="at">gene_symbol =</span> <span class="fu">c</span>(<span class="st">&quot;IL6&quot;</span>, <span class="st">&quot;TNF&quot;</span>)</span>
-<span id="cb122-4"><a href="proteomics-enrichment.html#cb122-4" tabindex="-1"></a>)</span>
-<span id="cb122-5"><a href="proteomics-enrichment.html#cb122-5" tabindex="-1"></a></span>
-<span id="cb122-6"><a href="proteomics-enrichment.html#cb122-6" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(</span>
-<span id="cb122-7"><a href="proteomics-enrichment.html#cb122-7" tabindex="-1"></a>  <span class="at">proteins =</span> <span class="fu">c</span>(<span class="st">&quot;P05231&quot;</span>, <span class="st">&quot;P01375&quot;</span>),</span>
-<span id="cb122-8"><a href="proteomics-enrichment.html#cb122-8" tabindex="-1"></a>  <span class="at">from_type =</span> <span class="st">&quot;UNIPROT&quot;</span>,</span>
-<span id="cb122-9"><a href="proteomics-enrichment.html#cb122-9" tabindex="-1"></a>  <span class="at">mapping_table =</span> custom_map</span>
-<span id="cb122-10"><a href="proteomics-enrichment.html#cb122-10" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb124-1"><a href="proteomics-enrichment.html#cb124-1" tabindex="-1"></a>custom_map <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb124-2"><a href="proteomics-enrichment.html#cb124-2" tabindex="-1"></a>  <span class="at">protein =</span> <span class="fu">c</span>(<span class="st">&quot;P05231&quot;</span>, <span class="st">&quot;P01375&quot;</span>),</span>
+<span id="cb124-3"><a href="proteomics-enrichment.html#cb124-3" tabindex="-1"></a>  <span class="at">gene_symbol =</span> <span class="fu">c</span>(<span class="st">&quot;IL6&quot;</span>, <span class="st">&quot;TNF&quot;</span>)</span>
+<span id="cb124-4"><a href="proteomics-enrichment.html#cb124-4" tabindex="-1"></a>)</span>
+<span id="cb124-5"><a href="proteomics-enrichment.html#cb124-5" tabindex="-1"></a></span>
+<span id="cb124-6"><a href="proteomics-enrichment.html#cb124-6" tabindex="-1"></a><span class="fu">protein_to_gene_symbol</span>(</span>
+<span id="cb124-7"><a href="proteomics-enrichment.html#cb124-7" tabindex="-1"></a>  <span class="at">proteins =</span> <span class="fu">c</span>(<span class="st">&quot;P05231&quot;</span>, <span class="st">&quot;P01375&quot;</span>),</span>
+<span id="cb124-8"><a href="proteomics-enrichment.html#cb124-8" tabindex="-1"></a>  <span class="at">from_type =</span> <span class="st">&quot;UNIPROT&quot;</span>,</span>
+<span id="cb124-9"><a href="proteomics-enrichment.html#cb124-9" tabindex="-1"></a>  <span class="at">mapping_table =</span> custom_map</span>
+<span id="cb124-10"><a href="proteomics-enrichment.html#cb124-10" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="run-string-ppi-analysis-for-proteomics-hits" class="section level2 hasAnchor" number="11.9">
 <h2><span class="header-section-number">11.9</span> Run STRING PPI analysis for proteomics hits<a href="proteomics-enrichment.html#run-string-ppi-analysis-for-proteomics-hits" class="anchor-section" aria-label="Anchor link to header"></a></h2>
@@ -567,13 +567,13 @@ then let <code>clusterProfiler::bitr()</code> handle the remaining unmatched ide
 <code>clusterProfiler::getPPI()</code> and the downstream network-analysis functions in
 <strong>TCMDATA</strong>.</p>
 <p>Start by retrieving a STRING network from your protein list.</p>
-<div class="sourceCode" id="cb123"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb123-1"><a href="proteomics-enrichment.html#cb123-1" tabindex="-1"></a>ppi_res <span class="ot">&lt;-</span> <span class="fu">get_protein_ppi</span>(</span>
-<span id="cb123-2"><a href="proteomics-enrichment.html#cb123-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
-<span id="cb123-3"><a href="proteomics-enrichment.html#cb123-3" tabindex="-1"></a>  <span class="at">taxID =</span> <span class="dv">9606</span></span>
-<span id="cb123-4"><a href="proteomics-enrichment.html#cb123-4" tabindex="-1"></a>)</span>
-<span id="cb123-5"><a href="proteomics-enrichment.html#cb123-5" tabindex="-1"></a></span>
-<span id="cb123-6"><a href="proteomics-enrichment.html#cb123-6" tabindex="-1"></a>ppi_res<span class="sc">$</span>gene_symbols</span>
-<span id="cb123-7"><a href="proteomics-enrichment.html#cb123-7" tabindex="-1"></a>ppi_res<span class="sc">$</span>ppi</span></code></pre></div>
+<div class="sourceCode" id="cb125"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb125-1"><a href="proteomics-enrichment.html#cb125-1" tabindex="-1"></a>ppi_res <span class="ot">&lt;-</span> <span class="fu">get_protein_ppi</span>(</span>
+<span id="cb125-2"><a href="proteomics-enrichment.html#cb125-2" tabindex="-1"></a>  <span class="at">proteins =</span> inflam_proteins,</span>
+<span id="cb125-3"><a href="proteomics-enrichment.html#cb125-3" tabindex="-1"></a>  <span class="at">taxID =</span> <span class="dv">9606</span></span>
+<span id="cb125-4"><a href="proteomics-enrichment.html#cb125-4" tabindex="-1"></a>)</span>
+<span id="cb125-5"><a href="proteomics-enrichment.html#cb125-5" tabindex="-1"></a></span>
+<span id="cb125-6"><a href="proteomics-enrichment.html#cb125-6" tabindex="-1"></a>ppi_res<span class="sc">$</span>gene_symbols</span>
+<span id="cb125-7"><a href="proteomics-enrichment.html#cb125-7" tabindex="-1"></a>ppi_res<span class="sc">$</span>ppi</span></code></pre></div>
 <p><code>get_protein_ppi()</code> returns both the mapped gene symbols and the retrieved PPI
 network, so users can check the identifier conversion before moving to network
 analysis.</p>
@@ -583,54 +583,54 @@ analysis.</p>
 <p>Use <code>subset_protein_ppi()</code> to remove low-confidence edges and optionally keep
 only the most connected nodes. Then compute node-level topological metrics with
 <code>compute_protein_ppi_metrics()</code>.</p>
-<div class="sourceCode" id="cb124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb124-1"><a href="proteomics-enrichment.html#cb124-1" tabindex="-1"></a>ppi_filtered <span class="ot">&lt;-</span> <span class="fu">subset_protein_ppi</span>(</span>
-<span id="cb124-2"><a href="proteomics-enrichment.html#cb124-2" tabindex="-1"></a>  ppi_res,</span>
-<span id="cb124-3"><a href="proteomics-enrichment.html#cb124-3" tabindex="-1"></a>  <span class="at">score_cutoff =</span> <span class="fl">0.7</span>,</span>
-<span id="cb124-4"><a href="proteomics-enrichment.html#cb124-4" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">100</span></span>
-<span id="cb124-5"><a href="proteomics-enrichment.html#cb124-5" tabindex="-1"></a>)</span>
-<span id="cb124-6"><a href="proteomics-enrichment.html#cb124-6" tabindex="-1"></a></span>
-<span id="cb124-7"><a href="proteomics-enrichment.html#cb124-7" tabindex="-1"></a>ppi_metrics <span class="ot">&lt;-</span> <span class="fu">compute_protein_ppi_metrics</span>(</span>
-<span id="cb124-8"><a href="proteomics-enrichment.html#cb124-8" tabindex="-1"></a>  ppi_filtered,</span>
-<span id="cb124-9"><a href="proteomics-enrichment.html#cb124-9" tabindex="-1"></a>  <span class="at">weight_attr =</span> <span class="st">&quot;score&quot;</span></span>
-<span id="cb124-10"><a href="proteomics-enrichment.html#cb124-10" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb126-1"><a href="proteomics-enrichment.html#cb126-1" tabindex="-1"></a>ppi_filtered <span class="ot">&lt;-</span> <span class="fu">subset_protein_ppi</span>(</span>
+<span id="cb126-2"><a href="proteomics-enrichment.html#cb126-2" tabindex="-1"></a>  ppi_res,</span>
+<span id="cb126-3"><a href="proteomics-enrichment.html#cb126-3" tabindex="-1"></a>  <span class="at">score_cutoff =</span> <span class="fl">0.7</span>,</span>
+<span id="cb126-4"><a href="proteomics-enrichment.html#cb126-4" tabindex="-1"></a>  <span class="at">n =</span> <span class="dv">100</span></span>
+<span id="cb126-5"><a href="proteomics-enrichment.html#cb126-5" tabindex="-1"></a>)</span>
+<span id="cb126-6"><a href="proteomics-enrichment.html#cb126-6" tabindex="-1"></a></span>
+<span id="cb126-7"><a href="proteomics-enrichment.html#cb126-7" tabindex="-1"></a>ppi_metrics <span class="ot">&lt;-</span> <span class="fu">compute_protein_ppi_metrics</span>(</span>
+<span id="cb126-8"><a href="proteomics-enrichment.html#cb126-8" tabindex="-1"></a>  ppi_filtered,</span>
+<span id="cb126-9"><a href="proteomics-enrichment.html#cb126-9" tabindex="-1"></a>  <span class="at">weight_attr =</span> <span class="st">&quot;score&quot;</span></span>
+<span id="cb126-10"><a href="proteomics-enrichment.html#cb126-10" tabindex="-1"></a>)</span></code></pre></div>
 <p>To prioritize hub proteins, run integrated centrality ranking.</p>
-<div class="sourceCode" id="cb125"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb125-1"><a href="proteomics-enrichment.html#cb125-1" tabindex="-1"></a>rank_res <span class="ot">&lt;-</span> <span class="fu">rank_protein_ppi_nodes</span>(ppi_metrics)</span>
-<span id="cb125-2"><a href="proteomics-enrichment.html#cb125-2" tabindex="-1"></a></span>
-<span id="cb125-3"><a href="proteomics-enrichment.html#cb125-3" tabindex="-1"></a><span class="fu">head</span>(</span>
-<span id="cb125-4"><a href="proteomics-enrichment.html#cb125-4" tabindex="-1"></a>  rank_res<span class="sc">$</span>table[, <span class="fu">c</span>(</span>
-<span id="cb125-5"><a href="proteomics-enrichment.html#cb125-5" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>, <span class="st">&quot;degree&quot;</span>, <span class="st">&quot;betweenness_w&quot;</span>, <span class="st">&quot;closeness_w&quot;</span>,</span>
-<span id="cb125-6"><a href="proteomics-enrichment.html#cb125-6" tabindex="-1"></a>    <span class="st">&quot;MCC&quot;</span>, <span class="st">&quot;MNC&quot;</span>, <span class="st">&quot;EPC&quot;</span>, <span class="st">&quot;Score_network&quot;</span>, <span class="st">&quot;Rank_network&quot;</span></span>
-<span id="cb125-7"><a href="proteomics-enrichment.html#cb125-7" tabindex="-1"></a>  )]</span>
-<span id="cb125-8"><a href="proteomics-enrichment.html#cb125-8" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb127"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb127-1"><a href="proteomics-enrichment.html#cb127-1" tabindex="-1"></a>rank_res <span class="ot">&lt;-</span> <span class="fu">rank_protein_ppi_nodes</span>(ppi_metrics)</span>
+<span id="cb127-2"><a href="proteomics-enrichment.html#cb127-2" tabindex="-1"></a></span>
+<span id="cb127-3"><a href="proteomics-enrichment.html#cb127-3" tabindex="-1"></a><span class="fu">head</span>(</span>
+<span id="cb127-4"><a href="proteomics-enrichment.html#cb127-4" tabindex="-1"></a>  rank_res<span class="sc">$</span>table[, <span class="fu">c</span>(</span>
+<span id="cb127-5"><a href="proteomics-enrichment.html#cb127-5" tabindex="-1"></a>    <span class="st">&quot;name&quot;</span>, <span class="st">&quot;degree&quot;</span>, <span class="st">&quot;betweenness_w&quot;</span>, <span class="st">&quot;closeness_w&quot;</span>,</span>
+<span id="cb127-6"><a href="proteomics-enrichment.html#cb127-6" tabindex="-1"></a>    <span class="st">&quot;MCC&quot;</span>, <span class="st">&quot;MNC&quot;</span>, <span class="st">&quot;EPC&quot;</span>, <span class="st">&quot;Score_network&quot;</span>, <span class="st">&quot;Rank_network&quot;</span></span>
+<span id="cb127-7"><a href="proteomics-enrichment.html#cb127-7" tabindex="-1"></a>  )]</span>
+<span id="cb127-8"><a href="proteomics-enrichment.html#cb127-8" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="detect-ppi-modules" class="section level2 hasAnchor" number="11.11">
 <h2><span class="header-section-number">11.11</span> Detect PPI modules<a href="proteomics-enrichment.html#detect-ppi-modules" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>Three clustering wrappers are included: Louvain, MCODE, and MCL.</p>
-<div class="sourceCode" id="cb126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb126-1"><a href="proteomics-enrichment.html#cb126-1" tabindex="-1"></a><span class="co"># Louvain</span></span>
-<span id="cb126-2"><a href="proteomics-enrichment.html#cb126-2" tabindex="-1"></a>ppi_louvain <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_louvain</span>(ppi_metrics)</span>
-<span id="cb126-3"><a href="proteomics-enrichment.html#cb126-3" tabindex="-1"></a><span class="fu">score_protein_ppi_clusters</span>(ppi_louvain)</span>
-<span id="cb126-4"><a href="proteomics-enrichment.html#cb126-4" tabindex="-1"></a></span>
-<span id="cb126-5"><a href="proteomics-enrichment.html#cb126-5" tabindex="-1"></a><span class="co"># MCODE</span></span>
-<span id="cb126-6"><a href="proteomics-enrichment.html#cb126-6" tabindex="-1"></a>ppi_mcode <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_mcode</span>(ppi_metrics)</span>
-<span id="cb126-7"><a href="proteomics-enrichment.html#cb126-7" tabindex="-1"></a><span class="fu">get_protein_mcode_res</span>(ppi_mcode, <span class="at">only_clusters =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb126-8"><a href="proteomics-enrichment.html#cb126-8" tabindex="-1"></a></span>
-<span id="cb126-9"><a href="proteomics-enrichment.html#cb126-9" tabindex="-1"></a><span class="co"># MCL</span></span>
-<span id="cb126-10"><a href="proteomics-enrichment.html#cb126-10" tabindex="-1"></a>ppi_mcl <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_mcl</span>(ppi_metrics)</span>
-<span id="cb126-11"><a href="proteomics-enrichment.html#cb126-11" tabindex="-1"></a><span class="fu">score_protein_ppi_clusters</span>(ppi_mcl, <span class="at">cluster_attr =</span> <span class="st">&quot;MCL_cluster&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb128"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb128-1"><a href="proteomics-enrichment.html#cb128-1" tabindex="-1"></a><span class="co"># Louvain</span></span>
+<span id="cb128-2"><a href="proteomics-enrichment.html#cb128-2" tabindex="-1"></a>ppi_louvain <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_louvain</span>(ppi_metrics)</span>
+<span id="cb128-3"><a href="proteomics-enrichment.html#cb128-3" tabindex="-1"></a><span class="fu">score_protein_ppi_clusters</span>(ppi_louvain)</span>
+<span id="cb128-4"><a href="proteomics-enrichment.html#cb128-4" tabindex="-1"></a></span>
+<span id="cb128-5"><a href="proteomics-enrichment.html#cb128-5" tabindex="-1"></a><span class="co"># MCODE</span></span>
+<span id="cb128-6"><a href="proteomics-enrichment.html#cb128-6" tabindex="-1"></a>ppi_mcode <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_mcode</span>(ppi_metrics)</span>
+<span id="cb128-7"><a href="proteomics-enrichment.html#cb128-7" tabindex="-1"></a><span class="fu">get_protein_mcode_res</span>(ppi_mcode, <span class="at">only_clusters =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb128-8"><a href="proteomics-enrichment.html#cb128-8" tabindex="-1"></a></span>
+<span id="cb128-9"><a href="proteomics-enrichment.html#cb128-9" tabindex="-1"></a><span class="co"># MCL</span></span>
+<span id="cb128-10"><a href="proteomics-enrichment.html#cb128-10" tabindex="-1"></a>ppi_mcl <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_mcl</span>(ppi_metrics)</span>
+<span id="cb128-11"><a href="proteomics-enrichment.html#cb128-11" tabindex="-1"></a><span class="fu">score_protein_ppi_clusters</span>(ppi_mcl, <span class="at">cluster_attr =</span> <span class="st">&quot;MCL_cluster&quot;</span>)</span></code></pre></div>
 </div>
 <div id="assess-network-robustness" class="section level2 hasAnchor" number="11.12">
 <h2><span class="header-section-number">11.12</span> Assess network robustness<a href="proteomics-enrichment.html#assess-network-robustness" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p><code>run_protein_ppi_robustness()</code> maps the target proteins to node names in the
 PPI graph and then calls <code>TCMDATA::ppi_knock()</code> to evaluate network disruption.</p>
-<div class="sourceCode" id="cb127"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb127-1"><a href="proteomics-enrichment.html#cb127-1" tabindex="-1"></a>robustness_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_robustness</span>(</span>
-<span id="cb127-2"><a href="proteomics-enrichment.html#cb127-2" tabindex="-1"></a>  ppi_metrics,</span>
-<span id="cb127-3"><a href="proteomics-enrichment.html#cb127-3" tabindex="-1"></a>  <span class="at">targets =</span> <span class="fu">c</span>(<span class="st">&quot;olink_instance_0.il6&quot;</span>, <span class="st">&quot;olink_instance_0.tnf&quot;</span>)</span>
-<span id="cb127-4"><a href="proteomics-enrichment.html#cb127-4" tabindex="-1"></a>)</span>
-<span id="cb127-5"><a href="proteomics-enrichment.html#cb127-5" tabindex="-1"></a></span>
-<span id="cb127-6"><a href="proteomics-enrichment.html#cb127-6" tabindex="-1"></a>robustness_res<span class="sc">$</span>targets</span>
-<span id="cb127-7"><a href="proteomics-enrichment.html#cb127-7" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Summary</span>
-<span id="cb127-8"><a href="proteomics-enrichment.html#cb127-8" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Total_Score</span>
-<span id="cb127-9"><a href="proteomics-enrichment.html#cb127-9" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Total_Pvalue</span></code></pre></div>
+<div class="sourceCode" id="cb129"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb129-1"><a href="proteomics-enrichment.html#cb129-1" tabindex="-1"></a>robustness_res <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_robustness</span>(</span>
+<span id="cb129-2"><a href="proteomics-enrichment.html#cb129-2" tabindex="-1"></a>  ppi_metrics,</span>
+<span id="cb129-3"><a href="proteomics-enrichment.html#cb129-3" tabindex="-1"></a>  <span class="at">targets =</span> <span class="fu">c</span>(<span class="st">&quot;olink_instance_0.il6&quot;</span>, <span class="st">&quot;olink_instance_0.tnf&quot;</span>)</span>
+<span id="cb129-4"><a href="proteomics-enrichment.html#cb129-4" tabindex="-1"></a>)</span>
+<span id="cb129-5"><a href="proteomics-enrichment.html#cb129-5" tabindex="-1"></a></span>
+<span id="cb129-6"><a href="proteomics-enrichment.html#cb129-6" tabindex="-1"></a>robustness_res<span class="sc">$</span>targets</span>
+<span id="cb129-7"><a href="proteomics-enrichment.html#cb129-7" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Summary</span>
+<span id="cb129-8"><a href="proteomics-enrichment.html#cb129-8" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Total_Score</span>
+<span id="cb129-9"><a href="proteomics-enrichment.html#cb129-9" tabindex="-1"></a>robustness_res<span class="sc">$</span>robustness<span class="sc">$</span>Total_Pvalue</span></code></pre></div>
 </div>
 <div id="practical-notes" class="section level2 hasAnchor" number="11.13">
 <h2><span class="header-section-number">11.13</span> Practical notes<a href="proteomics-enrichment.html#practical-notes" class="anchor-section" aria-label="Anchor link to header"></a></h2>

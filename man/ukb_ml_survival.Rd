@@ -42,9 +42,10 @@ A ukb_ml_surv object containing:
 }
 }
 \description{
-Unified interface for training machine learning models for survival analysis.
-Supports random survival forests (RSF), gradient boosting survival, and
-regularized Cox models.
+Deprecated legacy interface for training machine learning models for
+survival analysis. New analyses should use
+\code{\link{ukb_ml_survival_workflow}}, which freezes the test set before
+feature selection, tuning, final refit, and evaluation.
 }
 \examples{
 \dontrun{

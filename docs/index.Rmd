@@ -123,6 +123,13 @@ The remaining chapters walk through each step with code examples.
 | `ukb_ml_confusion()` | Deprecated legacy confusion-matrix helper |
 | `ukb_ml_importance()` | Deprecated legacy variable-importance helper |
 | `ukb_shap()` | Compute SHAP values for workflow or legacy ML objects |
-| `ukb_ml_survival()` | Survival ML models (RSF, GBM, CoxNet) |
+| `ukb_ml_survival_workflow()` | Recommended frozen-test survival ML workflow |
+| `ukb_ml_survival_split_data()` | Create survival train/test or train/validation/test splits |
+| `ukb_ml_survival_as_split()` | Register user-supplied survival train/test splits |
+| `ukb_ml_survival_feature_select()` | Select survival ML features using training data only |
+| `ukb_ml_survival_tune()` | Tune survival ML hyperparameters without touching the test set |
+| `ukb_ml_survival_fit_final()` | Refit final survival ML models |
+| `ukb_ml_survival_evaluate_test()` | Evaluate survival ML once on the frozen test set |
+| `ukb_ml_survival()` | Deprecated legacy survival ML interface |
 | `plot_shap_summary()` | SHAP summary plot |
 | `plot_shap_dependence()` | SHAP dependence plot |

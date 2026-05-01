@@ -23,7 +23,11 @@
 - Added lightweight `rpart` decision tree and `naive_bayes` model backends to `ukb_ml_workflow()`.
 - Added optional lazy ML dependency installation via `options(UKBAnalytica.auto_install_ml = TRUE)`; by default, optional model packages are checked only when the selected model needs them and are not installed automatically.
 - Marked legacy ML model, CV, prediction, importance, comparison, and evaluation helpers as deprecated with pointers to the new workflow APIs.
+- Added `ukb_ml_survival_workflow()` and survival-specific split, feature-selection, tuning, final-refit, and frozen-test evaluation helpers for time-to-event ML.
+- Added `model = "cox"` as the lightweight default survival ML backend and aligned survival prediction output with the new workflow object structure.
+- Marked legacy `ukb_ml_survival()` as deprecated in favor of `ukb_ml_survival_workflow()`.
 - Added simulated-data tests for binary classification, multiclass classification, continuous regression, manual split validation, and threshold behavior.
+- Added simulated-data tests for survival ML splitting, manual split validation, Cox workflow fitting, prediction, and frozen-test evaluation.
 
 ### RAP phenotype extraction
 - Added R-native RAP phenotype extraction helpers that wrap DNAnexus `dx extract_dataset` and RAP `table-exporter`.

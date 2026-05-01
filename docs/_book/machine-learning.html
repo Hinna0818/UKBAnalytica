@@ -369,9 +369,10 @@ threshold learning.</li>
 <li>Refit the final model on the training-development data.</li>
 <li>Evaluate once on the frozen test set.</li>
 </ol>
-<p>This chapter focuses on binary classification, multiclass classification, and
-continuous outcomes. Time-to-event machine learning remains available through
-<code>ukb_ml_survival()</code> and is described separately at the end.</p>
+<p>This chapter covers binary classification, multiclass classification,
+continuous outcomes, and time-to-event prediction. For survival ML, use
+<code>ukb_ml_survival_workflow()</code>; the legacy <code>ukb_ml_survival()</code> interface remains
+available only for backward compatibility.</p>
 <div id="what-users-usually-need" class="section level2 hasAnchor" number="10.1">
 <h2><span class="header-section-number">10.1</span> What users usually need<a href="machine-learning.html#what-users-usually-need" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>For most projects, users only need one function:</p>
@@ -931,18 +932,103 @@ legacy <code>ukb_ml</code> objects.</p>
 </div>
 <div id="survival-machine-learning" class="section level2 hasAnchor" number="10.14">
 <h2><span class="header-section-number">10.14</span> Survival machine learning<a href="machine-learning.html#survival-machine-learning" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>The frozen-test workflow above is for non-survival outcomes. For time-to-event
-prediction, use the existing survival ML interface.</p>
-<div class="sourceCode" id="cb110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb110-1"><a href="machine-learning.html#cb110-1" tabindex="-1"></a>surv_rf <span class="ot">&lt;-</span> <span class="fu">ukb_ml_survival</span>(</span>
+<p>For time-to-event prediction, use <code>ukb_ml_survival_workflow()</code>. It follows the
+same structure as <code>ukb_ml_workflow()</code>:</p>
+<ol style="list-style-type: decimal">
+<li>Freeze the survival test set.</li>
+<li>Select features and tune hyperparameters using only training/validation data.</li>
+<li>Refit the final model on training plus validation data.</li>
+<li>Evaluate once on the frozen test set.</li>
+</ol>
+<p>The simplest baseline uses a Cox model and requires only the <code>survival</code>
+backend:</p>
+<div class="sourceCode" id="cb110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb110-1"><a href="machine-learning.html#cb110-1" tabindex="-1"></a>surv_ml <span class="ot">&lt;-</span> <span class="fu">ukb_ml_survival_workflow</span>(</span>
 <span id="cb110-2"><a href="machine-learning.html#cb110-2" tabindex="-1"></a>  <span class="fu">Surv</span>(outcome_surv_time, outcome_status) <span class="sc">~</span> age <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> smoking,</span>
 <span id="cb110-3"><a href="machine-learning.html#cb110-3" tabindex="-1"></a>  <span class="at">data =</span> analysis_dt,</span>
-<span id="cb110-4"><a href="machine-learning.html#cb110-4" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">&quot;rsf&quot;</span>,</span>
-<span id="cb110-5"><a href="machine-learning.html#cb110-5" tabindex="-1"></a>  <span class="at">params =</span> <span class="fu">list</span>(<span class="at">ntree =</span> <span class="dv">500</span>),</span>
-<span id="cb110-6"><a href="machine-learning.html#cb110-6" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">42</span></span>
-<span id="cb110-7"><a href="machine-learning.html#cb110-7" tabindex="-1"></a>)</span>
-<span id="cb110-8"><a href="machine-learning.html#cb110-8" tabindex="-1"></a></span>
-<span id="cb110-9"><a href="machine-learning.html#cb110-9" tabindex="-1"></a><span class="fu">print</span>(surv_rf)</span>
-<span id="cb110-10"><a href="machine-learning.html#cb110-10" tabindex="-1"></a><span class="fu">ukb_ml_survival_importance</span>(surv_rf)</span></code></pre></div>
+<span id="cb110-4"><a href="machine-learning.html#cb110-4" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">&quot;cox&quot;</span>,</span>
+<span id="cb110-5"><a href="machine-learning.html#cb110-5" tabindex="-1"></a>  <span class="at">split_params =</span> <span class="fu">list</span>(</span>
+<span id="cb110-6"><a href="machine-learning.html#cb110-6" tabindex="-1"></a>    <span class="at">split =</span> <span class="st">&quot;train_valid_test&quot;</span>,</span>
+<span id="cb110-7"><a href="machine-learning.html#cb110-7" tabindex="-1"></a>    <span class="at">train_ratio =</span> <span class="fl">0.70</span>,</span>
+<span id="cb110-8"><a href="machine-learning.html#cb110-8" tabindex="-1"></a>    <span class="at">validation_ratio =</span> <span class="fl">0.10</span>,</span>
+<span id="cb110-9"><a href="machine-learning.html#cb110-9" tabindex="-1"></a>    <span class="at">test_ratio =</span> <span class="fl">0.20</span></span>
+<span id="cb110-10"><a href="machine-learning.html#cb110-10" tabindex="-1"></a>  ),</span>
+<span id="cb110-11"><a href="machine-learning.html#cb110-11" tabindex="-1"></a>  <span class="at">feature_select =</span> <span class="st">&quot;filter&quot;</span>,</span>
+<span id="cb110-12"><a href="machine-learning.html#cb110-12" tabindex="-1"></a>  <span class="at">feature_params =</span> <span class="fu">list</span>(<span class="at">max_features =</span> <span class="dv">50</span>),</span>
+<span id="cb110-13"><a href="machine-learning.html#cb110-13" tabindex="-1"></a>  <span class="at">tune =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb110-14"><a href="machine-learning.html#cb110-14" tabindex="-1"></a>  <span class="at">tune_params =</span> <span class="fu">list</span>(<span class="at">resampling =</span> <span class="st">&quot;validation&quot;</span>),</span>
+<span id="cb110-15"><a href="machine-learning.html#cb110-15" tabindex="-1"></a>  <span class="at">evaluation_times =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">10</span>),</span>
+<span id="cb110-16"><a href="machine-learning.html#cb110-16" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">42</span></span>
+<span id="cb110-17"><a href="machine-learning.html#cb110-17" tabindex="-1"></a>)</span>
+<span id="cb110-18"><a href="machine-learning.html#cb110-18" tabindex="-1"></a></span>
+<span id="cb110-19"><a href="machine-learning.html#cb110-19" tabindex="-1"></a>surv_ml<span class="sc">$</span>final_test_metrics</span>
+<span id="cb110-20"><a href="machine-learning.html#cb110-20" tabindex="-1"></a><span class="fu">head</span>(surv_ml<span class="sc">$</span>final_test_predictions)</span></code></pre></div>
+<p>Supported survival models:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left"><code>model</code></th>
+<th align="left">Backend</th>
+<th align="left">Best use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>"cox"</code></td>
+<td align="left"><code>survival</code></td>
+<td align="left">Interpretable baseline survival model</td>
+</tr>
+<tr class="even">
+<td align="left"><code>"coxnet"</code></td>
+<td align="left"><code>glmnet</code></td>
+<td align="left">Regularized high-dimensional Cox model</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>"rsf"</code></td>
+<td align="left"><code>randomForestSRC</code></td>
+<td align="left">Nonlinear random survival forest</td>
+</tr>
+<tr class="even">
+<td align="left"><code>"gbm_surv"</code></td>
+<td align="left"><code>gbm</code></td>
+<td align="left">Gradient-boosted Cox model</td>
+</tr>
+</tbody>
+</table>
+<p>The final metrics include Harrell’s C-index and naive time-specific Brier
+scores at <code>evaluation_times</code>. The Brier scores are not IPCW-adjusted; use them
+as quick model checks, not as the only censoring-aware performance statistic.</p>
+<p>Predict survival probabilities or risk scores from the final model:</p>
+<div class="sourceCode" id="cb111"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb111-1"><a href="machine-learning.html#cb111-1" tabindex="-1"></a>surv_prob <span class="ot">&lt;-</span> <span class="fu">predict</span>(</span>
+<span id="cb111-2"><a href="machine-learning.html#cb111-2" tabindex="-1"></a>  surv_ml,</span>
+<span id="cb111-3"><a href="machine-learning.html#cb111-3" tabindex="-1"></a>  <span class="at">newdata =</span> external_validation_df,</span>
+<span id="cb111-4"><a href="machine-learning.html#cb111-4" tabindex="-1"></a>  <span class="at">times =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>),</span>
+<span id="cb111-5"><a href="machine-learning.html#cb111-5" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">&quot;survival&quot;</span></span>
+<span id="cb111-6"><a href="machine-learning.html#cb111-6" tabindex="-1"></a>)</span>
+<span id="cb111-7"><a href="machine-learning.html#cb111-7" tabindex="-1"></a></span>
+<span id="cb111-8"><a href="machine-learning.html#cb111-8" tabindex="-1"></a>risk_score <span class="ot">&lt;-</span> <span class="fu">predict</span>(surv_ml<span class="sc">$</span>final_model, <span class="at">newdata =</span> external_validation_df, <span class="at">type =</span> <span class="st">&quot;risk&quot;</span>)</span></code></pre></div>
+<p>If train/validation/test data already exist, register them explicitly:</p>
+<div class="sourceCode" id="cb112"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb112-1"><a href="machine-learning.html#cb112-1" tabindex="-1"></a>surv_split <span class="ot">&lt;-</span> <span class="fu">ukb_ml_survival_as_split</span>(</span>
+<span id="cb112-2"><a href="machine-learning.html#cb112-2" tabindex="-1"></a>  <span class="at">train_data =</span> train_df,</span>
+<span id="cb112-3"><a href="machine-learning.html#cb112-3" tabindex="-1"></a>  <span class="at">validation_data =</span> valid_df,</span>
+<span id="cb112-4"><a href="machine-learning.html#cb112-4" tabindex="-1"></a>  <span class="at">test_data =</span> test_df,</span>
+<span id="cb112-5"><a href="machine-learning.html#cb112-5" tabindex="-1"></a>  <span class="at">time =</span> <span class="st">&quot;outcome_surv_time&quot;</span>,</span>
+<span id="cb112-6"><a href="machine-learning.html#cb112-6" tabindex="-1"></a>  <span class="at">event =</span> <span class="st">&quot;outcome_status&quot;</span>,</span>
+<span id="cb112-7"><a href="machine-learning.html#cb112-7" tabindex="-1"></a>  <span class="at">id_col =</span> <span class="st">&quot;eid&quot;</span></span>
+<span id="cb112-8"><a href="machine-learning.html#cb112-8" tabindex="-1"></a>)</span>
+<span id="cb112-9"><a href="machine-learning.html#cb112-9" tabindex="-1"></a></span>
+<span id="cb112-10"><a href="machine-learning.html#cb112-10" tabindex="-1"></a>surv_ml <span class="ot">&lt;-</span> <span class="fu">ukb_ml_survival_workflow</span>(</span>
+<span id="cb112-11"><a href="machine-learning.html#cb112-11" tabindex="-1"></a>  <span class="fu">Surv</span>(outcome_surv_time, outcome_status) <span class="sc">~</span> age <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> smoking,</span>
+<span id="cb112-12"><a href="machine-learning.html#cb112-12" tabindex="-1"></a>  <span class="at">split =</span> surv_split,</span>
+<span id="cb112-13"><a href="machine-learning.html#cb112-13" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">&quot;cox&quot;</span>,</span>
+<span id="cb112-14"><a href="machine-learning.html#cb112-14" tabindex="-1"></a>  <span class="at">evaluation_times =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>),</span>
+<span id="cb112-15"><a href="machine-learning.html#cb112-15" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">42</span></span>
+<span id="cb112-16"><a href="machine-learning.html#cb112-16" tabindex="-1"></a>)</span></code></pre></div>
+<p>Lower-level survival workflow helpers mirror the non-survival API:
+<code>ukb_ml_survival_split_data()</code>, <code>ukb_ml_survival_as_split()</code>,
+<code>ukb_ml_survival_feature_select()</code>, <code>ukb_ml_survival_tune()</code>,
+<code>ukb_ml_survival_fit_final()</code>, and <code>ukb_ml_survival_evaluate_test()</code>.</p>
+<p><code>ukb_ml_survival()</code> now emits a deprecation warning. Use
+<code>ukb_ml_survival_workflow()</code> for new analyses.</p>
 </div>
 <div id="practical-checklist" class="section level2 hasAnchor" number="10.15">
 <h2><span class="header-section-number">10.15</span> Practical checklist<a href="machine-learning.html#practical-checklist" class="anchor-section" aria-label="Anchor link to header"></a></h2>
@@ -956,6 +1042,8 @@ used as predictors.</li>
 manually.</li>
 <li>Hyperparameters and thresholds are chosen on train/validation or CV only.</li>
 <li><code>final_test_metrics</code> are reported as final frozen-test performance.</li>
+<li>For survival ML, <code>outcome_surv_time</code> and <code>outcome_status</code> are used only as
+the left-hand side of <code>Surv(time, event)</code>, not as predictors.</li>
 </ol>
 </div>
 <div id="optional-packages" class="section level2 hasAnchor" number="10.16">
@@ -963,24 +1051,28 @@ manually.</li>
 <p>Install only the model backends you plan to use. UKBAnalytica_v2 checks optional
 packages only when the selected model or helper needs them. It does not install
 extra ML dependencies unless you explicitly opt in:</p>
-<div class="sourceCode" id="cb111"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb111-1"><a href="machine-learning.html#cb111-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">UKBAnalytica.auto_install_ml =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb113"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb113-1"><a href="machine-learning.html#cb113-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">UKBAnalytica.auto_install_ml =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p>The default is <code>FALSE</code>, which is safer on RAP and HPC systems because users can
 control the package library and CRAN/Bioconductor mirror themselves.</p>
-<div class="sourceCode" id="cb112"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb112-1"><a href="machine-learning.html#cb112-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(</span>
-<span id="cb112-2"><a href="machine-learning.html#cb112-2" tabindex="-1"></a>  <span class="st">&quot;ranger&quot;</span>,      <span class="co"># random forest</span></span>
-<span id="cb112-3"><a href="machine-learning.html#cb112-3" tabindex="-1"></a>  <span class="st">&quot;xgboost&quot;</span>,     <span class="co"># gradient boosting</span></span>
-<span id="cb112-4"><a href="machine-learning.html#cb112-4" tabindex="-1"></a>  <span class="st">&quot;glmnet&quot;</span>,      <span class="co"># regularized regression and glmnet feature selection</span></span>
-<span id="cb112-5"><a href="machine-learning.html#cb112-5" tabindex="-1"></a>  <span class="st">&quot;e1071&quot;</span>,       <span class="co"># SVM and naive Bayes</span></span>
-<span id="cb112-6"><a href="machine-learning.html#cb112-6" tabindex="-1"></a>  <span class="st">&quot;nnet&quot;</span>,        <span class="co"># neural network / multinomial regression</span></span>
-<span id="cb112-7"><a href="machine-learning.html#cb112-7" tabindex="-1"></a>  <span class="st">&quot;rpart&quot;</span>,       <span class="co"># decision tree</span></span>
-<span id="cb112-8"><a href="machine-learning.html#cb112-8" tabindex="-1"></a>  <span class="st">&quot;Boruta&quot;</span>,      <span class="co"># Boruta feature selection</span></span>
-<span id="cb112-9"><a href="machine-learning.html#cb112-9" tabindex="-1"></a>  <span class="st">&quot;fastshap&quot;</span>,    <span class="co"># SHAP explanations</span></span>
-<span id="cb112-10"><a href="machine-learning.html#cb112-10" tabindex="-1"></a>  <span class="st">&quot;pROC&quot;</span>,        <span class="co"># legacy ROC helpers</span></span>
-<span id="cb112-11"><a href="machine-learning.html#cb112-11" tabindex="-1"></a>  <span class="st">&quot;randomForestSRC&quot;</span>  <span class="co"># survival random forest</span></span>
-<span id="cb112-12"><a href="machine-learning.html#cb112-12" tabindex="-1"></a>))</span></code></pre></div>
+<div class="sourceCode" id="cb114"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb114-1"><a href="machine-learning.html#cb114-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(</span>
+<span id="cb114-2"><a href="machine-learning.html#cb114-2" tabindex="-1"></a>  <span class="st">&quot;ranger&quot;</span>,      <span class="co"># random forest</span></span>
+<span id="cb114-3"><a href="machine-learning.html#cb114-3" tabindex="-1"></a>  <span class="st">&quot;xgboost&quot;</span>,     <span class="co"># gradient boosting</span></span>
+<span id="cb114-4"><a href="machine-learning.html#cb114-4" tabindex="-1"></a>  <span class="st">&quot;glmnet&quot;</span>,      <span class="co"># regularized regression and glmnet feature selection</span></span>
+<span id="cb114-5"><a href="machine-learning.html#cb114-5" tabindex="-1"></a>  <span class="st">&quot;e1071&quot;</span>,       <span class="co"># SVM and naive Bayes</span></span>
+<span id="cb114-6"><a href="machine-learning.html#cb114-6" tabindex="-1"></a>  <span class="st">&quot;nnet&quot;</span>,        <span class="co"># neural network / multinomial regression</span></span>
+<span id="cb114-7"><a href="machine-learning.html#cb114-7" tabindex="-1"></a>  <span class="st">&quot;rpart&quot;</span>,       <span class="co"># decision tree</span></span>
+<span id="cb114-8"><a href="machine-learning.html#cb114-8" tabindex="-1"></a>  <span class="st">&quot;Boruta&quot;</span>,      <span class="co"># Boruta feature selection</span></span>
+<span id="cb114-9"><a href="machine-learning.html#cb114-9" tabindex="-1"></a>  <span class="st">&quot;fastshap&quot;</span>,    <span class="co"># SHAP explanations</span></span>
+<span id="cb114-10"><a href="machine-learning.html#cb114-10" tabindex="-1"></a>  <span class="st">&quot;pROC&quot;</span>,        <span class="co"># legacy ROC helpers</span></span>
+<span id="cb114-11"><a href="machine-learning.html#cb114-11" tabindex="-1"></a>  <span class="st">&quot;survival&quot;</span>,    <span class="co"># Cox and survival metrics</span></span>
+<span id="cb114-12"><a href="machine-learning.html#cb114-12" tabindex="-1"></a>  <span class="st">&quot;gbm&quot;</span>,         <span class="co"># boosted survival model</span></span>
+<span id="cb114-13"><a href="machine-learning.html#cb114-13" tabindex="-1"></a>  <span class="st">&quot;randomForestSRC&quot;</span>  <span class="co"># random survival forest</span></span>
+<span id="cb114-14"><a href="machine-learning.html#cb114-14" tabindex="-1"></a>))</span></code></pre></div>
 <p><code>logistic</code> and <code>linear</code> models use base R and do not require extra model
 backend packages. <code>naive_bayes</code> reuses <code>e1071</code>, so no separate package is
-needed if you already installed it for SVM.</p>
+needed if you already installed it for SVM. For survival ML, <code>model = "cox"</code>
+uses <code>survival</code>, <code>model = "coxnet"</code> uses <code>glmnet</code>, <code>model = "gbm_surv"</code> uses
+<code>gbm</code>, and <code>model = "rsf"</code> uses <code>randomForestSRC</code>.</p>
 
 </div>
 </div>
