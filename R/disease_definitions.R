@@ -182,6 +182,9 @@ create_disease_definition <- function(name = NULL,
 #'   \item{Intraventricular_Block}{Intraventricular conduction block}
 #'   \item{SVT}{Supraventricular tachycardia}
 #'   \item{Lung_Cancer}{Lung cancer using ICD-10/death and cancer registry}
+#'   \item{Additional chronic diseases}{Common respiratory, renal,
+#'   gastrointestinal, neurologic, psychiatric, eye, skin, musculoskeletal, and
+#'   cancer endpoints used in UKB epidemiology workflows}
 #' }
 #'
 #' @examples
@@ -498,6 +501,192 @@ get_predefined_diseases <- function() {
       icd9_pattern = "^(3000|3002|3003)",
       sr_codes = c(1287),
       first_occurrence_fields = c(130904, 130906)
+    ),
+
+    # Additional common chronic diseases
+    Stroke_TIA = create_disease_definition(
+      name = "Stroke or Transient Ischaemic Attack",
+      icd10_pattern = "^(I60|I61|I62|I63|I64|I65|I66|G45)",
+      icd9_pattern = "^(430|431|432|433|434|435|436|437)",
+      sr_codes = c(1081, 1082, 1083, 1086, 1583)
+    ),
+    Thyroid_Disorders = create_disease_definition(
+      name = "Thyroid Disorders",
+      icd10_pattern = "^(E00|E01|E02|E03|E04|E05|E06|E07)",
+      icd9_pattern = "^(240|241|242|243|244|245|246)"
+    ),
+    Dyspepsia = create_disease_definition(
+      name = "Dyspepsia and Upper Gastrointestinal Disorders",
+      icd10_pattern = "^(K21|K22|K25|K26|K27|K28|K29|K30)",
+      icd9_pattern = "^(530|531|532|533|534|535|536)"
+    ),
+    Irritable_Bowel_Syndrome = create_disease_definition(
+      name = "Irritable Bowel Syndrome",
+      icd10_pattern = "^K58",
+      icd9_pattern = "^5641",
+      sr_codes = c(1154)
+    ),
+    Inflammatory_Bowel_Disease = create_disease_definition(
+      name = "Inflammatory Bowel Disease",
+      icd10_pattern = "^(K50|K51)",
+      icd9_pattern = "^(555|556)",
+      sr_codes = c(1461, 1462, 1463)
+    ),
+    Diverticular_Disease = create_disease_definition(
+      name = "Diverticular Disease",
+      icd10_pattern = "^K57",
+      icd9_pattern = "^562",
+      sr_codes = c(1458)
+    ),
+    Treated_Constipation = create_disease_definition(
+      name = "Treated Constipation",
+      icd10_pattern = "^K590",
+      icd9_pattern = "^5640",
+      sr_codes = c(1599)
+    ),
+    Chronic_Liver_Disease = create_disease_definition(
+      name = "Chronic Liver Disease",
+      icd10_pattern = "^(K70|K71|K72|K73|K74|K75|K76)",
+      icd9_pattern = "^(571|572|573)",
+      sr_codes = c(1141, 1157, 1158, 1506)
+    ),
+    Alcohol_Use_Disorder = create_disease_definition(
+      name = "Alcohol Use Disorder",
+      icd10_pattern = "^(F10|K70|T51)",
+      icd9_pattern = "^(291|303|3050|5710|5711|5712|5713)"
+    ),
+    Substance_Use_Disorder = create_disease_definition(
+      name = "Other Psychoactive Substance Use Disorder",
+      icd10_pattern = "^(F11|F12|F13|F14|F15|F16|F18|F19)",
+      icd9_pattern = "^(304|305[2-9])"
+    ),
+    Schizophrenia_Bipolar = create_disease_definition(
+      name = "Schizophrenia or Bipolar Disorder",
+      icd10_pattern = "^(F20|F21|F22|F23|F24|F25|F30|F31)",
+      icd9_pattern = "^(295|2960|2961|2964|2965|2966|2967|2968)",
+      sr_codes = c(1289, 1291)
+    ),
+    Migraine = create_disease_definition(
+      name = "Migraine",
+      icd10_pattern = "^G43",
+      icd9_pattern = "^346",
+      sr_codes = c(1265)
+    ),
+    Bronchiectasis = create_disease_definition(
+      name = "Bronchiectasis",
+      icd10_pattern = "^J47",
+      icd9_pattern = "^494",
+      sr_codes = c(1114)
+    ),
+    Multiple_Sclerosis = create_disease_definition(
+      name = "Multiple Sclerosis",
+      icd10_pattern = "^G35",
+      icd9_pattern = "^340",
+      sr_codes = c(1261)
+    ),
+    Menieres_Disease = create_disease_definition(
+      name = "Meniere's Disease",
+      icd10_pattern = "^H810",
+      icd9_pattern = "^3860",
+      sr_codes = c(1421)
+    ),
+    Pernicious_Anaemia = create_disease_definition(
+      name = "Pernicious Anaemia",
+      icd10_pattern = "^D51",
+      icd9_pattern = "^2810",
+      sr_codes = c(1331)
+    ),
+    Psoriasis_Eczema = create_disease_definition(
+      name = "Psoriasis or Eczema",
+      icd10_pattern = "^(L20|L21|L22|L23|L24|L25|L26|L27|L30|L40|L41)",
+      icd9_pattern = "^(691|692|696)",
+      sr_codes = c(1452, 1453)
+    ),
+    Fracture = create_disease_definition(
+      name = "Major Fracture",
+      icd10_pattern = "^(S32|S42|S52|S72|S82)",
+      icd9_pattern = "^(800|801|802|803|804|805|806|807|808|809|810|811|812|813|814|815|816|817|818|819|820|821|822|823|824|825|826|827|828|829)",
+      sr_codes = c(1647, 1648, 1650)
+    ),
+    Glaucoma = create_disease_definition(
+      name = "Glaucoma",
+      icd10_pattern = "^H40",
+      icd9_pattern = "^365",
+      sr_codes = c(1277)
+    ),
+    Cataract = create_disease_definition(
+      name = "Cataract",
+      icd10_pattern = "^(H25|H26|H28)",
+      icd9_pattern = "^366",
+      sr_codes = c(1278)
+    ),
+    AMD = create_disease_definition(
+      name = "Age-Related Macular Degeneration",
+      icd10_pattern = "^H353",
+      icd9_pattern = "^3625",
+      sr_codes = c(1528)
+    ),
+    Prostate_Disorders = create_disease_definition(
+      name = "Benign Prostate Disorders",
+      icd10_pattern = "^(N40|N41|N42)",
+      icd9_pattern = "^600",
+      sr_codes = c(1207, 1396, 1516)
+    ),
+    Breast_Cancer = create_disease_definition(
+      name = "Breast Cancer",
+      icd10_pattern = "^C50",
+      death_icd10 = "^C50",
+      cancer_icd10_pattern = "^C50",
+      cancer_behaviour = 3L
+    ),
+    Prostate_Cancer = create_disease_definition(
+      name = "Prostate Cancer",
+      icd10_pattern = "^C61",
+      death_icd10 = "^C61",
+      cancer_icd10_pattern = "^C61",
+      cancer_behaviour = 3L
+    ),
+    Colorectal_Cancer = create_disease_definition(
+      name = "Colorectal Cancer",
+      icd10_pattern = "^(C18|C19|C20)",
+      death_icd10 = "^(C18|C19|C20)",
+      cancer_icd10_pattern = "^(C18|C19|C20)",
+      cancer_behaviour = 3L
+    ),
+    Melanoma = create_disease_definition(
+      name = "Melanoma",
+      icd10_pattern = "^C43",
+      death_icd10 = "^C43",
+      cancer_icd10_pattern = "^C43",
+      cancer_behaviour = 3L
+    ),
+    Non_Melanoma_Skin_Cancer = create_disease_definition(
+      name = "Non-Melanoma Skin Cancer",
+      icd10_pattern = "^C44",
+      death_icd10 = "^C44",
+      cancer_icd10_pattern = "^C44",
+      cancer_behaviour = 3L
+    ),
+    Ovarian_Cancer = create_disease_definition(
+      name = "Ovarian Cancer",
+      icd10_pattern = "^C56",
+      death_icd10 = "^C56",
+      cancer_icd10_pattern = "^C56",
+      cancer_behaviour = 3L
+    ),
+    Oesophageal_Cancer = create_disease_definition(
+      name = "Oesophageal Cancer",
+      icd10_pattern = "^C15",
+      death_icd10 = "^C15",
+      cancer_icd10_pattern = "^C15",
+      cancer_behaviour = 3L
+    ),
+    Stomach_Cancer = create_disease_definition(
+      name = "Stomach Cancer",
+      icd10_pattern = "^C16",
+      death_icd10 = "^C16",
+      cancer_icd10_pattern = "^C16",
+      cancer_behaviour = 3L
     )
   )
 }

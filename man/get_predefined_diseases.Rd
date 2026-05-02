@@ -35,6 +35,9 @@ Included diseases:
 \item{Intraventricular_Block}{Intraventricular conduction block}
 \item{SVT}{Supraventricular tachycardia}
 \item{Lung_Cancer}{Lung cancer using ICD-10/death and cancer registry}
+\item{Additional chronic diseases}{Common respiratory, renal,
+gastrointestinal, neurologic, psychiatric, eye, skin, musculoskeletal, and
+cancer endpoints used in UKB epidemiology workflows}
 }
 }
 \examples{

@@ -268,6 +268,52 @@ library(UKBAnalytica)
 # 先检查项目里有哪些可用字段
 fields <- rap_list_fields(pattern = "blood pressure|^participant\\.p31")
 
+# 推荐新工作流：先建立metadata对象，再搜索、查看、提取、解码
+meta <- ukb_metadata_setup(
+  source = "files",
+  fields_df = fields,
+  data_dict = "Data_Dictionary_Showcase.tsv", # 可选；没有也可以先只用RAP字段列表
+  codings = "Codings.tsv"                    # 可选；用于decode categorical values
+)
+
+ukb_field_info(4080, metadata = meta)
+bp_fields <- ukb_search_fields("blood pressure", metadata = meta)
+
+# 常见变量集合：不需要手工记住每个field id
+get_variable_sets()[, c("set", "category", "variable", "field_id", "ukb_col")]
+clinical_core <- get_variable_set("clinical_core")
+air_ids <- get_variable_set("air_pollution", output = "field_id")
+
+# 小规模同步提取，直接读回R
+baseline <- ukb_extract_fields(
+  field_id = c(31, 21022, 21001, 4080, 4079),
+  metadata = meta,
+  mode = "sync",
+  strip_entity_prefix = FALSE
+)
+
+# 如metadata里有coding映射，可同时decode values和column names
+baseline_decoded <- ukb_decode(baseline, metadata = meta)
+
+air_pollution <- ukb_extract_fields(
+  field_id = air_ids,
+  metadata = meta,
+  mode = "sync",
+  strip_entity_prefix = FALSE
+)
+
+# 如果本地有UKB Data Dictionary，可拿到更丰富的metadata
+bp_meta <- get_field_metadata(
+  query = "blood pressure",
+  ukb_data_dict = "Data_Dictionary_Showcase.tsv",
+  fields_df = fields
+)
+head(bp_meta)
+
+# 如果手头没有本地字典文件，也可以直接按field id抓取UKB Showcase页面
+live_info <- get_field_info(4080, live = TRUE)
+live_info[, c("field_id", "title", "category", "value_type", "units", "instances", "array")]
+
 # 小规模同步提取，直接读回R
 baseline <- rap_extract_pheno(
   variables = c("sex", "age", "bmi", "sbp_auto_1"),
@@ -282,7 +328,7 @@ job <- rap_submit_extract(
 job$job_id
 ```
 
-`field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为 legacy 辅助脚本，用于旧版的 RAP 内项目流程；新的项目更推荐优先使用上面的 R 接口。无论使用哪种方式，都应遵循 UKB 的治理要求，仅在允许范围内导出不包含个体级信息的汇总结果和图表。
+`ukb_metadata_setup()`是推荐入口；它把当前RAP项目可抽取字段、可选的UKB Data Dictionary和可选的coding/encoding表合并成一个对象。`ukb_field_info()`回答“这个field id是什么”，`ukb_search_fields()`回答“我要的概念有哪些field”，`get_variable_set()`提供常见字段集合，`ukb_extract_fields()`把field id或搜索结果直接接到RAP提取，`ukb_decode()`在有coding metadata时解码取值并把列名转成可读名称。`get_field_metadata()`仍保留为底层接口。`field_id`会提取这个UKB field下的全部instances/arrays；`variables`会按照`get_variable_info()`里的精确列名提取，更适合常见基线变量。`inst/python/ukb_data_loader.py`和`inst/python/protein_loader.py`仍然保留作为 legacy 辅助脚本，用于旧版的 RAP 内项目流程；新的项目更推荐优先使用上面的 R 接口。无论使用哪种方式，都应遵循 UKB 的治理要求，仅在允许范围内导出不包含个体级信息的汇总结果和图表。
 
 拿到数据后，建议先清理UKB常见缺失编码，并用`snapshot`记录每一步样本量，方便后续写流程图：
 
