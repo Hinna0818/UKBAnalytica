@@ -26,19 +26,6 @@ You can install the development version of `UKBAnalytica` from GitHub with:
 devtools::install_github("Hinna0818/UKBAnalytica_v2")
 ```
 
-Sometimes due to the network problem, it is not easy to use `devtools` to install, so you can install in this way:
-```{r}
-# install.packages("pak")
-pak::pkg_install("Hinna0818/UKBAnalytica_v2")
-```
-
-Or just clone this repo and intall it locally:
-```{bash}
-git clone https://github.com/Hinna0818/UKBAnalytica_v2.git
-cd UKBAnalytica
-R CMD INSTALL .
-```
-
 ## Quick start
 
 ```r
