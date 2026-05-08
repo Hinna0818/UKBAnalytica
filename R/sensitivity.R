@@ -12,6 +12,9 @@
 #'   to this value will be excluded.
 #' @param copy Logical scalar. If `TRUE` and `data` is a data.table, work on a
 #'   copied object before filtering.
+#' @param stepwise Logical scalar. If `TRUE`, apply covariate missingness
+#'   filters sequentially in the order provided and record a row-level flow table
+#'   in `attr(result, "complete_case_flow")`.
 #' @param verbose Logical scalar. If `TRUE`, print a short filtering summary.
 #'
 #' @return An object with the same class and columns as `data`, with filtered
@@ -130,9 +133,13 @@ sensitivity_exclude_early_events <- function(data,
 sensitivity_exclude_missing_covariates <- function(data,
                                                    covariates,
                                                    copy = TRUE,
+                                                   stepwise = FALSE,
                                                    verbose = TRUE) {
   if (!isTRUE(copy) && !identical(copy, FALSE)) {
     stop("'copy' must be TRUE or FALSE.")
+  }
+  if (!isTRUE(stepwise) && !identical(stepwise, FALSE)) {
+    stop("'stepwise' must be TRUE or FALSE.")
   }
   if (!isTRUE(verbose) && !identical(verbose, FALSE)) {
     stop("'verbose' must be TRUE or FALSE.")
@@ -155,7 +162,50 @@ sensitivity_exclude_missing_covariates <- function(data,
     cov_data <- dt[, covariates, drop = FALSE]
   }
 
-  drop_idx <- !stats::complete.cases(cov_data)
+  if (isTRUE(stepwise)) {
+    current_keep <- rep(TRUE, nrow(dt))
+    flow <- data.table::data.table(
+      step = integer(0),
+      variable = character(0),
+      n_before = integer(0),
+      n_missing_in_remaining = integer(0),
+      n_after = integer(0),
+      n_removed = integer(0),
+      retained_from_previous = numeric(0),
+      retained_from_input = numeric(0)
+    )
+
+    for (i in seq_along(covariates)) {
+      var <- covariates[[i]]
+      n_before <- sum(current_keep)
+      var_missing <- is.na(dt[[var]]) & current_keep
+      n_missing <- sum(var_missing)
+      current_keep[var_missing] <- FALSE
+      n_after <- sum(current_keep)
+
+      flow <- data.table::rbindlist(
+        list(
+          flow,
+          data.table::data.table(
+            step = i,
+            variable = var,
+            n_before = n_before,
+            n_missing_in_remaining = n_missing,
+            n_after = n_after,
+            n_removed = n_before - n_after,
+            retained_from_previous = if (n_before > 0) n_after / n_before else NA_real_,
+            retained_from_input = if (nrow(dt) > 0) n_after / nrow(dt) else NA_real_
+          )
+        ),
+        use.names = TRUE
+      )
+    }
+
+    drop_idx <- !current_keep
+  } else {
+    drop_idx <- !stats::complete.cases(cov_data)
+    flow <- NULL
+  }
 
   if (data.table::is.data.table(dt)) {
     result <- dt[!drop_idx]
@@ -166,11 +216,15 @@ sensitivity_exclude_missing_covariates <- function(data,
   info <- list(
     method = "exclude_missing_covariates",
     covariates = covariates,
+    stepwise = stepwise,
     n_input = nrow(data),
     n_removed = sum(drop_idx),
     n_output = nrow(result)
   )
   result <- .attach_sensitivity_metadata(result, info)
+  if (isTRUE(stepwise)) {
+    attr(result, "complete_case_flow") <- flow
+  }
 
   if (isTRUE(verbose)) {
     message("[sensitivity_exclude_missing_covariates] Complete")
@@ -178,6 +232,10 @@ sensitivity_exclude_missing_covariates <- function(data,
       "  Input n = %d, removed = %d, output n = %d",
       info$n_input, info$n_removed, info$n_output
     ))
+    if (isTRUE(stepwise)) {
+      message("  Stepwise complete-case flow:")
+      print(flow)
+    }
   }
 
   result

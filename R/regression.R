@@ -12,7 +12,9 @@
 #' @param ... Additional arguments passed to \code{survival::coxph()}.
 #'
 #' @importFrom stats as.formula confint
-#' @return A data.frame with columns: \code{variable}, \code{HR}, \code{lower95}, \code{upper95}, \code{pvalue}.
+#' @return A data.frame with columns: \code{variable}, \code{coef},
+#'   \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
+#'   \code{pvalue}, \code{n}, and \code{n_event}.
 #'
 #' @examples
 #' \dontrun{
@@ -62,10 +64,15 @@ runmulti_cox <- function(data,
 
     results[[var]] <- data.frame(
       variable = var,
-      HR = round(conf_row[, "exp(coef)"], 3),
-      lower95 = round(conf_row[, "lower .95"], 3),
-      upper95 = round(conf_row[, "upper .95"], 3),
-      pvalue = signif(main_row[, "Pr(>|z|)"], 3),
+      coef = unname(main_row[, "coef"]),
+      se = unname(main_row[, "se(coef)"]),
+      z = unname(main_row[, "z"]),
+      HR = unname(conf_row[, "exp(coef)"]),
+      lower95 = unname(conf_row[, "lower .95"]),
+      upper95 = unname(conf_row[, "upper .95"]),
+      pvalue = unname(main_row[, "Pr(>|z|)"]),
+      n = unname(sum_model$n),
+      n_event = unname(sum_model$nevent),
       stringsAsFactors = FALSE
     )
   }

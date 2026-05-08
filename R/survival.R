@@ -357,11 +357,11 @@ build_survival_dataset <- function(dt,
       flow_dt$n_after / flow_dt$n_before,
       NA_real_
     )
-    flow_dt$retained_from_raw <- ifelse(
-      n_raw > 0,
-      flow_dt$n_after / n_raw,
-      NA_real_
-    )
+    flow_dt$retained_from_raw <- if (n_raw > 0) {
+      flow_dt$n_after / n_raw
+    } else {
+      rep(NA_real_, nrow(flow_dt))
+    }
 
     flow_print <- data.table::copy(flow_dt)
     flow_print$retained_from_prev <- ifelse(
