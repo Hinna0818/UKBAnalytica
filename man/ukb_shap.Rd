@@ -12,6 +12,7 @@ ukb_shap(
   seed = NULL,
   verbose = TRUE,
   class_level = NULL,
+  method = c("auto", "fastshap", "xgboost"),
   ...
 )
 }
@@ -23,7 +24,8 @@ ukb_shap(
 \code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
 If \code{object} is a \code{ukb_ml_final}, \code{data} is required.}
 
-\item{nsim}{Number of Monte Carlo samples for SHAP estimation (default 100)}
+\item{nsim}{Number of Monte Carlo samples for SHAP estimation (default 100).
+Ignored when \code{method = "xgboost"}.}
 
 \item{sample_n}{Optional; subsample observations for large datasets}
 
@@ -33,6 +35,9 @@ If \code{object} is a \code{ukb_ml_final}, \code{data} is required.}
 
 \item{class_level}{Optional class to explain for multiclass
 \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.}
+
+\item{method}{SHAP backend. \code{"auto"} uses the native XGBoost
+contribution backend for XGBoost models and \code{fastshap} otherwise.}
 
 \item{...}{Additional arguments}
 }

@@ -557,6 +557,76 @@ run_protein_ppi_louvain <- function(ppi,
 }
 
 
+#' Run fast greedy clustering on a PPI network
+#'
+#' @description
+#' Cluster a PPI network with igraph's fast greedy community detection. By
+#' default the function uses the largest connected component and cuts the
+#' resulting dendrogram into a user-specified number of clusters. This is useful
+#' when sparse STRING networks contain many small disconnected components but
+#' the case study needs interpretable modules in the main connected network.
+#'
+#' @inheritParams subset_protein_ppi
+#' @param n_clusters Integer number of clusters to return. Default is `4`.
+#' @param largest_component Logical. If `TRUE`, run clustering on the largest
+#'   connected component. If `FALSE`, run on the full graph. Default is `TRUE`.
+#' @param cluster_attr Character vertex attribute used to store cluster labels.
+#'   Default is `"fast_greedy_cluster"`.
+#' @param prefix Character prefix for cluster labels. Default is `"FG"`.
+#'
+#' @return An `igraph` object with a fast greedy cluster vertex attribute.
+#'
+#' @examples
+#' \dontrun{
+#' ppi_fg <- run_protein_ppi_fastgreedy(ppi_graph, n_clusters = 4)
+#' }
+#'
+#' @export
+run_protein_ppi_fastgreedy <- function(ppi,
+                                       n_clusters = 4L,
+                                       largest_component = TRUE,
+                                       cluster_attr = "fast_greedy_cluster",
+                                       prefix = "FG") {
+  .require_package("igraph")
+  graph <- .extract_ppi_graph(ppi)
+
+  if (!is.numeric(n_clusters) || length(n_clusters) != 1L || n_clusters < 1) {
+    stop("`n_clusters` must be a positive integer.")
+  }
+  n_clusters <- as.integer(n_clusters)
+
+  graph <- igraph::simplify(
+    igraph::as_undirected(graph),
+    remove.multiple = TRUE,
+    remove.loops = TRUE,
+    edge.attr.comb = "mean"
+  )
+
+  if (isTRUE(largest_component)) {
+    comp <- igraph::components(graph)
+    largest <- which.max(comp$csize)
+    keep_nodes <- names(comp$membership)[comp$membership == largest]
+    graph <- igraph::induced_subgraph(graph, vids = keep_nodes)
+  }
+
+  if (igraph::vcount(graph) == 0L) {
+    stop("The graph has no vertices after preprocessing.")
+  }
+  if (igraph::ecount(graph) == 0L) {
+    stop("Fast greedy clustering requires at least one edge.")
+  }
+
+  n_clusters <- min(n_clusters, igraph::vcount(graph))
+  communities <- igraph::cluster_fast_greedy(graph)
+  membership <- igraph::cut_at(communities, no = n_clusters)
+  labels <- paste0(prefix, membership)
+  igraph::vertex_attr(graph, cluster_attr) <- labels
+  igraph::vertex_attr(graph, "fast_greedy_membership") <- membership
+  igraph::vertex_attr(graph, "fast_greedy_n_clusters") <- n_clusters
+  graph
+}
+
+
 #' Run MCODE clustering on a PPI network
 #'
 #' @description

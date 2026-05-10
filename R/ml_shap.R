@@ -21,12 +21,15 @@ NULL
 #' @param data Data for SHAP computation. If \code{object} is a
 #'   \code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
 #'   If \code{object} is a \code{ukb_ml_final}, \code{data} is required.
-#' @param nsim Number of Monte Carlo samples for SHAP estimation (default 100)
+#' @param nsim Number of Monte Carlo samples for SHAP estimation (default 100).
+#'   Ignored when \code{method = "xgboost"}.
 #' @param sample_n Optional; subsample observations for large datasets
 #' @param seed Random seed
 #' @param verbose Print progress
 #' @param class_level Optional class to explain for multiclass
 #'   \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.
+#' @param method SHAP backend. \code{"auto"} uses the native XGBoost
+#'   contribution backend for XGBoost models and \code{fastshap} otherwise.
 #' @param ... Additional arguments
 #'
 #' @return A ukb_shap object containing:
@@ -57,9 +60,9 @@ ukb_shap <- function(object,
                      seed = NULL,
                      verbose = TRUE,
                      class_level = NULL,
+                     method = c("auto", "fastshap", "xgboost"),
                      ...) {
-  
-  .check_ml_package("fastshap")
+  method <- match.arg(method)
 
   if (inherits(object, "ukb_ml_workflow")) {
     if (is.null(object$final_model)) {
@@ -76,6 +79,7 @@ ukb_shap <- function(object,
       seed = seed,
       verbose = verbose,
       class_level = class_level,
+      method = method,
       ...
     ))
   }
@@ -92,9 +96,16 @@ ukb_shap <- function(object,
       seed = seed,
       verbose = verbose,
       class_level = class_level,
+      method = method,
       ...
     ))
   }
+
+  if (method == "xgboost") {
+    stop("method = 'xgboost' is only available for ukb_ml_workflow or ukb_ml_final objects fitted with model = 'xgboost'.", call. = FALSE)
+  }
+
+  .check_ml_package("fastshap")
   
   if (!is.null(seed)) set.seed(seed)
   
@@ -161,6 +172,7 @@ ukb_shap <- function(object,
                                   seed = NULL,
                                   verbose = TRUE,
                                   class_level = NULL,
+                                  method = c("auto", "fastshap", "xgboost"),
                                   ...) {
   if (!inherits(object, "ukb_ml_final")) {
     stop("`object` must be a ukb_ml_final object.", call. = FALSE)
@@ -169,6 +181,22 @@ ukb_shap <- function(object,
     stop("`data` must be a data.frame or data.table.", call. = FALSE)
   }
   if (!is.null(seed)) set.seed(seed)
+  method <- match.arg(method)
+
+  if ((method == "auto" && identical(object$model, "xgboost")) || method == "xgboost") {
+    if (!identical(object$model, "xgboost")) {
+      stop("method = 'xgboost' requires a ukb_ml_final object fitted with model = 'xgboost'.", call. = FALSE)
+    }
+    return(.ukb_shap_xgboost_final_model(
+      object = object,
+      data = data,
+      sample_n = sample_n,
+      seed = seed,
+      verbose = verbose
+    ))
+  }
+
+  .check_ml_package("fastshap")
 
   features <- object$selected_features %||% object$predictors
   data <- as.data.frame(data)
@@ -232,6 +260,95 @@ ukb_shap <- function(object,
     task = if (object$outcome_type == "continuous") "regression" else "classification",
     outcome_type = object$outcome_type,
     class_level = class_level
+  )
+
+  class(result) <- "ukb_shap"
+  if (isTRUE(verbose)) message("SHAP computation complete")
+  result
+}
+
+#' Compute native XGBoost SHAP values for a final model object
+#' @keywords internal
+#' @noRd
+.ukb_shap_xgboost_final_model <- function(object,
+                                          data,
+                                          sample_n = NULL,
+                                          seed = NULL,
+                                          verbose = TRUE) {
+  .check_ml_package("xgboost")
+
+  if (!inherits(object, "ukb_ml_final")) {
+    stop("`object` must be a ukb_ml_final object.", call. = FALSE)
+  }
+  if (!identical(object$model, "xgboost")) {
+    stop("Native XGBoost SHAP requires model = 'xgboost'.", call. = FALSE)
+  }
+  if (!is.data.frame(data)) {
+    stop("`data` must be a data.frame or data.table.", call. = FALSE)
+  }
+  if (!is.null(seed)) set.seed(seed)
+
+  data <- as.data.frame(data)
+  features <- object$selected_features %||% object$predictors
+  missing_features <- setdiff(features, names(data))
+  if (length(missing_features) > 0L) {
+    stop("SHAP data is missing feature column(s): ", paste(missing_features, collapse = ", "), call. = FALSE)
+  }
+
+  if (!is.null(sample_n) && sample_n < nrow(data)) {
+    idx <- sample(nrow(data), sample_n)
+    data <- data[idx, , drop = FALSE]
+    if (isTRUE(verbose)) message(sprintf("Using %d sampled observations for SHAP", sample_n))
+  }
+
+  mf <- stats::model.frame(
+    object$x_terms,
+    data = data,
+    na.action = stats::na.pass,
+    xlev = object$xlevels
+  )
+  X <- stats::model.matrix(object$x_terms, data = mf, contrasts.arg = object$contrasts)
+  if ("(Intercept)" %in% colnames(X)) {
+    X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
+  }
+
+  expected_cols <- object$feature_names
+  missing_matrix_cols <- setdiff(expected_cols, colnames(X))
+  if (length(missing_matrix_cols) > 0L) {
+    add <- matrix(0, nrow = nrow(X), ncol = length(missing_matrix_cols))
+    colnames(add) <- missing_matrix_cols
+    X <- cbind(X, add)
+  }
+  extra_matrix_cols <- setdiff(colnames(X), expected_cols)
+  if (length(extra_matrix_cols) > 0L) {
+    X <- X[, setdiff(colnames(X), extra_matrix_cols), drop = FALSE]
+  }
+  X <- X[, expected_cols, drop = FALSE]
+  storage.mode(X) <- "numeric"
+
+  if (isTRUE(verbose)) {
+    message(sprintf("Computing native XGBoost SHAP values for %d observations...", nrow(X)))
+  }
+  contrib <- predict(
+    object$fitted_model,
+    xgboost::xgb.DMatrix(X),
+    predcontrib = TRUE
+  )
+  contrib <- as.matrix(contrib)
+  bias_col <- ncol(contrib)
+  shap_values <- contrib[, -bias_col, drop = FALSE]
+  colnames(shap_values) <- expected_cols
+
+  result <- list(
+    shap_values = shap_values,
+    baseline = mean(contrib[, bias_col], na.rm = TRUE),
+    feature_names = expected_cols,
+    feature_values = as.data.frame(X, check.names = FALSE),
+    model_type = object$model,
+    task = if (object$outcome_type == "continuous") "regression" else "classification",
+    outcome_type = object$outcome_type,
+    class_level = if (object$outcome_type == "binary") object$positive_class else NULL,
+    method = "xgboost"
   )
 
   class(result) <- "ukb_shap"

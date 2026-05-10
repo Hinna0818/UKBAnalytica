@@ -48,6 +48,16 @@
 }
 
 #' @keywords internal
+.mlw_outcome_classes <- function(y) {
+  y_nonmissing <- y[!is.na(y)]
+  if (is.factor(y_nonmissing)) {
+    lv <- levels(droplevels(y_nonmissing))
+    return(lv[!is.na(lv) & nzchar(lv)])
+  }
+  sort(unique(as.character(y_nonmissing)))
+}
+
+#' @keywords internal
 .mlw_parse_formula <- function(formula, data) {
   if (!inherits(formula, "formula")) {
     stop("'formula' must be a model formula.", call. = FALSE)
@@ -98,7 +108,7 @@
   y <- mf[[parsed$response]]
   if (outcome_type %in% c("binary", "multiclass")) {
     if (is.null(classes)) {
-      classes <- sort(unique(as.character(y)))
+      classes <- .mlw_outcome_classes(y)
     }
     y <- factor(as.character(y), levels = classes)
     if (any(is.na(y))) {
@@ -359,7 +369,7 @@
         eta = 0.1,
         subsample = 1,
         colsample_bytree = 1,
-        verbose = 0
+        verbosity = 0
       )
       fit_params <- utils::modifyList(default_params, params)
       nrounds <- fit_params$nrounds
@@ -616,9 +626,9 @@ ukb_ml_as_split <- function(train_data,
     outcome_type <- .mlw_resolve_outcome_type(train_data[[outcome]], outcome_type)
 
     if (outcome_type %in% c("binary", "multiclass")) {
-      train_classes <- sort(unique(as.character(train_data[[outcome]][!is.na(train_data[[outcome]])])))
+      train_classes <- .mlw_outcome_classes(train_data[[outcome]])
       check_classes <- function(x, label) {
-        classes <- sort(unique(as.character(x[[outcome]][!is.na(x[[outcome]])])))
+        classes <- .mlw_outcome_classes(x[[outcome]])
         missing <- setdiff(classes, train_classes)
         if (length(missing) > 0L) {
           stop(sprintf("%s contains outcome class(es) absent from train_data: %s", label, paste(missing, collapse = ", ")), call. = FALSE)
@@ -1159,7 +1169,7 @@ ukb_ml_tune <- function(split,
 
   if (!is.null(seed)) set.seed(seed)
   classes <- if (outcome_type %in% c("binary", "multiclass")) {
-    sort(unique(as.character(split$train[[parsed$response]])))
+    .mlw_outcome_classes(split$train[[parsed$response]])
   } else {
     NULL
   }
@@ -1356,7 +1366,7 @@ ukb_ml_fit_final <- function(split,
   }
 
   classes <- if (outcome_type %in% c("binary", "multiclass")) {
-    sort(unique(as.character(split$train[[parsed$response]])))
+    .mlw_outcome_classes(split$train[[parsed$response]])
   } else {
     NULL
   }

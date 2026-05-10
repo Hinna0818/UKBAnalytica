@@ -12,9 +12,6 @@
 #'   to this value will be excluded.
 #' @param copy Logical scalar. If `TRUE` and `data` is a data.table, work on a
 #'   copied object before filtering.
-#' @param stepwise Logical scalar. If `TRUE`, apply covariate missingness
-#'   filters sequentially in the order provided and record a row-level flow table
-#'   in `attr(result, "complete_case_flow")`.
 #' @param verbose Logical scalar. If `TRUE`, print a short filtering summary.
 #'
 #' @return An object with the same class and columns as `data`, with filtered
@@ -118,6 +115,9 @@ sensitivity_exclude_early_events <- function(data,
 #' @param covariates Character vector of covariate names to check.
 #' @param copy Logical scalar. If `TRUE` and `data` is a data.table, work on a
 #'   copied object before filtering.
+#' @param stepwise Logical scalar. If `TRUE`, apply covariate missingness
+#'   filters sequentially in the order provided and record a row-level flow table
+#'   in `attr(result, "complete_case_flow")`.
 #' @param verbose Logical scalar. If `TRUE`, print a short filtering summary.
 #'
 #' @return An object with the same class and columns as `data`, with filtered

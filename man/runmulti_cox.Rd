@@ -24,7 +24,9 @@ runmulti_cox(
 \item{...}{Additional arguments passed to \code{survival::coxph()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{HR}, \code{lower95}, \code{upper95}, \code{pvalue}.
+A data.frame with columns: \code{variable}, \code{coef},
+\code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
+\code{pvalue}, \code{n}, and \code{n_event}.
 }
 \description{
 Fit Cox proportional hazards models for each main variable separately.

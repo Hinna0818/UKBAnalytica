@@ -8,6 +8,7 @@ sensitivity_exclude_missing_covariates(
   data,
   covariates,
   copy = TRUE,
+  stepwise = FALSE,
   verbose = TRUE
 )
 }
@@ -18,6 +19,10 @@ sensitivity_exclude_missing_covariates(
 
 \item{copy}{Logical scalar. If \code{TRUE} and \code{data} is a data.table, work on a
 copied object before filtering.}
+
+\item{stepwise}{Logical scalar. If \code{TRUE}, apply covariate missingness
+filters sequentially in the order provided and record a row-level flow table
+in \code{attr(result, "complete_case_flow")}.}
 
 \item{verbose}{Logical scalar. If \code{TRUE}, print a short filtering summary.}
 }
