@@ -136,7 +136,7 @@ plot_correlation <- function(corr_matrix,
   # Create base plot
   p <- ggplot(
     corr_df,
-    aes(x = Var1, y = Var2, fill = Correlation)
+    aes(x = .data$Var1, y = .data$Var2, fill = .data$Correlation)
   ) +
     geom_tile(color = "gray90", linewidth = 0.5) +
     scale_fill_gradient2(
@@ -180,7 +180,7 @@ plot_correlation <- function(corr_matrix,
     
     p <- p + ggplot2::geom_text(
       data = corr_df,
-      ggplot2::aes(label = label),
+      ggplot2::aes(label = .data$label),
       color = corr_df$text_color,
       size = text_size,
       show.legend = FALSE

@@ -7,6 +7,114 @@
 #' @keywords internal
 NULL
 
+#' Create ROC Curve Data for Binary ML Predictions
+#'
+#' @description
+#' Converts binary outcome predictions into a tidy ROC curve table with AUC and
+#' optional 95% confidence interval. This helper is useful for plotting one or
+#' more model ROC curves without re-running model evaluation.
+#'
+#' @param truth True binary outcome values.
+#' @param prob Predicted probability for the positive class.
+#' @param model_id Optional model identifier.
+#' @param model_label Optional model label used in plots.
+#' @param positive_class Optional positive class label. Defaults to the second
+#'   level after converting \code{truth} to a factor.
+#' @param ci Logical. Calculate AUC 95% confidence interval.
+#' @param ci_method Method passed to \code{pROC::ci.auc()}; usually
+#'   \code{"delong"} or \code{"bootstrap"}.
+#' @param quiet Logical passed to \code{pROC::roc()}.
+#'
+#' @return A data.frame with specificity, sensitivity, false-positive rate,
+#'   threshold, AUC, and optional confidence interval columns.
+#'
+#' @examples
+#' \dontrun{
+#' roc_df <- ukb_ml_roc_data(
+#'   truth = test$case,
+#'   prob = pred_prob,
+#'   model_label = "XGBoost"
+#' )
+#' plot_ml_roc_compare(roc_df)
+#' }
+#'
+#' @export
+ukb_ml_roc_data <- function(truth,
+                            prob,
+                            model_id = NULL,
+                            model_label = NULL,
+                            positive_class = NULL,
+                            ci = TRUE,
+                            ci_method = c("delong", "bootstrap"),
+                            quiet = TRUE) {
+  .check_ml_package("pROC")
+
+  ci_method <- match.arg(ci_method)
+  truth <- droplevels(as.factor(truth))
+  if (nlevels(truth) != 2L) {
+    stop("ukb_ml_roc_data() only supports binary outcomes.", call. = FALSE)
+  }
+
+  if (is.null(positive_class)) {
+    positive_class <- levels(truth)[2]
+  }
+  if (!positive_class %in% levels(truth)) {
+    stop("`positive_class` must be one of: ", paste(levels(truth), collapse = ", "), call. = FALSE)
+  }
+  negative_class <- setdiff(levels(truth), positive_class)[1]
+
+  prob <- as.numeric(prob)
+  keep <- !is.na(truth) & !is.na(prob)
+  truth <- droplevels(truth[keep])
+  prob <- prob[keep]
+  if (length(unique(truth)) != 2L) {
+    stop("Both outcome classes must be present after removing missing values.", call. = FALSE)
+  }
+
+  roc_obj <- pROC::roc(
+    response = truth,
+    predictor = prob,
+    levels = c(negative_class, positive_class),
+    quiet = quiet
+  )
+  auc_value <- as.numeric(pROC::auc(roc_obj))
+
+  if (isTRUE(ci)) {
+    auc_ci <- as.numeric(pROC::ci.auc(roc_obj, method = ci_method))
+    lower95 <- auc_ci[[1]]
+    upper95 <- auc_ci[[3]]
+  } else {
+    lower95 <- NA_real_
+    upper95 <- NA_real_
+  }
+
+  if (is.null(model_id)) {
+    model_id <- "model"
+  }
+  if (is.null(model_label)) {
+    model_label <- model_id
+  }
+
+  out <- data.frame(
+    model_id = model_id,
+    model_label = model_label,
+    specificity = as.numeric(roc_obj$specificities),
+    sensitivity = as.numeric(roc_obj$sensitivities),
+    fpr = 1 - as.numeric(roc_obj$specificities),
+    threshold = as.numeric(roc_obj$thresholds),
+    auc = auc_value,
+    lower95 = lower95,
+    upper95 = upper95,
+    ci_method = if (isTRUE(ci)) ci_method else NA_character_,
+    positive_class = positive_class,
+    n = length(prob),
+    n_event = sum(truth == positive_class),
+    stringsAsFactors = FALSE
+  )
+  class(out) <- c("ukb_ml_roc_data", class(out))
+  out
+}
+
 # Metrics Function
 
 #' Calculate Model Performance Metrics

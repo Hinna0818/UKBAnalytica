@@ -36,6 +36,10 @@
 #'
 #' @return A `ggplot2` object with attributes `plot_data` and `label_data`.
 #'
+#' @importFrom ggplot2 ggplot aes geom_vline geom_point scale_color_manual
+#'   scale_x_continuous scale_y_continuous expansion labs theme_classic theme
+#'   element_line element_blank geom_hline geom_text
+#'
 #' @examples
 #' \dontrun{
 #' cox_res$p_bonferroni <- p.adjust(cox_res$pvalue, method = "bonferroni")
@@ -160,34 +164,34 @@ plot_regression_volcano <- function(data,
     y_limits <- c(0, max(plot_data$neg_log10_p, na.rm = TRUE) * 1.04)
   }
 
-  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$effect, y = .data$neg_log10_p)) +
-    ggplot2::geom_vline(xintercept = null_effect, linewidth = 0.25, colour = "#767676") +
-    ggplot2::geom_point(
-      ggplot2::aes(colour = .data$group),
+  p <- ggplot(plot_data, aes(x = .data$effect, y = .data$neg_log10_p)) +
+    geom_vline(xintercept = null_effect, linewidth = 0.25, colour = "#767676") +
+    geom_point(
+      aes(colour = .data$group),
       size = point_size,
       alpha = 0.82,
       stroke = 0
     ) +
-    ggplot2::scale_color_manual(values = colors, drop = FALSE) +
-    ggplot2::scale_x_continuous(
+    scale_color_manual(values = colors, drop = FALSE) +
+    scale_x_continuous(
       limits = x_limits,
-      expand = ggplot2::expansion(mult = c(0.02, 0.02))
+      expand = expansion(mult = c(0.02, 0.02))
     ) +
-    ggplot2::scale_y_continuous(
+    scale_y_continuous(
       limits = y_limits,
-      expand = ggplot2::expansion(mult = c(0.01, 0.04))
+      expand = expansion(mult = c(0.01, 0.04))
     ) +
-    ggplot2::labs(x = x_lab, y = y_lab) +
-    ggplot2::theme_classic(base_size = 7) +
-    ggplot2::theme(
+    labs(x = x_lab, y = y_lab) +
+    theme_classic(base_size = 7) +
+    theme(
       legend.position = "none",
-      axis.line = ggplot2::element_line(linewidth = 0.35, colour = "black"),
-      axis.ticks = ggplot2::element_line(linewidth = 0.35, colour = "black"),
-      panel.grid = ggplot2::element_blank()
+      axis.line = element_line(linewidth = 0.35, colour = "black"),
+      axis.ticks = element_line(linewidth = 0.35, colour = "black"),
+      panel.grid = element_blank()
     )
 
   if (show_cutoff) {
-    p <- p + ggplot2::geom_hline(
+    p <- p + geom_hline(
       yintercept = -log10(significance_cutoff),
       linewidth = 0.28,
       linetype = "dashed",
@@ -196,9 +200,9 @@ plot_regression_volcano <- function(data,
   }
 
   if (nrow(label_data) > 0) {
-    p <- p + ggplot2::geom_text(
+    p <- p + geom_text(
       data = label_data,
-      ggplot2::aes(label = .data$label),
+      aes(label = .data$label),
       size = label_size,
       check_overlap = TRUE,
       vjust = -0.5

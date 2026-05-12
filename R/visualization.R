@@ -4,7 +4,9 @@
 #'   geom_step geom_ribbon geom_hline annotate scale_color_manual
 #'   scale_fill_manual coord_cartesian scale_x_continuous scale_y_continuous
 #'   geom_histogram geom_density geom_segment geom_errorbar geom_smooth
-#'   geom_abline coord_equal scale_size_continuous
+#'   geom_abline geom_line geom_jitter coord_equal scale_size_continuous
+#'   scale_color_gradientn position_jitter guide_colorbar theme_classic
+#'   element_line margin expansion
 NULL
 
 #' Plot Forest Plot for Subgroup Analysis
@@ -111,11 +113,11 @@ plot_forest <- function(results,
   plot_data <- plot_data[!is.na(plot_data$estimate), ]
 
   # Create forest plot
-  p <- ggplot(plot_data, aes(x = estimate, y = subgroup)) +
+  p <- ggplot(plot_data, aes(x = .data$estimate, y = .data$subgroup)) +
     # Point estimates
     geom_point(size = 3, shape = 18) +
     # Confidence intervals
-    geom_errorbarh(aes(xmin = lower95, xmax = upper95),
+    geom_errorbarh(aes(xmin = .data$lower95, xmax = .data$upper95),
                    height = 0.2, linewidth = 0.5) +
     # Null effect line
     geom_vline(xintercept = null_value, linetype = "dashed", color = "gray50") +
@@ -290,7 +292,7 @@ plot_km_curve <- function(data,
   }
 
   # Create main plot
-  p <- ggplot(surv_data, aes(x = time, y = surv, color = strata)) +
+  p <- ggplot(surv_data, aes(x = .data$time, y = .data$surv, color = .data$strata)) +
     geom_step(linewidth = 1) +
     scale_color_manual(values = colors, name = legend_title) +
     labs(title = title, x = xlab, y = ylab) +
@@ -304,7 +306,7 @@ plot_km_curve <- function(data,
 
   # Add confidence interval
   if (conf_int) {
-    p <- p + geom_ribbon(aes(ymin = lower, ymax = upper, fill = strata),
+    p <- p + geom_ribbon(aes(ymin = .data$lower, ymax = .data$upper, fill = .data$strata),
                          alpha = 0.2, color = NA) +
       scale_fill_manual(values = colors, guide = "none")
   }
@@ -313,7 +315,7 @@ plot_km_curve <- function(data,
   if (censor_marks) {
     censor_data <- surv_data[surv_data$n.event == 0, ]
     if (nrow(censor_data) > 0) {
-      p <- p + geom_point(data = censor_data, aes(x = time, y = surv),
+      p <- p + geom_point(data = censor_data, aes(x = .data$time, y = .data$surv),
                           shape = 3, size = 2)
     }
   }
@@ -367,7 +369,7 @@ plot_km_curve <- function(data,
       }
     })
 
-    risk_table_plot <- ggplot(risk_data, aes(x = time, y = strata, label = n.risk)) +
+    risk_table_plot <- ggplot(risk_data, aes(x = .data$time, y = .data$strata, label = .data$n.risk)) +
       geom_text(size = 3) +
       scale_x_continuous(limits = c(0, max_time)) +
       labs(x = NULL, y = "Number at Risk") +
@@ -445,7 +447,7 @@ plot_ps_distribution <- function(data,
   colors <- c("Control" = "#0073C2", "Treated" = "#CD534C")
 
   if (type == "histogram") {
-    p <- ggplot(plot_data, aes(x = ps, fill = group)) +
+    p <- ggplot(plot_data, aes(x = .data$ps, fill = .data$group)) +
       geom_histogram(alpha = 0.6, position = "identity", bins = 30) +
       scale_fill_manual(values = colors) +
       labs(title = "Propensity Score Distribution",
@@ -457,7 +459,7 @@ plot_ps_distribution <- function(data,
       )
 
   } else if (type == "density") {
-    p <- ggplot(plot_data, aes(x = ps, fill = group, color = group)) +
+    p <- ggplot(plot_data, aes(x = .data$ps, fill = .data$group, color = .data$group)) +
       geom_density(alpha = 0.4) +
       scale_fill_manual(values = colors) +
       scale_color_manual(values = colors) +
@@ -474,7 +476,7 @@ plot_ps_distribution <- function(data,
     plot_data$count <- 1
     plot_data$count[plot_data$group == "Control"] <- -1
 
-    p <- ggplot(plot_data, aes(x = ps, fill = group)) +
+    p <- ggplot(plot_data, aes(x = .data$ps, fill = .data$group)) +
       geom_histogram(data = plot_data[plot_data$group == "Treated", ],
                      aes(y = after_stat(count)), bins = 30, alpha = 0.8) +
       geom_histogram(data = plot_data[plot_data$group == "Control", ],
@@ -548,11 +550,11 @@ plot_balance <- function(balance_before,
   # Create plot
   p <- ggplot(plot_data) +
     # Before matching (hollow circles)
-    geom_point(aes(x = smd_before, y = variable), shape = 1, size = 3, color = "#CD534C") +
+    geom_point(aes(x = .data$smd_before, y = .data$variable), shape = 1, size = 3, color = "#CD534C") +
     # After matching (filled circles)
-    geom_point(aes(x = smd_after, y = variable), shape = 16, size = 3, color = "#0073C2") +
+    geom_point(aes(x = .data$smd_after, y = .data$variable), shape = 16, size = 3, color = "#0073C2") +
     # Connect with lines
-    geom_segment(aes(x = smd_before, xend = smd_after, y = variable, yend = variable),
+    geom_segment(aes(x = .data$smd_before, xend = .data$smd_after, y = .data$variable, yend = .data$variable),
                  color = "gray60", linewidth = 0.5) +
     # Threshold lines
     geom_vline(xintercept = c(-threshold, threshold), linetype = "dashed", color = "gray50") +
@@ -647,11 +649,11 @@ plot_calibration <- function(data,
   }
 
   # Create plot
-  p <- ggplot(calib_data, aes(x = predicted, y = observed)) +
+  p <- ggplot(calib_data, aes(x = .data$predicted, y = .data$observed)) +
     # Perfect calibration line
     geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray50") +
     # Points
-    geom_point(aes(size = count), color = "#0073C2") +
+    geom_point(aes(size = .data$count), color = "#0073C2") +
     scale_size_continuous(name = "N", range = c(2, 6)) +
     # Labels
     labs(
@@ -668,7 +670,7 @@ plot_calibration <- function(data,
 
   # Add confidence intervals
   if (conf_int) {
-    p <- p + geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.02, color = "#0073C2")
+    p <- p + geom_errorbar(aes(ymin = .data$lower, ymax = .data$upper), width = 0.02, color = "#0073C2")
   }
 
   # Add smooth line
@@ -765,7 +767,7 @@ plot_mediation <- function(mediation_result,
       null_val <- 0
     }
 
-    p <- ggplot(plot_data, aes(x = effect_label, y = est, fill = color_group)) +
+    p <- ggplot(plot_data, aes(x = .data$effect_label, y = .data$est, fill = .data$color_group)) +
       geom_col(width = 0.6) +
       geom_hline(yintercept = null_val, linetype = "dashed", color = "gray50") +
       scale_fill_manual(values = colors, guide = "none") +
@@ -782,7 +784,7 @@ plot_mediation <- function(mediation_result,
 
     if (show_ci) {
       p <- p + geom_errorbar(
-        aes(ymin = lower, ymax = upper),
+        aes(ymin = .data$lower, ymax = .data$upper),
         width = 0.2,
         color = "black"
       )
@@ -794,7 +796,7 @@ plot_mediation <- function(mediation_result,
         sprintf("p=%.3f", plot_data$p)
       )
       p <- p + geom_text(
-        aes(label = p_label),
+        aes(label = .data$p_label),
         vjust = -0.5,
         size = 3
       )
@@ -826,10 +828,10 @@ plot_mediation <- function(mediation_result,
     )
 
     # Stacked bar chart (easier to interpret than pie)
-    p <- ggplot(decomp_data, aes(x = 1, y = abs_value, fill = effect_type)) +
+    p <- ggplot(decomp_data, aes(x = 1, y = .data$abs_value, fill = .data$effect_type)) +
       geom_col(width = 0.5, position = "stack") +
       geom_text(
-        aes(label = sprintf("%.1f%%", proportion * 100)),
+        aes(label = sprintf("%.1f%%", .data$proportion * 100)),
         position = position_stack(vjust = 0.5),
         color = "white",
         fontface = "bold",
@@ -903,9 +905,9 @@ plot_mediation <- function(mediation_result,
         linewidth = 1.2, color = colors["direct"]
       ) +
       # Draw nodes
-      geom_point(data = nodes, aes(x = x, y = y),
+      geom_point(data = nodes, aes(x = .data$x, y = .data$y),
                  size = 20, shape = 21, fill = "white", color = "black", stroke = 2) +
-      geom_text(data = nodes, aes(x = x, y = y, label = name),
+      geom_text(data = nodes, aes(x = .data$x, y = .data$y, label = .data$name),
                 size = 4, fontface = "bold") +
       # Labels for paths
       annotate("text", x = 0.5, y = 0.7, label = "a", size = 5, fontface = "italic") +
@@ -1022,10 +1024,10 @@ plot_mediation_forest <- function(multi_mediation_result,
   }
 
   # Create forest plot
-  p <- ggplot(plot_data, aes(x = estimate, y = mediator)) +
+  p <- ggplot(plot_data, aes(x = .data$estimate, y = .data$mediator)) +
     geom_point(size = 3, shape = 18, color = "#CD534C") +
     geom_errorbarh(
-      aes(xmin = lower, xmax = upper),
+      aes(xmin = .data$lower, xmax = .data$upper),
       height = 0.2,
       linewidth = 0.5,
       color = "#CD534C"
@@ -1050,8 +1052,8 @@ plot_mediation_forest <- function(multi_mediation_result,
 
   p <- p + geom_text(
     data = plot_data,
-    aes(x = upper + (max(upper, na.rm = TRUE) - min(lower, na.rm = TRUE)) * 0.05,
-        label = sig),
+    aes(x = .data$upper + (max(.data$upper, na.rm = TRUE) - min(.data$lower, na.rm = TRUE)) * 0.05,
+        label = .data$sig),
     hjust = 0, size = 5
   )
 
@@ -1165,10 +1167,10 @@ plot_mi_pooled <- function(mi_result,
     # Use FMI for point size
     plot_data$fmi_pct <- ifelse(is.na(plot_data$fmi), 0, plot_data$fmi * 100)
 
-    p <- ggplot(plot_data, aes(x = estimate, y = term)) +
-      geom_point(aes(size = fmi_pct), color = colors["point"], shape = 18) +
+    p <- ggplot(plot_data, aes(x = .data$estimate, y = .data$term)) +
+      geom_point(aes(size = .data$fmi_pct), color = colors["point"], shape = 18) +
       geom_errorbarh(
-        aes(xmin = conf.low, xmax = conf.high),
+        aes(xmin = .data$conf.low, xmax = .data$conf.high),
         height = 0.2,
         linewidth = 0.6,
         color = colors["error"]
@@ -1179,10 +1181,10 @@ plot_mi_pooled <- function(mi_result,
         guide = guide_legend(title.position = "top")
       )
   } else {
-    p <- ggplot(plot_data, aes(x = estimate, y = term)) +
+    p <- ggplot(plot_data, aes(x = .data$estimate, y = .data$term)) +
       geom_point(size = 3, color = colors["point"], shape = 18) +
       geom_errorbarh(
-        aes(xmin = conf.low, xmax = conf.high),
+        aes(xmin = .data$conf.low, xmax = .data$conf.high),
         height = 0.2,
         linewidth = 0.6,
         color = colors["error"]
@@ -1283,7 +1285,7 @@ plot_mi_diagnostics <- function(mi_result,
 
     if (is.null(title)) title <- "Fraction of Missing Information (FMI)"
 
-    p <- ggplot(plot_data, aes(x = term, y = value, fill = level)) +
+    p <- ggplot(plot_data, aes(x = .data$term, y = .data$value, fill = .data$level)) +
       geom_col(width = 0.7) +
       geom_hline(yintercept = c(10, 30, 50), linetype = "dashed",
                  color = c("green4", "orange", "red"), alpha = 0.7) +
@@ -1337,7 +1339,7 @@ plot_mi_diagnostics <- function(mi_result,
 
     if (is.null(title)) title <- "Between/Within Variance Ratio"
 
-    p <- ggplot(plot_data, aes(x = term, y = value)) +
+    p <- ggplot(plot_data, aes(x = .data$term, y = .data$value)) +
       geom_col(width = 0.7, fill = "#377EB8") +
       geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
       coord_flip() +
@@ -1374,7 +1376,7 @@ plot_mi_diagnostics <- function(mi_result,
 
     if (is.null(title)) title <- "Degrees of Freedom (Rubin's Adjustment)"
 
-    p <- ggplot(plot_data, aes(x = term, y = value)) +
+    p <- ggplot(plot_data, aes(x = .data$term, y = .data$value)) +
       geom_col(width = 0.7, fill = "#4DAF4A") +
       coord_flip() +
       labs(
@@ -1440,7 +1442,7 @@ plot_ml_importance <- function(object,
   imp$variable <- factor(imp$variable, levels = rev(imp$variable))
   
   if (type == "bar") {
-    p <- ggplot(imp, aes(x = variable, y = importance)) +
+    p <- ggplot(imp, aes(x = .data$variable, y = .data$importance)) +
       geom_col(fill = color, width = 0.7) +
       coord_flip() +
       labs(
@@ -1453,8 +1455,8 @@ plot_ml_importance <- function(object,
         plot.title = element_text(hjust = 0.5, face = "bold")
       )
   } else {
-    p <- ggplot(imp, aes(x = variable, y = importance)) +
-      geom_segment(aes(xend = variable, yend = 0), color = "gray70") +
+    p <- ggplot(imp, aes(x = .data$variable, y = .data$importance)) +
+      geom_segment(aes(xend = .data$variable, yend = 0), color = "gray70") +
       geom_point(color = color, size = 3) +
       coord_flip() +
       labs(
@@ -1518,7 +1520,7 @@ plot_ml_roc <- function(object,
     roc_data <- rbind(roc_data, df)
   }
   
-  p <- ggplot(roc_data, aes(x = 1 - specificity, y = sensitivity, color = model)) +
+  p <- ggplot(roc_data, aes(x = 1 - .data$specificity, y = .data$sensitivity, color = .data$model)) +
     geom_line(linewidth = 1) +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray50") +
     scale_x_continuous(limits = c(0, 1)) +
@@ -1537,6 +1539,104 @@ plot_ml_roc <- function(object,
     )
   
   p
+}
+
+#' Plot One or More ROC Curves from Tidy ROC Data
+#'
+#' @description
+#' Creates a publication-ready ROC curve plot from one or more data frames
+#' returned by \code{\link{ukb_ml_roc_data}}. AUC and 95% confidence interval
+#' values are included in the legend when available.
+#'
+#' @param roc_data A data.frame returned by \code{\link{ukb_ml_roc_data}}, a
+#'   row-bound data.frame of multiple ROC tables, or a list of such data.frames.
+#' @param colors Optional named or unnamed vector of line colors.
+#' @param show_auc Logical. Include AUC and 95% CI in the legend labels.
+#' @param title Optional plot title. If \code{NULL}, no title is shown.
+#' @param xlab X-axis label.
+#' @param ylab Y-axis label.
+#' @param legend_position Legend position passed to \code{ggplot2::theme()}.
+#' @param base_size Base font size.
+#' @param ... Additional arguments reserved for future use.
+#'
+#' @return A ggplot2 object.
+#'
+#' @examples
+#' \dontrun{
+#' roc1 <- ukb_ml_roc_data(y, p1, model_label = "Model 1")
+#' roc2 <- ukb_ml_roc_data(y, p2, model_label = "Model 2")
+#' plot_ml_roc_compare(list(roc1, roc2))
+#' }
+#'
+#' @importFrom stats setNames
+#' @export
+plot_ml_roc_compare <- function(roc_data,
+                                colors = NULL,
+                                show_auc = TRUE,
+                                title = NULL,
+                                xlab = "1 - Specificity",
+                                ylab = "Sensitivity",
+                                legend_position = "bottom",
+                                base_size = 7,
+                                ...) {
+  if (is.list(roc_data) && !is.data.frame(roc_data)) {
+    roc_data <- do.call(rbind, roc_data)
+  }
+  if (!is.data.frame(roc_data)) {
+    stop("`roc_data` must be a data.frame or a list of data.frames.", call. = FALSE)
+  }
+
+  required_cols <- c("model_label", "fpr", "sensitivity", "auc")
+  missing_cols <- setdiff(required_cols, names(roc_data))
+  if (length(missing_cols) > 0L) {
+    stop("`roc_data` is missing required column(s): ", paste(missing_cols, collapse = ", "), call. = FALSE)
+  }
+
+  plot_data <- as.data.frame(roc_data)
+  auc_cols <- intersect(c("model_id", "model_label", "auc", "lower95", "upper95"), names(plot_data))
+  auc_data <- unique(plot_data[, auc_cols, drop = FALSE])
+  if (!"lower95" %in% names(auc_data)) auc_data$lower95 <- NA_real_
+  if (!"upper95" %in% names(auc_data)) auc_data$upper95 <- NA_real_
+
+  auc_data$legend_label <- if (isTRUE(show_auc)) {
+    has_ci <- is.finite(auc_data$lower95) & is.finite(auc_data$upper95)
+    ifelse(
+      has_ci,
+      sprintf("%s, AUC %.3f (%.3f-%.3f)", auc_data$model_label, auc_data$auc, auc_data$lower95, auc_data$upper95),
+      sprintf("%s, AUC %.3f", auc_data$model_label, auc_data$auc)
+    )
+  } else {
+    auc_data$model_label
+  }
+
+  plot_data <- merge(plot_data, auc_data[, c("model_label", "legend_label")], by = "model_label", all.x = TRUE)
+  legend_levels <- auc_data$legend_label[match(unique(auc_data$model_label), auc_data$model_label)]
+  plot_data$legend_label <- factor(plot_data$legend_label, levels = legend_levels)
+
+  if (is.null(colors)) {
+    colors <- c("#2F6FA3", "#C74732", "#33B5A5", "#7B3294", "#E69F00", "#4D4D4D")
+  }
+  if (is.null(names(colors))) {
+    colors <- stats::setNames(rep(colors, length.out = length(legend_levels)), legend_levels)
+  }
+
+  ggplot(plot_data, aes(x = .data$fpr, y = .data$sensitivity, color = .data$legend_label)) +
+    geom_abline(slope = 1, intercept = 0, linewidth = 0.35, linetype = "dashed", color = "#8A8A8A") +
+    geom_line(linewidth = 0.75) +
+    coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+    scale_color_manual(values = colors, name = NULL) +
+    labs(title = title, x = xlab, y = ylab) +
+    theme_classic(base_size = base_size, base_family = "sans") +
+    theme(
+      axis.line = element_line(linewidth = 0.35, color = "black"),
+      axis.ticks = element_line(linewidth = 0.35, color = "black"),
+      axis.text = element_text(size = base_size * 0.9, color = "black"),
+      axis.title = element_text(size = base_size, color = "black"),
+      legend.position = legend_position,
+      legend.text = element_text(size = base_size * 0.85),
+      legend.key.width = unit(10, "pt"),
+      plot.margin = margin(4, 4, 4, 4)
+    )
 }
 
 #' Plot Calibration Curve
@@ -1562,10 +1662,10 @@ plot_ml_calibration <- function(object,
   
   cal_data <- object$calibration
   
-  p <- ggplot(cal_data, aes(x = predicted, y = observed)) +
+  p <- ggplot(cal_data, aes(x = .data$predicted, y = .data$observed)) +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray50") +
-    geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.02, color = "gray70") +
-    geom_point(aes(size = count), color = "#E34A33") +
+    geom_errorbar(aes(ymin = .data$lower, ymax = .data$upper), width = 0.02, color = "gray70") +
+    geom_point(aes(size = .data$count), color = "#E34A33") +
     scale_size_continuous(range = c(2, 8), name = "N") +
     scale_x_continuous(limits = c(0, 1)) +
     scale_y_continuous(limits = c(0, 1)) +
@@ -1626,9 +1726,9 @@ plot_ml_confusion <- function(object,
     fill_var <- "Freq"
   }
   
-  p <- ggplot(cm_df, aes(x = Actual, y = Predicted, fill = .data[[fill_var]])) +
+  p <- ggplot(cm_df, aes(x = .data$Actual, y = .data$Predicted, fill = .data[[fill_var]])) +
     geom_tile(color = "white", linewidth = 1) +
-    geom_text(aes(label = Label), size = 5) +
+    geom_text(aes(label = .data$Label), size = 5) +
     scale_fill_gradient(low = colors[1], high = colors[2]) +
     labs(
       title = title,
@@ -1690,7 +1790,7 @@ plot_ml_compare <- function(object,
   }
   
   if (type == "bar") {
-    p <- ggplot(plot_data, aes(x = model, y = value, fill = metric)) +
+    p <- ggplot(plot_data, aes(x = .data$model, y = .data$value, fill = .data$metric)) +
       geom_col(position = "dodge", width = 0.7) +
       labs(
         title = title,
@@ -1705,7 +1805,7 @@ plot_ml_compare <- function(object,
         legend.position = "bottom"
       )
   } else {
-    p <- ggplot(plot_data, aes(x = model, y = value, color = metric, group = metric)) +
+    p <- ggplot(plot_data, aes(x = .data$model, y = .data$value, color = .data$metric, group = .data$metric)) +
       geom_point(size = 3) +
       geom_line() +
       labs(
@@ -1722,6 +1822,198 @@ plot_ml_compare <- function(object,
       )
   }
   
+  p
+}
+
+.ukb_normalize_01 <- function(x) {
+  x <- as.numeric(x)
+  rng <- range(x, na.rm = TRUE)
+  if (!all(is.finite(rng)) || diff(rng) == 0) {
+    return(rep(0.5, length(x)))
+  }
+  (x - rng[[1]]) / diff(rng)
+}
+
+.ukb_resolve_feature_labels <- function(features,
+                                        label_map = NULL,
+                                        feature_col = "feature",
+                                        label_col = "label") {
+  labels <- features
+  if (is.null(label_map)) {
+    return(labels)
+  }
+
+  if (is.vector(label_map) && !is.list(label_map)) {
+    if (is.null(names(label_map))) {
+      stop("A vector `label_map` must be named by feature.", call. = FALSE)
+    }
+    matched <- unname(label_map[features])
+    labels[!is.na(matched) & nzchar(matched)] <- matched[!is.na(matched) & nzchar(matched)]
+  } else if (is.data.frame(label_map)) {
+    if (!all(c(feature_col, label_col) %in% names(label_map))) {
+      stop("A data.frame `label_map` must contain `feature_col` and `label_col`.", call. = FALSE)
+    }
+    idx <- match(features, as.character(label_map[[feature_col]]))
+    matched <- as.character(label_map[[label_col]][idx])
+    labels[!is.na(matched) & nzchar(matched)] <- matched[!is.na(matched) & nzchar(matched)]
+  } else {
+    stop("`label_map` must be NULL, a named vector, or a data.frame.", call. = FALSE)
+  }
+
+  if (anyDuplicated(labels)) {
+    labels <- make.unique(labels, sep = ".")
+  }
+  labels
+}
+
+.ukb_shap_beeswarm_data <- function(object,
+                                    max_features = 20,
+                                    label_map = NULL,
+                                    feature_col = "feature",
+                                    label_col = "label") {
+  if (!inherits(object, "ukb_shap")) {
+    stop("`object` must be a ukb_shap object.", call. = FALSE)
+  }
+  if (is.null(object$shap_values) || is.null(object$feature_values)) {
+    stop("`object` must contain SHAP values and feature values.", call. = FALSE)
+  }
+
+  summary_df <- ukb_shap_summary(object, n = max_features)
+  top_features <- intersect(summary_df$feature, object$feature_names)
+  labels <- .ukb_resolve_feature_labels(
+    top_features,
+    label_map = label_map,
+    feature_col = feature_col,
+    label_col = label_col
+  )
+
+  plot_data <- do.call(rbind, lapply(seq_along(top_features), function(i) {
+    feature <- top_features[[i]]
+    feature_idx <- match(feature, object$feature_names)
+    feature_value <- object$feature_values[[feature]]
+    data.frame(
+      feature = feature,
+      feature_label = labels[[i]],
+      shap_value = as.numeric(object$shap_values[, feature_idx]),
+      feature_value = as.numeric(feature_value),
+      feature_value_norm = .ukb_normalize_01(feature_value),
+      stringsAsFactors = FALSE
+    )
+  }))
+
+  plot_data$feature_label <- factor(plot_data$feature_label, levels = rev(labels))
+  attr(plot_data, "summary") <- summary_df
+  plot_data
+}
+
+#' Plot SHAP Beeswarm Summary
+#'
+#' @description
+#' Creates a SHAP beeswarm plot directly from a \code{ukb_shap} object. The plot
+#' displays the top features ranked by mean absolute SHAP value, with point color
+#' representing the normalized feature value.
+#'
+#' @param object A \code{ukb_shap} object from \code{\link{ukb_shap}}.
+#' @param max_features Maximum number of features to display.
+#' @param label_map Optional named vector or data.frame mapping feature names to
+#'   display labels. For a data.frame, columns are controlled by
+#'   \code{feature_col} and \code{label_col}.
+#' @param feature_col Feature column in \code{label_map} when it is a data.frame.
+#' @param label_col Label column in \code{label_map} when it is a data.frame.
+#' @param colors Three or more colors for the low-to-high feature value scale.
+#' @param point_size Point size.
+#' @param alpha Point transparency.
+#' @param jitter_height Vertical jitter height.
+#' @param seed Optional seed for reproducible jitter.
+#' @param title Optional plot title. If \code{NULL}, no title is shown.
+#' @param xlab X-axis label.
+#' @param legend_title Legend title.
+#' @param base_size Base font size.
+#' @param return_data Logical. If \code{TRUE}, returns a list with \code{plot}
+#'   and \code{data}; otherwise returns only the ggplot object.
+#' @param ... Additional arguments reserved for future use.
+#'
+#' @return A ggplot2 object, or a list with plot data when
+#'   \code{return_data = TRUE}.
+#'
+#' @examples
+#' \dontrun{
+#' shap <- ukb_shap(final_model, data = validation_data, method = "xgboost")
+#' plot_shap_beeswarm(shap, max_features = 20)
+#' }
+#'
+#' @export
+plot_shap_beeswarm <- function(object,
+                               max_features = 20,
+                               label_map = NULL,
+                               feature_col = "feature",
+                               label_col = "label",
+                               colors = c("#1E88E5", "#7B3294", "#FF0051"),
+                               point_size = 0.58,
+                               alpha = 0.62,
+                               jitter_height = 0.18,
+                               seed = 20260509,
+                               title = NULL,
+                               xlab = "SHAP value",
+                               legend_title = "Feature value",
+                               base_size = 7,
+                               return_data = FALSE,
+                               ...) {
+  plot_data <- .ukb_shap_beeswarm_data(
+    object = object,
+    max_features = max_features,
+    label_map = label_map,
+    feature_col = feature_col,
+    label_col = label_col
+  )
+  x_max <- max(abs(plot_data$shap_value), na.rm = TRUE)
+  if (!is.finite(x_max) || x_max == 0) {
+    x_max <- 1
+  }
+
+  p <- ggplot(plot_data, aes(x = .data$shap_value, y = .data$feature_label, color = .data$feature_value_norm)) +
+    geom_vline(xintercept = 0, linewidth = 0.32, color = "#5F5F5F") +
+    geom_point(
+      position = position_jitter(width = 0, height = jitter_height, seed = seed),
+      size = point_size,
+      alpha = alpha,
+      stroke = 0
+    ) +
+    scale_color_gradientn(
+      colors = colors,
+      limits = c(0, 1),
+      breaks = c(0, 1),
+      labels = c("Low", "High"),
+      name = legend_title,
+      guide = guide_colorbar(
+        barheight = unit(38, "pt"),
+        barwidth = unit(4, "pt"),
+        ticks = FALSE
+      )
+    ) +
+    scale_x_continuous(
+      limits = c(-x_max, x_max) * 1.05,
+      expand = expansion(mult = c(0.02, 0.02))
+    ) +
+    labs(title = title, x = xlab, y = NULL) +
+    theme_classic(base_size = base_size, base_family = "sans") +
+    theme(
+      axis.line.x = element_line(linewidth = 0.35, color = "black"),
+      axis.line.y = element_blank(),
+      axis.ticks = element_line(linewidth = 0.35, color = "black"),
+      axis.ticks.y = element_blank(),
+      axis.text.x = element_text(size = base_size * 0.9, color = "black"),
+      axis.text.y = element_text(size = base_size * 0.9, color = "black"),
+      axis.title = element_text(size = base_size, color = "black"),
+      legend.position = "right",
+      legend.title = element_text(size = base_size * 0.9),
+      legend.text = element_text(size = base_size * 0.85),
+      plot.margin = margin(4, 4, 4, 4)
+    )
+
+  if (isTRUE(return_data)) {
+    return(list(plot = p, data = plot_data, summary = attr(plot_data, "summary")))
+  }
   p
 }
 
@@ -1770,7 +2062,7 @@ plot_shap_summary <- function(object,
       levels = rev(summary_df$feature)
     )
     
-    p <- ggplot(summary_df, aes(x = feature, y = mean_abs_shap)) +
+    p <- ggplot(summary_df, aes(x = .data$feature, y = .data$mean_abs_shap)) +
       geom_col(fill = "#3182BD", width = 0.7) +
       coord_flip() +
       labs(
@@ -1817,7 +2109,7 @@ plot_shap_summary <- function(object,
       levels = rev(top_features)
     )
     
-    p <- ggplot(plot_data, aes(x = feature, y = shap, color = value_norm)) +
+    p <- ggplot(plot_data, aes(x = .data$feature, y = .data$shap, color = .data$value_norm)) +
       geom_jitter(width = 0.2, alpha = 0.6, size = 1) +
       scale_color_viridis_c(option = "D", name = "Feature Value\n(normalized)") +
       coord_flip() +
@@ -1875,7 +2167,7 @@ plot_shap_dependence <- function(object,
   }
   
   if (is.null(color_feature)) {
-    p <- ggplot(dep_data, aes(x = feature_value, y = shap_value)) +
+    p <- ggplot(dep_data, aes(x = .data$feature_value, y = .data$shap_value)) +
       geom_point(alpha = alpha, color = "#3182BD") +
       geom_hline(yintercept = 0, linetype = "dashed", color = "gray50")
     
@@ -1883,7 +2175,7 @@ plot_shap_dependence <- function(object,
       p <- p + geom_smooth(method = "loess", color = "#E34A33", se = FALSE)
     }
   } else {
-    p <- ggplot(dep_data, aes(x = feature_value, y = shap_value, color = color_value)) +
+    p <- ggplot(dep_data, aes(x = .data$feature_value, y = .data$shap_value, color = .data$color_value)) +
       geom_point(alpha = alpha) +
       geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
       scale_color_viridis_c(name = color_feature)
@@ -2226,7 +2518,7 @@ plot_shap_force <- function(object,
   force_data$feature_label <- paste0(force_data$feature, " = ", force_data$value)
   force_data$feature_label <- factor(force_data$feature_label, levels = force_data$feature_label)
   
-  p <- ggplot(force_data, aes(x = feature_label, y = shap, fill = direction)) +
+  p <- ggplot(force_data, aes(x = .data$feature_label, y = .data$shap, fill = .data$direction)) +
     geom_col(width = 0.7) +
     scale_fill_manual(values = c("Positive" = "#E34A33", "Negative" = "#3182BD")) +
     coord_flip() +

@@ -187,6 +187,71 @@
   model
 }
 
+#' List Supported Machine Learning Models
+#'
+#' @description
+#' Returns the machine-learning algorithms supported by the UKBAnalytica ML
+#' workflow, including eligible outcome types, required R package, and default
+#' tuning parameters.
+#'
+#' @param outcome_type Optional outcome type filter: \code{"all"},
+#'   \code{"binary"}, \code{"multiclass"}, or \code{"continuous"}.
+#'
+#' @return A data.frame describing supported models.
+#'
+#' @examples
+#' ukb_ml_supported_models("binary")
+#'
+#' @export
+ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclass", "continuous")) {
+  outcome_type <- match.arg(outcome_type)
+  out <- data.frame(
+    model = c("logistic", "linear", "rf", "xgboost", "glmnet", "svm", "nnet", "rpart", "naive_bayes"),
+    label = c(
+      "Logistic regression",
+      "Linear regression",
+      "Random forest",
+      "XGBoost",
+      "Regularized regression",
+      "Support vector machine",
+      "Neural network",
+      "Decision tree",
+      "Naive Bayes"
+    ),
+    outcome_types = c(
+      "binary",
+      "continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass,continuous",
+      "binary,multiclass"
+    ),
+    package = c("stats", "stats", "ranger", "xgboost", "glmnet", "e1071", "nnet", "rpart", "e1071"),
+    default_tuning = c(
+      "none",
+      "none",
+      "num.trees, mtry, min.node.size",
+      "nrounds, max_depth, eta",
+      "alpha",
+      "cost, gamma",
+      "size, decay",
+      "cp, maxdepth, minsplit",
+      "laplace"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  if (outcome_type != "all") {
+    keep <- vapply(strsplit(out$outcome_types, ","), function(x) outcome_type %in% x, logical(1))
+    out <- out[keep, , drop = FALSE]
+  }
+  rownames(out) <- NULL
+  out
+}
+
 #' @keywords internal
 .mlw_default_metric <- function(outcome_type) {
   switch(
@@ -1468,6 +1533,1014 @@ ukb_ml_evaluate_test <- function(object,
   result
 }
 
+.mlw_default_xgboost_grid <- function(y,
+                                      positive_class = NULL,
+                                      nthread = max(1L, min(4L, parallel::detectCores(logical = FALSE)))) {
+  classes <- .mlw_outcome_classes(y)
+  if (length(classes) != 2L) {
+    stop("Default XGBoost grid with scale_pos_weight requires a binary outcome.", call. = FALSE)
+  }
+  positive_class <- positive_class %||% classes[[2]]
+  if (!positive_class %in% classes) {
+    stop("`positive_class` must be one of: ", paste(classes, collapse = ", "), call. = FALSE)
+  }
+  y_chr <- as.character(y)
+  pos <- sum(y_chr == positive_class, na.rm = TRUE)
+  neg <- sum(!is.na(y_chr) & y_chr != positive_class)
+  scale_pos_weight <- if (pos > 0L) neg / pos else 1
+
+  expand.grid(
+    nrounds = c(100, 200),
+    max_depth = c(2, 3),
+    eta = c(0.03, 0.10),
+    subsample = 0.80,
+    colsample_bytree = c(0.60, 0.80),
+    min_child_weight = 1,
+    gamma = 0,
+    lambda = 1,
+    alpha = 0,
+    scale_pos_weight = scale_pos_weight,
+    nthread = nthread,
+    stringsAsFactors = FALSE
+  )
+}
+
+.mlw_feature_set_grid <- function(param_grid, model_id) {
+  if (is.null(param_grid)) {
+    return(NULL)
+  }
+  if (!is.data.frame(param_grid) && is.list(param_grid) && model_id %in% names(param_grid)) {
+    return(param_grid[[model_id]])
+  }
+  param_grid
+}
+
+#' Run a Complete Single-Model UKB ML Flow
+#'
+#' @description
+#' High-level single-model interface for common UK Biobank machine-learning
+#' analyses. The function can create or consume a frozen train/test split, tune
+#' model hyperparameters, learn a binary threshold, fit the final model, evaluate
+#' the frozen test set, prepare ROC data, and optionally compute SHAP values.
+#'
+#' @param formula Model formula. Required unless both \code{outcome} and
+#'   \code{features} are supplied.
+#' @param data Optional full dataset. Used to create a split when \code{split} is
+#'   \code{NULL} and \code{train_data}/\code{test_data} are not supplied.
+#' @param split Optional \code{ukb_ml_split} object.
+#' @param train_data,test_data,validation_data Optional pre-split datasets used
+#'   when \code{split} is \code{NULL}.
+#' @param id_col Optional participant ID column for overlap checks and output
+#'   predictions.
+#' @param outcome Optional outcome column. Defaults to the response in
+#'   \code{formula} or \code{split$outcome}.
+#' @param features Optional feature names. Used when \code{formula} is
+#'   \code{NULL}.
+#' @param model Model type passed to \code{\link{ukb_ml_tune}} and
+#'   \code{\link{ukb_ml_fit_final}}.
+#' @param model_id,model_label Optional model identifier and display label.
+#' @param outcome_type Outcome type.
+#' @param split_params List passed to \code{\link{ukb_ml_split_data}} when
+#'   splitting a full \code{data} object.
+#' @param param_grid Optional hyperparameter grid.
+#' @param tune Logical. Run hyperparameter tuning.
+#' @param tune_params Additional arguments passed to \code{\link{ukb_ml_tune}}.
+#' @param best_params Optional final model parameters when \code{tune = FALSE}.
+#' @param threshold_method \code{"none"}, \code{"fixed"}, or \code{"youden"}.
+#' @param threshold_params Additional arguments passed to
+#'   \code{\link{ukb_ml_threshold}}.
+#' @param metrics Optional metric names passed to \code{\link{ukb_ml_evaluate_test}}.
+#' @param positive_class Optional positive class label for binary outcomes.
+#' @param use_validation_in_refit Logical passed to \code{\link{ukb_ml_fit_final}}.
+#' @param compute_shap Logical. Compute SHAP values for the final model.
+#' @param shap_data Optional data used for SHAP. Defaults to the frozen test set.
+#' @param shap_params Additional arguments passed to \code{\link{ukb_shap}}.
+#' @param seed Optional random seed.
+#' @param verbose Logical.
+#'
+#' @return A \code{ukb_ml_flow} object with standardized components:
+#'   \code{split}, \code{formula}, \code{features}, \code{tune},
+#'   \code{threshold}, \code{final_model}, \code{test_eval},
+#'   \code{metrics}, \code{predictions}, \code{roc}, and optional \code{shap}.
+#'
+#' @examples
+#' \dontrun{
+#' flow <- ukb_ml_flow(
+#'   copd ~ age + bmi + protein_1 + protein_2,
+#'   train_data = train,
+#'   test_data = validation,
+#'   id_col = "eid",
+#'   model = "xgboost",
+#'   threshold_method = "youden"
+#' )
+#' plot(flow, type = "roc")
+#' }
+#'
+#' @export
+ukb_ml_flow <- function(formula = NULL,
+                        data = NULL,
+                        split = NULL,
+                        train_data = NULL,
+                        test_data = NULL,
+                        validation_data = NULL,
+                        id_col = NULL,
+                        outcome = NULL,
+                        features = NULL,
+                        model = "xgboost",
+                        model_id = "model",
+                        model_label = NULL,
+                        outcome_type = c("auto", "binary", "multiclass", "continuous"),
+                        split_params = list(),
+                        param_grid = NULL,
+                        tune = TRUE,
+                        tune_params = list(),
+                        best_params = NULL,
+                        threshold_method = c("none", "fixed", "youden"),
+                        threshold_params = list(),
+                        metrics = NULL,
+                        positive_class = NULL,
+                        use_validation_in_refit = FALSE,
+                        compute_shap = FALSE,
+                        shap_data = NULL,
+                        shap_params = list(),
+                        seed = NULL,
+                        verbose = TRUE) {
+  outcome_type_arg <- match.arg(outcome_type)
+  threshold_method <- match.arg(threshold_method)
+  model_label <- model_label %||% model_id
+
+  if (!is.null(formula)) {
+    if (!inherits(formula, "formula")) {
+      stop("`formula` must be a model formula.", call. = FALSE)
+    }
+    response <- all.vars(formula)[1]
+    outcome <- outcome %||% response
+  } else {
+    if (is.null(outcome) || is.null(features)) {
+      stop("Supply `formula`, or supply both `outcome` and `features`.", call. = FALSE)
+    }
+    formula <- .mlw_formula_from_features(outcome, features)
+  }
+
+  if (is.null(split)) {
+    if (!is.null(train_data) || !is.null(test_data)) {
+      if (is.null(train_data) || is.null(test_data)) {
+        stop("Both `train_data` and `test_data` are required when using pre-split data.", call. = FALSE)
+      }
+      split <- ukb_ml_as_split(
+        train_data = train_data,
+        test_data = test_data,
+        validation_data = validation_data,
+        id_col = id_col,
+        check_overlap = !is.null(id_col),
+        outcome = outcome,
+        outcome_type = outcome_type_arg
+      )
+    } else if (!is.null(data)) {
+      split_call <- utils::modifyList(
+        list(
+          df = data,
+          outcome = outcome,
+          outcome_type = outcome_type_arg,
+          seed = seed,
+          verbose = verbose
+        ),
+        split_params
+      )
+      split <- do.call(ukb_ml_split_data, split_call)
+    } else {
+      stop("Supply `split`, `train_data` + `test_data`, or full `data`.", call. = FALSE)
+    }
+  } else if (!inherits(split, "ukb_ml_split")) {
+    stop("`split` must be a ukb_ml_split object.", call. = FALSE)
+  }
+
+  outcome <- outcome %||% split$outcome
+  if (is.null(outcome)) {
+    stop("Could not determine outcome. Supply `outcome` or use a split with `split$outcome`.", call. = FALSE)
+  }
+  outcome_type_final <- if (outcome_type_arg == "auto") {
+    split$outcome_type %||% .mlw_resolve_outcome_type(split$train[[outcome]], "auto")
+  } else {
+    outcome_type_arg
+  }
+
+  parsed <- .mlw_parse_formula(formula, split$train)
+  features <- parsed$predictors
+  available_features <- intersect(features, intersect(names(split$train), names(split$test)))
+  if (length(available_features) != length(features)) {
+    missing_features <- setdiff(features, available_features)
+    stop("Feature column(s) missing from train/test split: ", paste(missing_features, collapse = ", "), call. = FALSE)
+  }
+
+  positive_class <- if (outcome_type_final == "binary") {
+    classes <- .mlw_outcome_classes(split$train[[outcome]])
+    as.character(positive_class %||% classes[[2]])
+  } else {
+    NULL
+  }
+  if (outcome_type_final != "binary" && threshold_method != "none") {
+    stop("Threshold learning is only available for binary outcomes.", call. = FALSE)
+  }
+
+  grid <- param_grid
+  if (is.null(grid) && identical(model, "xgboost") && outcome_type_final == "binary") {
+    grid <- .mlw_default_xgboost_grid(split$train[[outcome]], positive_class = positive_class)
+  }
+
+  tune_res <- NULL
+  if (isTRUE(tune)) {
+    tune_call <- utils::modifyList(
+      list(
+        split = split,
+        formula = formula,
+        model = model,
+        outcome_type = outcome_type_final,
+        search = "grid",
+        param_grid = grid,
+        resampling = "cv",
+        folds = 10,
+        metric = if (outcome_type_final == "continuous") "rmse" else "auc",
+        maximize = if (outcome_type_final == "continuous") FALSE else TRUE,
+        seed = seed,
+        verbose = verbose
+      ),
+      tune_params
+    )
+    tune_res <- do.call(ukb_ml_tune, tune_call)
+    best_params <- tune_res$best_params
+  } else {
+    best_params <- best_params %||% list()
+  }
+
+  threshold_res <- NULL
+  if (outcome_type_final == "binary" && threshold_method != "none") {
+    threshold_source <- NULL
+    if (!is.null(tune_res) && !is.null(tune_res$oof)) {
+      threshold_truth <- tune_res$oof$truth
+      threshold_prob <- as.numeric(tune_res$oof$prediction)
+      threshold_source <- "training_oof"
+    } else {
+      temp_fit <- ukb_ml_fit_final(
+        split = split,
+        formula = formula,
+        model = model,
+        best_params = best_params,
+        outcome_type = outcome_type_final,
+        use_validation_in_refit = FALSE,
+        seed = seed,
+        verbose = FALSE
+      )
+      if (!is.null(split$validation)) {
+        threshold_truth <- split$validation[[outcome]]
+        threshold_prob <- as.numeric(.ukb_ml_predict_core(temp_fit, split$validation, type = "prob"))
+        threshold_source <- "validation"
+      } else {
+        threshold_truth <- split$train[[outcome]]
+        threshold_prob <- as.numeric(.ukb_ml_predict_core(temp_fit, split$train, type = "prob"))
+        threshold_source <- "train"
+      }
+    }
+    threshold_call <- utils::modifyList(
+      list(
+        truth = threshold_truth,
+        prob = threshold_prob,
+        method = threshold_method,
+        positive_class = positive_class
+      ),
+      threshold_params
+    )
+    threshold_res <- do.call(ukb_ml_threshold, threshold_call)
+    threshold_res$source <- threshold_source
+  }
+
+  final_model <- ukb_ml_fit_final(
+    split = split,
+    formula = formula,
+    model = model,
+    best_params = best_params,
+    outcome_type = outcome_type_final,
+    threshold = threshold_res,
+    use_validation_in_refit = use_validation_in_refit,
+    seed = seed,
+    verbose = verbose
+  )
+
+  test_eval <- ukb_ml_evaluate_test(
+    object = final_model,
+    split = split,
+    metrics = metrics,
+    threshold = if (!is.null(threshold_res)) threshold_res$threshold else NULL,
+    positive_class = positive_class,
+    verbose = verbose
+  )
+
+  predictions <- test_eval$predictions
+  predictions$model_id <- model_id
+  predictions$model_label <- model_label
+  if (!is.null(split$id_col) && split$id_col %in% names(split$test)) {
+    predictions[[split$id_col]] <- split$test[[split$id_col]]
+  }
+  first_cols <- c("model_id", "model_label", split$id_col)
+  predictions <- predictions[, c(intersect(first_cols, names(predictions)), setdiff(names(predictions), first_cols)), drop = FALSE]
+
+  metrics_df <- data.frame(
+    model_id = model_id,
+    model_label = model_label,
+    metric = names(test_eval$metrics),
+    value = as.numeric(test_eval$metrics),
+    stringsAsFactors = FALSE
+  )
+  if (!is.null(threshold_res)) {
+    metrics_df <- rbind(
+      metrics_df,
+      data.frame(
+        model_id = model_id,
+        model_label = model_label,
+        metric = paste0("threshold_", threshold_res$method),
+        value = threshold_res$threshold,
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+
+  roc_df <- NULL
+  if (outcome_type_final == "binary" && "prob" %in% names(predictions)) {
+    roc_df <- ukb_ml_roc_data(
+      truth = predictions$truth,
+      prob = predictions$prob,
+      model_id = model_id,
+      model_label = model_label,
+      positive_class = positive_class
+    )
+  }
+
+  shap_res <- NULL
+  if (isTRUE(compute_shap)) {
+    shap_data <- shap_data %||% split$test
+    shap_call <- utils::modifyList(
+      list(
+        object = final_model,
+        data = shap_data,
+        seed = seed,
+        verbose = verbose
+      ),
+      shap_params
+    )
+    shap_res <- do.call(ukb_shap, shap_call)
+  }
+
+  out <- list(
+    split = split,
+    formula = formula,
+    outcome = outcome,
+    features = features,
+    model_id = model_id,
+    model_label = model_label,
+    model = model,
+    outcome_type = outcome_type_final,
+    tune = tune_res,
+    threshold = threshold_res,
+    final_model = final_model,
+    test_eval = test_eval,
+    metrics = metrics_df,
+    predictions = predictions,
+    roc = roc_df,
+    shap = shap_res,
+    call = match.call()
+  )
+  class(out) <- "ukb_ml_flow"
+  out
+}
+
+#' Plot a UKB ML Flow Object
+#'
+#' @param x A \code{ukb_ml_flow} object.
+#' @param type Plot type: \code{"roc"} or \code{"shap_beeswarm"}.
+#' @param ... Additional arguments passed to the underlying plot function.
+#'
+#' @return A ggplot2 object.
+#'
+#' @export
+plot.ukb_ml_flow <- function(x, type = c("roc", "shap_beeswarm"), ...) {
+  type <- match.arg(type)
+  if (!inherits(x, "ukb_ml_flow")) {
+    stop("`x` must be a ukb_ml_flow object.", call. = FALSE)
+  }
+  if (type == "roc") {
+    if (is.null(x$roc)) {
+      stop("This flow object does not contain ROC data.", call. = FALSE)
+    }
+    return(plot_ml_roc_compare(x$roc, ...))
+  }
+  if (is.null(x$shap)) {
+    stop("This flow object does not contain SHAP values. Run ukb_ml_flow(..., compute_shap = TRUE).", call. = FALSE)
+  }
+  plot_shap_beeswarm(x$shap, ...)
+}
+
+.mlw_named_arg <- function(x, primary, secondary = NULL, default = NULL) {
+  if (is.null(x)) {
+    return(default)
+  }
+  if (!is.null(names(x))) {
+    if (!is.null(primary) && primary %in% names(x)) {
+      return(x[[primary]])
+    }
+    if (!is.null(secondary) && secondary %in% names(x)) {
+      return(x[[secondary]])
+    }
+  }
+  x
+}
+
+.mlw_select_compare_arg <- function(x, combo_id, model, feature_set_id) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (is.data.frame(x)) {
+    return(x)
+  }
+  if (is.list(x) && !is.null(names(x))) {
+    if (combo_id %in% names(x)) return(x[[combo_id]])
+    if (model %in% names(x)) return(x[[model]])
+    if (feature_set_id %in% names(x)) return(x[[feature_set_id]])
+  }
+  x
+}
+
+#' Compare Multiple Feature Sets and/or Models
+#'
+#' @description
+#' Batch-runs \code{\link{ukb_ml_flow}} across feature-set and model
+#' combinations. The same frozen train/test split is reused for every
+#' combination, making the output suitable for comparing different feature
+#' groups, different machine-learning algorithms, or the full
+#' feature-set-by-model grid.
+#'
+#' @param formula Optional base formula. The response is used as the outcome.
+#'   Predictors are used as the default feature set when \code{feature_sets} is
+#'   \code{NULL}.
+#' @param data,split,train_data,test_data,validation_data,id_col Passed to
+#'   \code{\link{ukb_ml_flow}}.
+#' @param outcome Optional outcome column. Required when \code{formula} is
+#'   \code{NULL}.
+#' @param feature_sets Optional named list of feature vectors. If \code{NULL},
+#'   one feature set is derived from \code{formula} or \code{features}.
+#' @param features Optional feature names used when \code{formula} and
+#'   \code{feature_sets} are \code{NULL}.
+#' @param models Character vector of models supported by
+#'   \code{\link{ukb_ml_supported_models}}.
+#' @param compare Comparison mode: \code{"auto"}, \code{"feature_sets"},
+#'   \code{"models"}, or \code{"both"}. In \code{"auto"} mode, all supplied
+#'   feature-set and model combinations are evaluated.
+#' @param outcome_type Outcome type passed to \code{\link{ukb_ml_flow}}.
+#' @param feature_set_labels Optional labels for feature sets.
+#' @param model_labels Optional labels for models.
+#' @param param_grid Optional hyperparameter grid. Can be a single grid shared
+#'   by all combinations, a named list keyed by model, feature set, or
+#'   \code{"feature_set__model"}.
+#' @param tune_params Optional list passed to \code{\link{ukb_ml_tune}}. Can also
+#'   be keyed by model, feature set, or combination.
+#' @param threshold_params Optional list passed to \code{\link{ukb_ml_threshold}}.
+#'   Can also be keyed by model, feature set, or combination.
+#' @param ... Additional arguments passed to \code{\link{ukb_ml_flow}}, including
+#'   \code{outcome_type}, \code{split_params}, \code{threshold_method},
+#'   \code{metrics}, \code{positive_class}, \code{use_validation_in_refit},
+#'   \code{compute_shap}, \code{shap_params}, \code{seed}, and \code{verbose}.
+#'
+#' @return A \code{ukb_ml_flow_compare} object containing \code{flows},
+#'   \code{metrics}, \code{comparison}, \code{predictions}, \code{roc}, and
+#'   \code{thresholds}.
+#'
+#' @examples
+#' \dontrun{
+#' cmp <- ukb_ml_compare_flows(
+#'   split = split,
+#'   outcome = "copd",
+#'   feature_sets = list(
+#'     clinical = c("age", "sex", "bmi"),
+#'     combined = c("age", "sex", "bmi", protein_vars)
+#'   ),
+#'   models = c("logistic", "xgboost"),
+#'   compare = "both"
+#' )
+#' plot(cmp)
+#' }
+#'
+#' @export
+ukb_ml_compare_flows <- function(formula = NULL,
+                                 data = NULL,
+                                 split = NULL,
+                                 train_data = NULL,
+                                 test_data = NULL,
+                                 validation_data = NULL,
+                                 id_col = NULL,
+                                 outcome = NULL,
+                                 feature_sets = NULL,
+                                 features = NULL,
+                                 models = "xgboost",
+                                 compare = c("auto", "feature_sets", "models", "both"),
+                                 outcome_type = c("auto", "binary", "multiclass", "continuous"),
+                                 feature_set_labels = NULL,
+                                 model_labels = NULL,
+                                 param_grid = NULL,
+                                 tune_params = list(),
+                                 threshold_params = list(),
+                                 ...) {
+  compare <- match.arg(compare)
+  if (!is.character(models) || length(models) == 0L || anyNA(models)) {
+    stop("`models` must be a non-empty character vector.", call. = FALSE)
+  }
+  outcome_type_arg <- match.arg(outcome_type)
+
+  if (is.null(outcome) && !is.null(formula)) {
+    ref_data <- split$train %||% train_data %||% data
+    if (!is.null(ref_data)) {
+      parsed_formula <- .mlw_parse_formula(formula, ref_data)
+      outcome <- parsed_formula$response
+    }
+  }
+  if (is.null(outcome) && !is.null(split)) {
+    outcome <- split$outcome
+  }
+
+  outcome_type_for_model_check <- outcome_type_arg
+  if (outcome_type_for_model_check == "auto") {
+    y_ref <- NULL
+    if (!is.null(split) && !is.null(outcome) && outcome %in% names(split$train)) {
+      y_ref <- split$train[[outcome]]
+    } else if (!is.null(train_data) && !is.null(outcome) && outcome %in% names(train_data)) {
+      y_ref <- train_data[[outcome]]
+    } else if (!is.null(data) && !is.null(outcome) && outcome %in% names(data)) {
+      y_ref <- data[[outcome]]
+    }
+    outcome_type_for_model_check <- if (!is.null(y_ref)) .mlw_resolve_outcome_type(y_ref, "auto") else "binary"
+  }
+  models <- vapply(models, .mlw_check_model, character(1), outcome_type = outcome_type_for_model_check)
+
+  if (is.null(feature_sets)) {
+    if (!is.null(formula)) {
+      ref_data <- split$train %||% train_data %||% data
+      if (is.null(ref_data)) {
+        stop("A data source is required to parse `formula` when `feature_sets` is NULL.", call. = FALSE)
+      }
+      parsed <- .mlw_parse_formula(formula, ref_data)
+      outcome <- outcome %||% parsed$response
+      feature_sets <- list(features = parsed$predictors)
+    } else {
+      if (is.null(outcome) || is.null(features)) {
+        stop("Supply `feature_sets`, or supply `formula`, or supply both `outcome` and `features`.", call. = FALSE)
+      }
+      feature_sets <- list(features = features)
+    }
+  }
+  if (!is.list(feature_sets) || length(feature_sets) == 0L) {
+    stop("`feature_sets` must be a non-empty named list.", call. = FALSE)
+  }
+  if (is.null(names(feature_sets)) || any(!nzchar(names(feature_sets)))) {
+    names(feature_sets) <- paste0("feature_set_", seq_along(feature_sets))
+  }
+
+  if (compare == "feature_sets" && length(models) != 1L) {
+    stop("compare = 'feature_sets' requires exactly one model.", call. = FALSE)
+  }
+  if (compare == "models" && length(feature_sets) != 1L) {
+    stop("compare = 'models' requires exactly one feature set.", call. = FALSE)
+  }
+
+  if (is.null(feature_set_labels)) {
+    feature_set_labels <- stats::setNames(names(feature_sets), names(feature_sets))
+  } else if (is.null(names(feature_set_labels))) {
+    feature_set_labels <- stats::setNames(as.character(feature_set_labels), names(feature_sets))
+  }
+  if (is.null(model_labels)) {
+    model_meta <- ukb_ml_supported_models()
+    model_labels <- stats::setNames(model_meta$label, model_meta$model)
+  } else if (is.null(names(model_labels))) {
+    model_labels <- stats::setNames(as.character(model_labels), models)
+  }
+
+  flows <- list()
+  for (feature_set_id in names(feature_sets)) {
+    feature_set_label <- unname(feature_set_labels[[feature_set_id]] %||% feature_set_id)
+    for (model in models) {
+      combo_id <- paste(feature_set_id, model, sep = "__")
+      model_label <- unname(model_labels[[model]] %||% model)
+      combo_label <- if (length(feature_sets) > 1L && length(models) > 1L) {
+        paste(feature_set_label, model_label, sep = " - ")
+      } else if (length(feature_sets) > 1L) {
+        feature_set_label
+      } else {
+        model_label
+      }
+
+      flow <- ukb_ml_flow(
+        formula = .mlw_formula_from_features(outcome, feature_sets[[feature_set_id]]),
+        data = data,
+        split = split,
+        train_data = train_data,
+        test_data = test_data,
+        validation_data = validation_data,
+        id_col = id_col,
+        outcome = outcome,
+        model = model,
+        model_id = combo_id,
+        model_label = combo_label,
+        outcome_type = outcome_type_arg,
+        param_grid = .mlw_select_compare_arg(param_grid, combo_id, model, feature_set_id),
+        tune_params = .mlw_select_compare_arg(tune_params, combo_id, model, feature_set_id) %||% list(),
+        threshold_params = .mlw_select_compare_arg(threshold_params, combo_id, model, feature_set_id) %||% list(),
+        ...
+      )
+      flow$feature_set_id <- feature_set_id
+      flow$feature_set_label <- feature_set_label
+      flows[[combo_id]] <- flow
+    }
+  }
+
+  add_meta <- function(df, flow) {
+    if (is.null(df)) {
+      return(NULL)
+    }
+    df$feature_set_id <- flow$feature_set_id
+    df$feature_set_label <- flow$feature_set_label
+    df$model <- flow$model
+    df
+  }
+
+  metrics_all <- do.call(rbind, lapply(flows, function(x) add_meta(x$metrics, x)))
+  predictions_all <- do.call(rbind, lapply(flows, function(x) add_meta(x$predictions, x)))
+  roc_all <- do.call(rbind, lapply(flows, function(x) add_meta(x$roc, x)))
+
+  thresholds_all <- do.call(rbind, lapply(flows, function(x) {
+    if (is.null(x$threshold)) {
+      return(NULL)
+    }
+    out <- data.frame(
+      model_id = x$model_id,
+      model_label = x$model_label,
+      feature_set_id = x$feature_set_id,
+      feature_set_label = x$feature_set_label,
+      model = x$model,
+      method = x$threshold$method,
+      source = x$threshold$source,
+      threshold = x$threshold$threshold,
+      sensitivity = x$threshold$sensitivity,
+      specificity = x$threshold$specificity,
+      positive_class = x$threshold$positive_class,
+      stringsAsFactors = FALSE
+    )
+    out
+  }))
+
+  comparison <- stats::reshape(
+    metrics_all,
+    idvar = c("model_id", "model_label", "feature_set_id", "feature_set_label", "model"),
+    timevar = "metric",
+    direction = "wide"
+  )
+  names(comparison) <- sub("^value\\.", "", names(comparison))
+  if ("auc" %in% names(comparison)) {
+    comparison <- comparison[order(comparison$auc, decreasing = TRUE), , drop = FALSE]
+  }
+  rownames(comparison) <- NULL
+
+  out <- list(
+    flows = flows,
+    metrics = metrics_all,
+    comparison = comparison,
+    predictions = predictions_all,
+    roc = roc_all,
+    thresholds = thresholds_all,
+    design = expand.grid(
+      feature_set_id = names(feature_sets),
+      model = models,
+      stringsAsFactors = FALSE
+    ),
+    call = match.call()
+  )
+  class(out) <- "ukb_ml_flow_compare"
+  out
+}
+
+#' Plot a UKB ML Flow Comparison Object
+#'
+#' @param x A \code{ukb_ml_flow_compare} object.
+#' @param type Plot type. Currently \code{"roc"}.
+#' @param ... Additional arguments passed to \code{\link{plot_ml_roc_compare}}.
+#'
+#' @return A ggplot2 object.
+#'
+#' @export
+plot.ukb_ml_flow_compare <- function(x, type = c("roc"), ...) {
+  type <- match.arg(type)
+  if (!inherits(x, "ukb_ml_flow_compare")) {
+    stop("`x` must be a ukb_ml_flow_compare object.", call. = FALSE)
+  }
+  if (type == "roc") {
+    if (is.null(x$roc)) {
+      stop("This comparison object does not contain ROC data.", call. = FALSE)
+    }
+    return(plot_ml_roc_compare(x$roc, ...))
+  }
+}
+
+#' Compare Multiple Feature Sets with a Frozen-Test ML Workflow
+#'
+#' @description
+#' Runs the same machine-learning workflow across multiple feature sets using a
+#' shared \code{ukb_ml_split}. For binary outcomes, the function can tune models
+#' by cross-validation, learn a threshold on training-development predictions,
+#' refit the final model, evaluate the frozen test set, and return unified
+#' metrics, prediction, threshold, and ROC tables.
+#'
+#' @param split A \code{ukb_ml_split} object.
+#' @param feature_sets Named list of character vectors. Each vector contains the
+#'   feature names used by one model.
+#' @param outcome Optional outcome column. Defaults to \code{split$outcome}.
+#' @param model Model type passed to \code{\link{ukb_ml_tune}} and
+#'   \code{\link{ukb_ml_fit_final}}.
+#' @param outcome_type Outcome type. Currently this helper is intended for
+#'   binary classification.
+#' @param model_labels Optional labels for feature sets. Can be a named vector or
+#'   a vector in the same order as \code{feature_sets}.
+#' @param param_grid Optional parameter grid. Can be a single grid shared by all
+#'   models or a named list keyed by feature-set name.
+#' @param tune_params Additional arguments passed to \code{\link{ukb_ml_tune}}.
+#' @param threshold_method \code{"none"}, \code{"fixed"}, or \code{"youden"}.
+#' @param threshold_params Additional arguments passed to
+#'   \code{\link{ukb_ml_threshold}}.
+#' @param metrics Optional metric names passed to \code{\link{ukb_ml_evaluate_test}}.
+#' @param positive_class Optional positive class label for binary outcomes.
+#' @param use_validation_in_refit Logical passed to \code{\link{ukb_ml_fit_final}}.
+#' @param seed Optional random seed.
+#' @param verbose Logical.
+#'
+#' @return A \code{ukb_ml_feature_set_compare} object containing per-feature-set
+#'   models and unified result tables.
+#'
+#' @examples
+#' \dontrun{
+#' res <- ukb_ml_compare_feature_sets(
+#'   split = split,
+#'   feature_sets = list(
+#'     proteins = protein_vars,
+#'     clinical = covariates,
+#'     combined = c(protein_vars, covariates)
+#'   ),
+#'   model = "xgboost",
+#'   threshold_method = "youden"
+#' )
+#' plot_ml_roc_compare(res$roc)
+#' }
+#'
+#' @export
+ukb_ml_compare_feature_sets <- function(split,
+                                        feature_sets,
+                                        outcome = NULL,
+                                        model = "xgboost",
+                                        outcome_type = c("auto", "binary"),
+                                        model_labels = NULL,
+                                        param_grid = NULL,
+                                        tune_params = list(),
+                                        threshold_method = c("none", "fixed", "youden"),
+                                        threshold_params = list(),
+                                        metrics = c("auc", "accuracy", "sensitivity", "specificity", "ppv", "npv", "f1", "brier"),
+                                        positive_class = NULL,
+                                        use_validation_in_refit = FALSE,
+                                        seed = NULL,
+                                        verbose = TRUE) {
+  if (!inherits(split, "ukb_ml_split")) {
+    stop("`split` must be a ukb_ml_split object.", call. = FALSE)
+  }
+  if (!is.list(feature_sets) || length(feature_sets) == 0L) {
+    stop("`feature_sets` must be a non-empty named list.", call. = FALSE)
+  }
+  if (is.null(names(feature_sets)) || any(!nzchar(names(feature_sets)))) {
+    names(feature_sets) <- paste0("model_", seq_along(feature_sets))
+  }
+
+  outcome <- outcome %||% split$outcome
+  if (is.null(outcome) || !outcome %in% names(split$train)) {
+    stop("`outcome` must be supplied or stored in `split$outcome`.", call. = FALSE)
+  }
+  outcome_type <- match.arg(outcome_type)
+  outcome_type <- if (outcome_type == "auto") split$outcome_type %||% .mlw_resolve_outcome_type(split$train[[outcome]], "auto") else outcome_type
+  if (!identical(outcome_type, "binary")) {
+    stop("ukb_ml_compare_feature_sets() currently supports binary outcomes.", call. = FALSE)
+  }
+
+  classes <- .mlw_outcome_classes(split$train[[outcome]])
+  positive_class <- positive_class %||% classes[[2]]
+  threshold_method <- match.arg(threshold_method)
+
+  if (is.null(model_labels)) {
+    model_labels <- names(feature_sets)
+  } else if (is.null(names(model_labels))) {
+    model_labels <- stats::setNames(as.character(model_labels), names(feature_sets))
+  }
+
+  model_results <- vector("list", length(feature_sets))
+  names(model_results) <- names(feature_sets)
+
+  for (model_id in names(feature_sets)) {
+    model_label <- unname(model_labels[[model_id]] %||% model_id)
+    features <- unique(as.character(feature_sets[[model_id]]))
+    features <- intersect(features, intersect(names(split$train), names(split$test)))
+    if (length(features) == 0L) {
+      stop("No available features for feature set: ", model_id, call. = FALSE)
+    }
+    if (isTRUE(verbose)) {
+      message(sprintf("[ukb_ml_compare_feature_sets] %s: %d feature(s)", model_label, length(features)))
+    }
+
+    ml_formula <- .mlw_formula_from_features(outcome, features)
+    grid_i <- .mlw_feature_set_grid(param_grid, model_id)
+    if (is.null(grid_i) && identical(model, "xgboost")) {
+      grid_i <- .mlw_default_xgboost_grid(split$train[[outcome]], positive_class = positive_class)
+    }
+
+    tune_call <- utils::modifyList(
+      list(
+        split = split,
+        formula = ml_formula,
+        model = model,
+        outcome_type = outcome_type,
+        search = "grid",
+        param_grid = grid_i,
+        resampling = "cv",
+        folds = 10,
+        metric = "auc",
+        maximize = TRUE,
+        seed = seed,
+        verbose = verbose
+      ),
+      tune_params
+    )
+    tune_res <- do.call(ukb_ml_tune, tune_call)
+
+    threshold_res <- NULL
+    if (threshold_method != "none") {
+      threshold_source <- NULL
+      if (!is.null(tune_res$oof)) {
+        threshold_truth <- tune_res$oof$truth
+        threshold_prob <- as.numeric(tune_res$oof$prediction)
+        threshold_source <- "training_oof"
+      } else {
+        temp_fit <- ukb_ml_fit_final(
+          split = split,
+          formula = ml_formula,
+          model = model,
+          best_params = tune_res$best_params,
+          outcome_type = outcome_type,
+          use_validation_in_refit = FALSE,
+          seed = seed,
+          verbose = FALSE
+        )
+        if (!is.null(split$validation)) {
+          threshold_truth <- split$validation[[outcome]]
+          threshold_prob <- as.numeric(.ukb_ml_predict_core(temp_fit, split$validation, type = "prob"))
+          threshold_source <- "validation"
+        } else {
+          threshold_truth <- split$train[[outcome]]
+          threshold_prob <- as.numeric(.ukb_ml_predict_core(temp_fit, split$train, type = "prob"))
+          threshold_source <- "train"
+        }
+      }
+      threshold_call <- utils::modifyList(
+        list(
+          truth = threshold_truth,
+          prob = threshold_prob,
+          method = threshold_method,
+          positive_class = positive_class
+        ),
+        threshold_params
+      )
+      threshold_res <- do.call(ukb_ml_threshold, threshold_call)
+      threshold_res$source <- threshold_source
+    }
+
+    final_model <- ukb_ml_fit_final(
+      split = split,
+      formula = ml_formula,
+      model = model,
+      best_params = tune_res$best_params,
+      outcome_type = outcome_type,
+      threshold = threshold_res,
+      use_validation_in_refit = use_validation_in_refit,
+      seed = seed,
+      verbose = verbose
+    )
+
+    eval_res <- ukb_ml_evaluate_test(
+      object = final_model,
+      split = split,
+      metrics = metrics,
+      threshold = if (!is.null(threshold_res)) threshold_res$threshold else NULL,
+      positive_class = positive_class,
+      verbose = verbose
+    )
+
+    pred <- eval_res$predictions
+    pred$model_id <- model_id
+    pred$model_label <- model_label
+    if (!is.null(split$id_col) && split$id_col %in% names(split$test)) {
+      pred[[split$id_col]] <- split$test[[split$id_col]]
+    }
+    first_cols <- c("model_id", "model_label", split$id_col)
+    pred <- pred[, c(intersect(first_cols, names(pred)), setdiff(names(pred), first_cols)), drop = FALSE]
+
+    metrics_df <- data.frame(
+      model_id = model_id,
+      model_label = model_label,
+      metric = names(eval_res$metrics),
+      value = as.numeric(eval_res$metrics),
+      stringsAsFactors = FALSE
+    )
+    if (!is.null(threshold_res)) {
+      metrics_df <- rbind(
+        metrics_df,
+        data.frame(
+          model_id = model_id,
+          model_label = model_label,
+          metric = paste0("threshold_", threshold_res$method),
+          value = threshold_res$threshold,
+          stringsAsFactors = FALSE
+        )
+      )
+    }
+
+    roc_df <- ukb_ml_roc_data(
+      truth = pred$truth,
+      prob = pred$prob,
+      model_id = model_id,
+      model_label = model_label,
+      positive_class = positive_class
+    )
+
+    threshold_df <- if (!is.null(threshold_res)) {
+      data.frame(
+        model_id = model_id,
+        model_label = model_label,
+        method = threshold_res$method,
+        source = threshold_res$source,
+        threshold = threshold_res$threshold,
+        sensitivity = threshold_res$sensitivity,
+        specificity = threshold_res$specificity,
+        positive_class = threshold_res$positive_class,
+        stringsAsFactors = FALSE
+      )
+    } else {
+      NULL
+    }
+
+    model_results[[model_id]] <- list(
+      model_id = model_id,
+      model_label = model_label,
+      features = features,
+      formula = ml_formula,
+      tune = tune_res,
+      threshold = threshold_res,
+      final_model = final_model,
+      test_eval = eval_res,
+      predictions = pred,
+      metrics = metrics_df,
+      roc = roc_df,
+      threshold_table = threshold_df
+    )
+  }
+
+  metrics_all <- do.call(rbind, lapply(model_results, `[[`, "metrics"))
+  predictions_all <- do.call(rbind, lapply(model_results, `[[`, "predictions"))
+  roc_all <- do.call(rbind, lapply(model_results, `[[`, "roc"))
+  threshold_all <- do.call(rbind, lapply(model_results, `[[`, "threshold_table"))
+
+  comparison <- stats::reshape(
+    metrics_all,
+    idvar = c("model_id", "model_label"),
+    timevar = "metric",
+    direction = "wide"
+  )
+  names(comparison) <- sub("^value\\.", "", names(comparison))
+  if ("auc" %in% names(comparison)) {
+    comparison <- comparison[order(comparison$auc, decreasing = TRUE), , drop = FALSE]
+  }
+  rownames(comparison) <- NULL
+
+  out <- list(
+    models = model_results,
+    metrics = metrics_all,
+    comparison = comparison,
+    predictions = predictions_all,
+    roc = roc_all,
+    thresholds = threshold_all,
+    call = match.call()
+  )
+  class(out) <- "ukb_ml_feature_set_compare"
+  out
+}
+
 #' Run a Frozen-Test UKB ML Workflow
 #'
 #' @description
@@ -1650,6 +2723,29 @@ print.ukb_ml_split <- function(x, ...) {
   cat(sprintf("Test: %d\n", nrow(x$test)))
   cat(sprintf("Outcome: %s\n", x$outcome %||% "<unspecified>"))
   cat(sprintf("Outcome type: %s\n", x$outcome_type %||% "<unspecified>"))
+  invisible(x)
+}
+
+#' @export
+print.ukb_ml_flow <- function(x, ...) {
+  cat("\nUKB ML Flow\n")
+  cat(sprintf("Model: %s\n", x$model %||% "<unspecified>"))
+  cat(sprintf("Label: %s\n", x$model_label %||% x$model_id %||% "<unspecified>"))
+  cat(sprintf("Outcome: %s\n", x$outcome %||% "<unspecified>"))
+  cat(sprintf("Outcome type: %s\n", x$outcome_type %||% "<unspecified>"))
+  cat(sprintf("Features: %d\n", length(x$features)))
+  if (!is.null(x$tune)) {
+    cat(sprintf("Best %s: %.4f\n", x$tune$metric, x$tune$best_score))
+  }
+  if (!is.null(x$threshold)) {
+    cat(sprintf("Threshold: %.4f (%s)\n", x$threshold$threshold, x$threshold$source %||% x$threshold$method))
+  }
+  if (!is.null(x$test_eval) && length(x$test_eval$metrics) > 0L) {
+    cat("Frozen test metrics:\n")
+    for (nm in names(x$test_eval$metrics)) {
+      cat(sprintf("  %s: %.4f\n", nm, x$test_eval$metrics[[nm]]))
+    }
+  }
   invisible(x)
 }
 

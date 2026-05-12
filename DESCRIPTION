@@ -17,6 +17,7 @@ Imports:
     data.table,
     stringi,
     ggplot2,
+    rlang,
     scales
 Suggests:
     testthat,
@@ -44,6 +45,7 @@ Suggests:
     pROC,
     randomForestSRC,
     clusterProfiler,
+    igraph,
     AnnotationDbi,
     org.Hs.eg.db,
     TCMDATA,

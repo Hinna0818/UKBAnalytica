@@ -45,6 +45,7 @@
 #'
 #' @import data.table
 #' @import ggplot2
+#' @importFrom rlang .data
 #' @importFrom stringi stri_extract_all_regex stri_trim_both
 #' @importFrom stats quantile relevel sd terms model.matrix predict approx
 #' @importFrom utils head modifyList
@@ -88,7 +89,7 @@ utils::globalVariables(c(
   "fruit_score", "vegetable_score", "fish_score", "meat_score", "diet_score",
   "p1289_i0", "p1299_i0", "p1309_i0", "p1319_i0", "p1329_i0", "p1339_i0",
   # Mediation module
-  "effect", "effect_label", "color_group", "est", "p", "p_label",
+  "effect", "effect_label", "color_group", "est", "p", "p_label", "neg_log10_p",
   "effect_type", "value", "abs_value", "proportion", "mediator", "se",
   "pvalue", "sig", "name", "tnie", "pnde", "te", "pm", "exp_est", "exp_lower", "exp_upper",
   # Multiple imputation module
