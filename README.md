@@ -140,6 +140,7 @@ primary disease a standard survival endpoint: `outcome_status` and
 Here we provide some learning materials for UK Biobank in which you may be interested:
 - [UK Biobank database browser](https://biobank.ndph.ox.ac.uk/ukb/index.cgi)
 - [UK Biobank RAP platform](https://ukbiobank.dnanexus.com/landing)
+- [UK Biobank GitHub resources](https://github.com/UK-Biobank)
 - [UK Biobank learning guides supported by our team](https://hinna0818.github.io/Bioinfo-SMU/Epidemiology/UK_Biobank/) 
 
 ## Star History
