@@ -32,6 +32,7 @@ devtools::install_github("Hinna0818/UKBAnalytica_v2")
 library(UKBAnalytica)
 library(data.table)
 
+## suppose you have a csv data file on your RAP
 ukb_data <- fread("population.csv")
 
 diseases <- get_predefined_diseases()[
