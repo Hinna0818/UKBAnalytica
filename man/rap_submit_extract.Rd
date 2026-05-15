@@ -38,7 +38,7 @@ of columns.}
 \item{dry_run}{Logical. If TRUE, return the planned fields and command
 metadata without uploading or submitting.}
 
-\item{manifest}{Optional local CSV path to save the matched-field manifest.}
+\item{manifest}{Optional manifest CSV path in the current RAP session.}
 
 \item{...}{Additional arguments passed to \code{rap_plan_extract()}.}
 }

@@ -1,4 +1,4 @@
-# Downloading Data from RAP {#rap-download}
+# RAP-internal Data Extraction {#rap-extract}
 
 UKBAnalytica_v2 provides R-native helpers for extracting phenotype data inside the
 UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the
@@ -395,7 +395,7 @@ job$job_id
 
 ### Demographic data
 
-Download any combination of UKB fields by specifying their field IDs.
+Extract any combination of UKB fields by specifying their field IDs.
 The loader uses Spark via `dxdata` under the hood.
 
 ```bash
@@ -424,7 +424,7 @@ The ID file supports comments (`#`), comma-separated and space-separated formats
 
 ### Metabolomics data (NMR)
 
-Download NMR metabolomics data. You can retrieve all 251 metabolite fields
+Extract NMR metabolomics data. You can retrieve all 251 metabolite fields
 or restrict to the curated non-ratio subset of 170 fields.
 
 ```bash
@@ -439,7 +439,7 @@ python ukb_data_loader.py metabolites \
 
 ### Proteomics data (Olink)
 
-Download Olink protein expression data via `dx` commands.
+Extract Olink protein expression data via `dx` commands.
 The loader handles batching, merging, and progress tracking automatically.
 
 ```bash
@@ -489,5 +489,5 @@ The table below lists commonly used field IDs for reference:
   written to the RAP project rather than directly into a local R object.
 - **Spark initialisation fails**: make sure you are running inside a RAP JupyterLab session.
 - **Field not found**: some fields require instance/array suffixes (e.g., `_i0`, `_a0`).
-- **Memory issues**: reduce `--batch-size` for protein downloads.
+- **Memory issues**: reduce `--batch-size` for protein extraction outputs.
 - **Timeout**: increase `--delay`.

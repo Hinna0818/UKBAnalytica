@@ -19,8 +19,8 @@ get_field_metadata(
 \item{query}{Optional keyword used to filter the metadata table. The keyword
 is matched against the title, description, category, and RAP field names.}
 
-\item{ukb_data_dict}{Optional path to a local \code{Data_Dictionary_Showcase.tsv}
-file or equivalent UKB metadata export.}
+\item{ukb_data_dict}{Optional path to a \code{Data_Dictionary_Showcase.tsv}
+file or equivalent UKB metadata export available in the current session.}
 
 \item{dataset}{Optional RAP \code{.dataset} file name. Used only when \code{fields_df}
 is \code{NULL} and RAP field metadata should be retrieved live.}
@@ -37,8 +37,9 @@ matching RAP column names and the number of approved RAP columns per field.
 }
 \description{
 Returns a structured data.frame of UK Biobank field metadata. When
-\code{ukb_data_dict} is supplied, the function reads the local UK Biobank data
-dictionary file and standardizes common metadata columns. When \code{fields_df} or
+\code{ukb_data_dict} is supplied, the function reads a UK Biobank data dictionary
+metadata file available in the current session and standardizes common
+metadata columns. When \code{fields_df} or
 a RAP dataset is supplied, the function also records the approved RAP field
 names available in the current project.
 
@@ -47,7 +48,7 @@ field metadata in R before planning an extraction.
 }
 \examples{
 \dontrun{
-# Use a local UKB data dictionary file
+# Use a UKB data dictionary metadata file available in the current session
 meta <- get_field_metadata(
   query = "blood pressure",
   ukb_data_dict = "Data_Dictionary_Showcase.tsv"

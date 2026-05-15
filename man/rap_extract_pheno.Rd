@@ -27,7 +27,8 @@ rap_extract_pheno(
 
 \item{dataset}{Dataset file name. If NULL, \code{rap_find_dataset()} is used.}
 
-\item{output}{Optional local CSV output path. If NULL, a temporary file is used.}
+\item{output}{Optional CSV output path in the current RAP session. If NULL,
+a temporary file is used.}
 
 \item{read}{Logical. If TRUE, read the CSV into R and return a data.table.
 If FALSE, return the output path.}
@@ -47,9 +48,10 @@ A data.table when \code{read = TRUE}; otherwise the output CSV path.
 In dry-run mode, returns a \code{rap_extract_plan}.
 }
 \description{
-Uses \code{dx extract_dataset --fields-file} and reads the result back into R.
-This is intended for small to medium extractions. For large phenotype pulls,
-use \code{rap_submit_extract()}.
+Uses \code{dx extract_dataset --fields-file} and reads the RAP-generated
+result back into R within the active RAP session. This is intended for small
+to medium extractions. For large phenotype pulls, use
+\code{rap_submit_extract()}.
 }
 \examples{
 \dontrun{

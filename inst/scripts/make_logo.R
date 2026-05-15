@@ -21,9 +21,8 @@ p <- ggplot(df, aes(x = time, y = surv)) +
   theme_void() +
   theme_transparent()
 
-# Generate hex sticker
-sticker(
-  p,
+logo_args <- list(
+  subplot = p,
   package = "UKBAnalytica",
   p_size = 18,
   p_color = "#2C3E50",
@@ -36,8 +35,14 @@ sticker(
   h_fill = "#F7F7F7",
   h_color = "#3182BD",
   h_size = 1.5,
-  filename = "man/figures/logo.png",
-  dpi = 300
+  white_around_sticker = FALSE,
+  dpi = 600
 )
 
-message("Logo saved to man/figures/logo.png")
+# Generate transparent-background raster and vector versions.
+do.call(sticker, c(logo_args, filename = "man/figures/logo.png"))
+#do.call(sticker, c(logo_args, filename = "man/figures/logo.svg"))
+#do.call(sticker, c(logo_args, filename = "man/figures/ukbanalytica-logo.svg"))
+#do.call(sticker, c(logo_args, filename = "man/figures/ukbanalytica-logo.pdf"))
+
+message("Logo saved to man/figures/logo.png, man/figures/logo.svg, and man/figures/ukbanalytica-logo.svg")

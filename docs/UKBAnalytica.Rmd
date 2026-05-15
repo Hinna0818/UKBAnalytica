@@ -11,7 +11,7 @@ documentclass: book
 bibliography: []
 description: |
   A comprehensive guide to the UKBAnalytica R package for processing UK Biobank
-  Research Analysis Platform (RAP) data, including data download, preprocessing,
+  Research Analysis Platform (RAP) data, including RAP-internal data extraction, preprocessing,
   disease phenotyping, survival analysis, and multiple imputation.
 link-citations: yes
 github-repo: Hinna0818/UKBAnalytica_v2
@@ -56,7 +56,7 @@ devtools::install_github("Hinna0818/UKBAnalytica_v2")
 
 The package covers the following workflow:
 
-1. **Data download** -- Python scripts for downloading data from the RAP platform.
+1. **RAP-internal data extraction** -- Python scripts for extracting data within the approved RAP platform.
 2. **Variable preprocessing** -- Standardized cleaning and recoding of baseline characteristics.
 3. **Disease phenotyping** -- Predefined and custom disease definitions from multiple coding systems.
 4. **Survival analysis** -- Build Cox-ready datasets with proper prevalent/incident classification.
@@ -82,9 +82,9 @@ The remaining chapters walk through each step with code examples.
 
 <!--chapter:end:index.Rmd-->
 
-# Downloading Data from RAP {#rap-download}
+# RAP-internal Data Extraction {#rap-extract}
 
-The UKBAnalytica package ships Python helper scripts for downloading data from the
+The UKBAnalytica package ships Python helper scripts for extracting data within RAP from the
 UK Biobank Research Analysis Platform (RAP). These scripts live in `inst/python/`
 after package installation.
 
@@ -102,7 +102,7 @@ inst/
 
 ## Demographic data
 
-Download any combination of UKB fields by specifying their field IDs.
+Extract any combination of UKB fields by specifying their field IDs.
 The loader uses Spark via `dxdata` under the hood.
 
 ```bash
@@ -131,7 +131,7 @@ The ID file supports comments (`#`), comma-separated and space-separated formats
 
 ## Metabolomics data (NMR)
 
-Download NMR metabolomics data. You can retrieve all 251 metabolite fields
+Extract NMR metabolomics data. You can retrieve all 251 metabolite fields
 or restrict to the curated non-ratio subset of 170 fields.
 
 ```bash
@@ -146,7 +146,7 @@ python ukb_data_loader.py metabolites \
 
 ## Proteomics data (Olink)
 
-Download Olink protein expression data via `dx` commands.
+Extract Olink protein expression data via `dx` commands.
 The loader handles batching, merging, and progress tracking automatically.
 
 ```bash
@@ -189,14 +189,14 @@ The table below lists commonly used field IDs for reference:
 
 - **Spark initialisation fails**: make sure you are running inside a RAP JupyterLab session.
 - **Field not found**: some fields require instance/array suffixes (e.g., `_i0`, `_a0`).
-- **Memory issues**: reduce `--batch-size` for protein downloads.
+- **Memory issues**: reduce `--batch-size` for protein extraction outputs.
 - **Timeout**: increase `--delay`.
 
-<!--chapter:end:01-rap-download.Rmd-->
+<!--chapter:end:01-rap-extract.Rmd-->
 
 # Variable Preprocessing {#preprocessing}
 
-After downloading data from RAP, the next step is to clean and recode baseline
+After extracting data within RAP, the next step is to clean and recode baseline
 variables. UKBAnalytica provides `preprocess_baseline()` and several helper
 functions to handle this in a standardised way.
 

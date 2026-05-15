@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-UK Biobank RAP Data Downloader (Spark-based)
+UK Biobank RAP data extraction helper (Spark-based)
 
 Author: Nan He, Southern Medical University, Basic Medical Sciences, Department of Bioinformatics
 
@@ -90,15 +90,15 @@ def load_ids_from_file(filepath):
     return ids
 
 
-def download_demographic(field_ids, output_path):
+def extract_demographic(field_ids, output_path):
     """
-    Download demographic data by field IDs.
+    Extract demographic fields within the approved RAP environment.
     
     Args:
         field_ids: List of UKB field IDs (e.g., ['31', '53', '21022'])
-        output_path: Output CSV file path
+        output_path: Output CSV file path in the active RAP session
     """
-    print(f"Downloading demographic data for {len(field_ids)} fields...")
+    print(f"Extracting demographic fields for {len(field_ids)} UKB field IDs...")
     
     # Get all field names with prefix
     field_names = sum([field_names_for_id(fid) for fid in field_ids], [])
@@ -116,16 +116,16 @@ def download_demographic(field_ids, output_path):
     print(f"Saved to: {output_path}")
 
 
-def download_metabolites(output_path, non_ratio=False):
+def extract_metabolites(output_path, non_ratio=False):
     """
-    Download NMR metabolites data.
+    Extract NMR metabolites fields within the approved RAP environment.
     
     Args:
-        output_path: Output CSV file path
-        non_ratio: If True, download only non-ratio metabolites from reference file
+        output_path: Output CSV file path in the active RAP session
+        non_ratio: If True, extract only non-ratio metabolites from reference file
     """
     if non_ratio:
-        print("Downloading non-ratio metabolites data...")
+        print("Extracting non-ratio metabolites fields...")
         # Load field IDs from reference file
         script_dir = os.path.dirname(os.path.abspath(__file__))
         ref_file = os.path.join(script_dir, '..', 'extdata', 'metabolites_non_ratio.txt')
@@ -134,7 +134,7 @@ def download_metabolites(output_path, non_ratio=False):
         ref_df = pd.read_csv(ref_file, sep='\t')
         all_fields = ['eid'] + ref_df['meta_ID'].tolist()
     else:
-        print("Downloading all metabolites data...")
+        print("Extracting all metabolites fields...")
         # NMR fields: 20280-20281 and 23400-23648
         nmr_fields_1 = [f"p{i}_i0" for i in range(20280, 20282)]
         nmr_fields_2 = [f"p{i}_i0" for i in range(23400, 23649)]
@@ -152,24 +152,24 @@ def download_metabolites(output_path, non_ratio=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='UK Biobank RAP Data Downloader')
-    subparsers = parser.add_subparsers(dest='command', help='Data type to download')
+    parser = argparse.ArgumentParser(description='UK Biobank RAP data extraction helper')
+    subparsers = parser.add_subparsers(dest='command', help='Data type to extract')
     
     # Demographic subcommand
-    demo_parser = subparsers.add_parser('demographic', help='Download demographic data')
+    demo_parser = subparsers.add_parser('demographic', help='Extract demographic fields')
     demo_parser.add_argument('--ids', type=str, default=None,
                             help='Comma-separated UKB field IDs (e.g., 31,53,21022)')
     demo_parser.add_argument('--id-file', type=str, default=None,
                             help='File containing UKB field IDs (one per line or comma-separated)')
     demo_parser.add_argument('-o', '--output', type=str, default='population.csv',
-                            help='Output file path')
+                            help='Output file path in the active RAP session')
     
     # Metabolites subcommand
-    meta_parser = subparsers.add_parser('metabolites', help='Download metabolites data')
+    meta_parser = subparsers.add_parser('metabolites', help='Extract metabolites fields')
     meta_parser.add_argument('--non-ratio', action='store_true',
-                            help='Download only non-ratio metabolites (168 fields)')
+                            help='Extract only non-ratio metabolites (168 fields)')
     meta_parser.add_argument('-o', '--output', type=str, default='metabolites.csv',
-                            help='Output file path')
+                            help='Output file path in the active RAP session')
     
     args = parser.parse_args()
     
@@ -189,9 +189,9 @@ def main():
         else:
             print("Error: Either --ids or --id-file is required")
             return 1
-        download_demographic(field_ids, args.output)
+        extract_demographic(field_ids, args.output)
     elif args.command == 'metabolites':
-        download_metabolites(args.output, non_ratio=args.non_ratio)
+        extract_metabolites(args.output, non_ratio=args.non_ratio)
     
     print("Done!")
     return 0

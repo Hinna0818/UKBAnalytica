@@ -5,7 +5,7 @@
 \title{RAP Phenotype Extraction Helpers}
 \description{
 R-native wrappers around DNAnexus \verb{dx extract_dataset} and the RAP
-\code{table-exporter} app. These functions are intended for use inside a UK
-Biobank RAP R session or a local shell with \code{dx} already authenticated.
+\code{table-exporter} app. These functions are intended for use inside approved
+UK Biobank RAP sessions or RAP-controlled execution environments.
 }
 \keyword{internal}

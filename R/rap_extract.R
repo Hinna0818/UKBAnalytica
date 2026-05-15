@@ -2,8 +2,8 @@
 #'
 #' @description
 #' R-native wrappers around DNAnexus `dx extract_dataset` and the RAP
-#' `table-exporter` app. These functions are intended for use inside a UK
-#' Biobank RAP R session or a local shell with `dx` already authenticated.
+#' `table-exporter` app. These functions are intended for use inside approved
+#' UK Biobank RAP sessions or RAP-controlled execution environments.
 #'
 #' @name rap_extract
 #' @keywords internal
@@ -468,7 +468,7 @@ rap_list_fields <- function(dataset = NULL,
 #' @param include_eid Logical. Include participant ID automatically.
 #' @param table_exporter Logical. If TRUE, return field names in the format
 #'   expected by the RAP table-exporter app.
-#' @param manifest Optional local CSV path to save the matched-field manifest.
+#' @param manifest Optional manifest CSV path in the current RAP session.
 #'
 #' @return A list containing extraction field names, matched requests, unmatched
 #'   requests, dataset, entity, and column counts.
@@ -526,16 +526,18 @@ rap_plan_extract <- function(field_id = NULL,
 #' Extract RAP Phenotype Data Synchronously
 #'
 #' @description
-#' Uses \code{dx extract_dataset --fields-file} and reads the result back into R.
-#' This is intended for small to medium extractions. For large phenotype pulls,
-#' use \code{rap_submit_extract()}.
+#' Uses \code{dx extract_dataset --fields-file} and reads the RAP-generated
+#' result back into R within the active RAP session. This is intended for small
+#' to medium extractions. For large phenotype pulls, use
+#' \code{rap_submit_extract()}.
 #'
 #' @param field_id UKB numeric field IDs to extract.
 #' @param field_names Exact RAP dataset column names to extract.
 #' @param variables Optional predefined variable names from
 #'   \code{get_variable_info()}.
 #' @param dataset Dataset file name. If NULL, \code{rap_find_dataset()} is used.
-#' @param output Optional local CSV output path. If NULL, a temporary file is used.
+#' @param output Optional CSV output path in the current RAP session. If NULL,
+#'   a temporary file is used.
 #' @param read Logical. If TRUE, read the CSV into R and return a data.table.
 #'   If FALSE, return the output path.
 #' @param strip_entity_prefix Logical. If TRUE, remove \code{"participant."}
@@ -633,7 +635,7 @@ rap_extract_pheno <- function(field_id = NULL,
 #' @param priority Job priority: \code{"low"} or \code{"high"}.
 #' @param dry_run Logical. If TRUE, return the planned fields and command
 #'   metadata without uploading or submitting.
-#' @param manifest Optional local CSV path to save the matched-field manifest.
+#' @param manifest Optional manifest CSV path in the current RAP session.
 #' @param ... Additional arguments passed to \code{rap_plan_extract()}.
 #'
 #' @return A list with class \code{rap_extract_job} containing job metadata.

@@ -11,7 +11,7 @@ documentclass: book
 bibliography: []
 description: |
   A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
-  Research Analysis Platform (RAP) data, including data download, preprocessing,
+  Research Analysis Platform (RAP) data, including RAP-internal data extraction, preprocessing,
   disease phenotyping, survival analysis, multiple imputation, machine learning,
   and proteomics enrichment analysis.
 link-citations: yes
@@ -60,7 +60,7 @@ devtools::install_github("Hinna0818/UKBAnalytica_v2")
 
 The package covers the following workflow:
 
-1. **Data download** -- Python scripts for downloading data from the RAP platform.
+1. **RAP-internal data extraction** -- Python scripts for extracting data within the approved RAP platform.
 2. **Variable preprocessing** -- Standardized cleaning and recoding of baseline characteristics.
 3. **Disease phenotyping** -- Predefined and custom disease definitions from multiple coding systems.
 4. **Survival analysis** -- Build Cox-ready datasets with proper prevalent/incident classification.

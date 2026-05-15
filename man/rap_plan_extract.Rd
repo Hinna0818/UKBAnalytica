@@ -37,7 +37,7 @@ included.}
 \item{table_exporter}{Logical. If TRUE, return field names in the format
 expected by the RAP table-exporter app.}
 
-\item{manifest}{Optional local CSV path to save the matched-field manifest.}
+\item{manifest}{Optional manifest CSV path in the current RAP session.}
 }
 \value{
 A list containing extraction field names, matched requests, unmatched

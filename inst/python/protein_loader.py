@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-UK Biobank RAP Proteomics Data Downloader
+UK Biobank RAP proteomics extraction helper
 
 Author: Nan He, Southern Medical University, Basic Medical Sciences, Department of Bioinformatics
 
 Usage:
-    python main.py                      # Download all proteins to current directory
-    python main.py --output ./data      # Download to specified directory
+    python main.py                      # Extract all protein fields in the active RAP session
+    python main.py --output ./data      # Write outputs to the selected RAP session directory
     python main.py --batch-size 100     # Custom batch size
 """
 
@@ -32,8 +32,8 @@ def get_dataset_id():
     return dataset
 
 
-def download_data_dictionary(dataset, output_dir):
-    """Download data dictionary to output directory."""
+def extract_data_dictionary(dataset, output_dir):
+    """Extract the RAP data dictionary to the selected output directory."""
     original_dir = os.getcwd()
     os.chdir(output_dir)
     try:
@@ -55,8 +55,8 @@ def get_protein_fields(data_dict_path, entity="olink_instance_0"):
     return field_names_str
 
 
-def download_proteins(dataset, field_batches, output_dir, batch_size, delay=2.0):
-    """Download protein data in batches."""
+def extract_proteins(dataset, field_batches, output_dir, batch_size, delay=2.0):
+    """Extract protein fields in batches within the approved RAP environment."""
     print("Starting batch extraction...")
     print(f"Total {len(field_batches)} batches, max {batch_size} fields per batch")
     print("=" * 50)
@@ -168,7 +168,7 @@ def print_file_sizes(file_list, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='UK Biobank RAP Proteomics Data Downloader')
+    parser = argparse.ArgumentParser(description='UK Biobank RAP proteomics extraction helper')
     parser.add_argument('-o', '--output', type=str, default='.', help='Output directory')
     parser.add_argument('--batch-size', type=int, default=200, help='Fields per batch')
     parser.add_argument('--delay', type=float, default=2.0, help='Delay between batches (seconds)')
@@ -179,7 +179,7 @@ def main():
     batch_size = args.batch_size
     os.makedirs(output_dir, exist_ok=True)
     
-    print("UK Biobank RAP Proteomics Data Downloader")
+    print("UK Biobank RAP proteomics extraction helper")
     print("Author: Nan He, Southern Medical University")
     print("=" * 50)
     
@@ -188,9 +188,9 @@ def main():
     dataset = get_dataset_id()
     print(f"Dataset: {dataset}")
     
-    # Step 2: Download data dictionary
-    print("\nDownloading data dictionary...")
-    data_dict_path = download_data_dictionary(dataset, output_dir)
+    # Step 2: Extract data dictionary
+    print("\nExtracting data dictionary...")
+    data_dict_path = extract_data_dictionary(dataset, output_dir)
     print(f"Data dictionary: {data_dict_path}")
     
     # Step 3: Get protein fields
@@ -208,9 +208,9 @@ def main():
     for i, batch in enumerate(field_batches):
         print(f"  Batch {i+1}: {len(batch)} fields")
     
-    # Step 5: Download protein data
+    # Step 5: Extract protein fields
     print()
-    successful_files, failed_batches = download_proteins(
+    successful_files, failed_batches = extract_proteins(
         dataset, field_batches, output_dir, batch_size, args.delay
     )
     

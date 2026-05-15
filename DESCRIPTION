@@ -4,8 +4,8 @@ Version: 0.6.2.2
 Authors@R: person(given = "Nan", family = "He", email = "nanh302311@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0009-0008-6932-3867"))
 Author: Nan He [aut, cre] (<https://orcid.org/0009-0008-6932-3867>)
 Maintainer: Nan He <nanh302311@gmail.com>
-Description: A high-performance R package for processing UK Biobank (UKB) 
-    Research Analysis Platform (RAP) exported data. 
+Description: A high-performance R package for processing UK Biobank (UKB)
+    Research Analysis Platform (RAP) hosted and RAP-generated analysis tables.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

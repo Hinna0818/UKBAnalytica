@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Page not found | UKBAnalytica_v2: A Guide to UK Biobank Data Analysis</title>
   <meta name="description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
-Research Analysis Platform (RAP) data, including data download, preprocessing,
+Research Analysis Platform (RAP) data, including RAP-internal data extraction, preprocessing,
 disease phenotyping, survival analysis, multiple imputation, machine learning,
 and proteomics enrichment analysis.</p>" />
   <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
@@ -15,7 +15,7 @@ and proteomics enrichment analysis.</p>" />
   <meta property="og:type" content="book" />
   
   <meta property="og:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
-Research Analysis Platform (RAP) data, including data download, preprocessing,
+Research Analysis Platform (RAP) data, including RAP-internal data extraction, preprocessing,
 disease phenotyping, survival analysis, multiple imputation, machine learning,
 and proteomics enrichment analysis.</p>" />
   <meta name="github-repo" content="Hinna0818/UKBAnalytica_v2" />
@@ -24,7 +24,7 @@ and proteomics enrichment analysis.</p>" />
   <meta name="twitter:title" content="Page not found | UKBAnalytica_v2: A Guide to UK Biobank Data Analysis" />
   
   <meta name="twitter:description" content="<p>A comprehensive guide to the UKBAnalytica_v2 R package for processing UK Biobank
-Research Analysis Platform (RAP) data, including data download, preprocessing,
+Research Analysis Platform (RAP) data, including RAP-internal data extraction, preprocessing,
 disease phenotyping, survival analysis, multiple imputation, machine learning,
 and proteomics enrichment analysis.</p>" />
   
@@ -159,30 +159,30 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="1.6" data-path="index.html"><a href="index.html#advanced-analysis-functions"><i class="fa fa-check"></i><b>1.6</b> Advanced analysis functions</a></li>
 <li class="chapter" data-level="1.7" data-path="index.html"><a href="index.html#machine-learning-functions"><i class="fa fa-check"></i><b>1.7</b> Machine learning functions</a></li>
 </ul></li>
-<li class="chapter" data-level="2" data-path="rap-download.html"><a href="rap-download.html"><i class="fa fa-check"></i><b>2</b> Downloading Data from RAP</a>
+<li class="chapter" data-level="2" data-path="rap-extract.html"><a href="rap-extract.html"><i class="fa fa-check"></i><b>2</b> RAP-internal Data Extraction</a>
 <ul>
-<li class="chapter" data-level="2.1" data-path="rap-download.html"><a href="rap-download.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
-<li class="chapter" data-level="2.2" data-path="rap-download.html"><a href="rap-download.html#r-native-phenotype-extraction"><i class="fa fa-check"></i><b>2.2</b> R-native phenotype extraction</a>
+<li class="chapter" data-level="2.1" data-path="rap-extract.html"><a href="rap-extract.html#file-structure"><i class="fa fa-check"></i><b>2.1</b> File structure</a></li>
+<li class="chapter" data-level="2.2" data-path="rap-extract.html"><a href="rap-extract.html#r-native-phenotype-extraction"><i class="fa fa-check"></i><b>2.2</b> R-native phenotype extraction</a>
 <ul>
-<li class="chapter" data-level="2.2.1" data-path="rap-download.html"><a href="rap-download.html#start-an-r-session-on-rap"><i class="fa fa-check"></i><b>2.2.1</b> Start an R session on RAP</a></li>
-<li class="chapter" data-level="2.2.2" data-path="rap-download.html"><a href="rap-download.html#confirm-the-dataset"><i class="fa fa-check"></i><b>2.2.2</b> Confirm the dataset</a></li>
-<li class="chapter" data-level="2.2.3" data-path="rap-download.html"><a href="rap-download.html#inspect-available-fields"><i class="fa fa-check"></i><b>2.2.3</b> Inspect available fields</a></li>
-<li class="chapter" data-level="2.2.4" data-path="rap-download.html"><a href="rap-download.html#preview-before-extracting"><i class="fa fa-check"></i><b>2.2.4</b> Preview before extracting</a></li>
-<li class="chapter" data-level="2.2.5" data-path="rap-download.html"><a href="rap-download.html#small-synchronous-extraction"><i class="fa fa-check"></i><b>2.2.5</b> Small synchronous extraction</a></li>
-<li class="chapter" data-level="2.2.6" data-path="rap-download.html"><a href="rap-download.html#recommended-demographic-extraction-with-table-exporter"><i class="fa fa-check"></i><b>2.2.6</b> Recommended demographic extraction with table-exporter</a></li>
-<li class="chapter" data-level="2.2.7" data-path="rap-download.html"><a href="rap-download.html#monitor-the-table-exporter-job"><i class="fa fa-check"></i><b>2.2.7</b> Monitor the table-exporter job</a></li>
-<li class="chapter" data-level="2.2.8" data-path="rap-download.html"><a href="rap-download.html#read-extracted-data-back-into-r"><i class="fa fa-check"></i><b>2.2.8</b> Read extracted data back into R</a></li>
-<li class="chapter" data-level="2.2.9" data-path="rap-download.html"><a href="rap-download.html#minimal-complete-demographic-workflow"><i class="fa fa-check"></i><b>2.2.9</b> Minimal complete demographic workflow</a></li>
+<li class="chapter" data-level="2.2.1" data-path="rap-extract.html"><a href="rap-extract.html#start-an-r-session-on-rap"><i class="fa fa-check"></i><b>2.2.1</b> Start an R session on RAP</a></li>
+<li class="chapter" data-level="2.2.2" data-path="rap-extract.html"><a href="rap-extract.html#confirm-the-dataset"><i class="fa fa-check"></i><b>2.2.2</b> Confirm the dataset</a></li>
+<li class="chapter" data-level="2.2.3" data-path="rap-extract.html"><a href="rap-extract.html#inspect-available-fields"><i class="fa fa-check"></i><b>2.2.3</b> Inspect available fields</a></li>
+<li class="chapter" data-level="2.2.4" data-path="rap-extract.html"><a href="rap-extract.html#preview-before-extracting"><i class="fa fa-check"></i><b>2.2.4</b> Preview before extracting</a></li>
+<li class="chapter" data-level="2.2.5" data-path="rap-extract.html"><a href="rap-extract.html#small-synchronous-extraction"><i class="fa fa-check"></i><b>2.2.5</b> Small synchronous extraction</a></li>
+<li class="chapter" data-level="2.2.6" data-path="rap-extract.html"><a href="rap-extract.html#recommended-demographic-extraction-with-table-exporter"><i class="fa fa-check"></i><b>2.2.6</b> Recommended demographic extraction with table-exporter</a></li>
+<li class="chapter" data-level="2.2.7" data-path="rap-extract.html"><a href="rap-extract.html#monitor-the-table-exporter-job"><i class="fa fa-check"></i><b>2.2.7</b> Monitor the table-exporter job</a></li>
+<li class="chapter" data-level="2.2.8" data-path="rap-extract.html"><a href="rap-extract.html#read-extracted-data-back-into-r"><i class="fa fa-check"></i><b>2.2.8</b> Read extracted data back into R</a></li>
+<li class="chapter" data-level="2.2.9" data-path="rap-extract.html"><a href="rap-extract.html#minimal-complete-demographic-workflow"><i class="fa fa-check"></i><b>2.2.9</b> Minimal complete demographic workflow</a></li>
 </ul></li>
-<li class="chapter" data-level="2.3" data-path="rap-download.html"><a href="rap-download.html#legacy-python-helpers"><i class="fa fa-check"></i><b>2.3</b> Legacy Python helpers</a>
+<li class="chapter" data-level="2.3" data-path="rap-extract.html"><a href="rap-extract.html#legacy-python-helpers"><i class="fa fa-check"></i><b>2.3</b> Legacy Python helpers</a>
 <ul>
-<li class="chapter" data-level="2.3.1" data-path="rap-download.html"><a href="rap-download.html#demographic-data"><i class="fa fa-check"></i><b>2.3.1</b> Demographic data</a></li>
-<li class="chapter" data-level="2.3.2" data-path="rap-download.html"><a href="rap-download.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3.2</b> Metabolomics data (NMR)</a></li>
-<li class="chapter" data-level="2.3.3" data-path="rap-download.html"><a href="rap-download.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.3.3</b> Proteomics data (Olink)</a></li>
+<li class="chapter" data-level="2.3.1" data-path="rap-extract.html"><a href="rap-extract.html#demographic-data"><i class="fa fa-check"></i><b>2.3.1</b> Demographic data</a></li>
+<li class="chapter" data-level="2.3.2" data-path="rap-extract.html"><a href="rap-extract.html#metabolomics-data-nmr"><i class="fa fa-check"></i><b>2.3.2</b> Metabolomics data (NMR)</a></li>
+<li class="chapter" data-level="2.3.3" data-path="rap-extract.html"><a href="rap-extract.html#proteomics-data-olink"><i class="fa fa-check"></i><b>2.3.3</b> Proteomics data (Olink)</a></li>
 </ul></li>
-<li class="chapter" data-level="2.4" data-path="rap-download.html"><a href="rap-download.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.4</b> Common UKB field IDs</a></li>
-<li class="chapter" data-level="2.5" data-path="rap-download.html"><a href="rap-download.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.5</b> Typical output sizes</a></li>
-<li class="chapter" data-level="2.6" data-path="rap-download.html"><a href="rap-download.html#troubleshooting"><i class="fa fa-check"></i><b>2.6</b> Troubleshooting</a></li>
+<li class="chapter" data-level="2.4" data-path="rap-extract.html"><a href="rap-extract.html#common-ukb-field-ids"><i class="fa fa-check"></i><b>2.4</b> Common UKB field IDs</a></li>
+<li class="chapter" data-level="2.5" data-path="rap-extract.html"><a href="rap-extract.html#typical-output-sizes"><i class="fa fa-check"></i><b>2.5</b> Typical output sizes</a></li>
+<li class="chapter" data-level="2.6" data-path="rap-extract.html"><a href="rap-extract.html#troubleshooting"><i class="fa fa-check"></i><b>2.6</b> Troubleshooting</a></li>
 </ul></li>
 <li class="chapter" data-level="3" data-path="preprocessing.html"><a href="preprocessing.html"><i class="fa fa-check"></i><b>3</b> Variable Preprocessing</a>
 <ul>
@@ -410,7 +410,7 @@ gitbook.start({
     "link": null,
     "text": null
   },
-  "download": ["UKBAnalytica_v2.pdf", "UKBAnalytica_v2.epub"],
+  "extract": ["UKBAnalytica_v2.pdf", "UKBAnalytica_v2.epub"],
   "search": {
     "engine": "fuse",
     "options": null

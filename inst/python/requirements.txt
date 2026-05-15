@@ -1,4 +1,4 @@
-# UK Biobank RAP Data Downloaders Requirements
+# UK Biobank RAP extraction helper requirements
 # Install with: pip install -r requirements.txt (all of the packages below are installed in RAP JUpyterLab)
 
 # Core dependencies for RAP platform

@@ -12,6 +12,9 @@
 **UKBAnalytica** is a high-performance R package for working with UK Biobank
 Research Analysis Platform (RAP) data inside approved RAP projects. It focuses on standardized
 phenotyping, survival-ready datasets, scalable preprocessing, and downstream analysis.
+The package does not ship UK Biobank participant-level source records; examples
+use field IDs, simulated toy data, or user-provided tables that remain within
+RAP-controlled storage.
 
 **For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica_v2/)
 
@@ -32,7 +35,7 @@ devtools::install_github("Hinna0818/UKBAnalytica_v2")
 library(UKBAnalytica)
 library(data.table)
 
-## suppose you have a csv data file on your RAP
+## suppose a participant-level table is available within your approved RAP project
 ukb_data <- fread("population.csv")
 
 diseases <- get_predefined_diseases()[
@@ -89,7 +92,7 @@ has a `cancer_icd10_pattern`; procedure evidence is used only when
 ## Minimal RAP Extraction Workflow
 
 Run the following inside a UK Biobank RAP R session. Participant-level data
-should remain inside approved RAP projects.
+should remain inside approved RAP projects and RAP-controlled storage.
 
 ```r
 library(UKBAnalytica)

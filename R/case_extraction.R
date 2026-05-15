@@ -1248,9 +1248,9 @@ extract_spirometry_copd <- function(dt,
 #'
 #' # Exclude prevalent, run Cox regression
 #' library(survival)
-#' copd_analysis <- copd[!is.na(outcome_status)]
+#' analysis_data <- copd[!is.na(outcome_status)]
 #' coxph(Surv(outcome_surv_time, outcome_status) ~ age + sex,
-#'       data = copd_analysis)
+#'       data = analysis_data)
 #'
 #' # Sensitivity: compare prevalent sources
 #' copd[, .(ICD_SR = sum(COPD_prevalent_icd),

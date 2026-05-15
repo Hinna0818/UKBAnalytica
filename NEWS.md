@@ -34,10 +34,10 @@
 - Added `rap_find_dataset()`, `rap_list_fields()`, `rap_plan_extract()`, `rap_extract_pheno()`, and `rap_submit_extract()`.
 - Added dry-run extraction planning so users can inspect matched fields and table-exporter command metadata before launching jobs.
 - Added support for `variables = ...` using UKBAnalytica predefined baseline mappings, while preserving `field_id = ...` for all instances and arrays of a UKB field.
-- Kept Python download scripts under `inst/python/` as legacy/helper entry points.
+- Kept Python extraction helper scripts under `inst/python/` as legacy/helper entry points.
 
 ### Documentation and tests
-- Expanded the RAP download chapter with a complete RAP JupyterLab -> Terminal -> R workflow, including output paths such as `/mnt/project`.
+- Expanded the RAP extraction chapter with a complete RAP JupyterLab -> Terminal -> R workflow, including output paths such as `/mnt/project`.
 - Updated README examples to recommend R-native RAP extraction for new users.
 - Split machine learning into a dedicated documentation chapter focused on the simplest standard `ukb_ml_workflow()` path.
 - Added offline tests for RAP extraction field parsing, field planning, predefined-variable mapping, and table-exporter dry-run formatting.
@@ -214,10 +214,10 @@ Add `variable_preprocess.R` module for preprocessing baseline variables.
 - Expanded predefined disease definitions to cover common conditions for rapid prototyping.
 
 ### Data acquisition (RAP)
-- Added Python utilities under `inst/python/` to download:
+- Added Python utilities under `inst/python/` to extract:
   - Demographic fields (user-specified UKB field IDs; optional ID file input).
   - Metabolomics (all fields; plus non-ratio subset driven by `inst/extdata/metabolites_non_ratio.txt`).
-  - Proteomics (batch download with optional merge).
+  - Proteomics (batch extract with optional merge).
 
 ### Documentation
 - Updated README to prioritize data acquisition (RAP) before survival endpoint construction.

@@ -17,8 +17,8 @@ get_field_info(
 \arguments{
 \item{field_id}{A single UKB numeric field ID.}
 
-\item{ukb_data_dict}{Optional path to a local \code{Data_Dictionary_Showcase.tsv}
-file or equivalent UKB metadata export.}
+\item{ukb_data_dict}{Optional path to a \code{Data_Dictionary_Showcase.tsv}
+file or equivalent UKB metadata export available in the current session.}
 
 \item{dataset}{Optional RAP \code{.dataset} file name. Used only when \code{fields_df}
 is \code{NULL} and RAP field metadata should be retrieved live.}
