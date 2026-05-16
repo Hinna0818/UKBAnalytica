@@ -1,5 +1,18 @@
 # UKBAnalytica News
 
+## UKBAnalytica 1.0.0 (2026-05-16)
+
+### Official release
+- Released UKBAnalytica 1.0.0 as an integrated RAP-oriented workflow package for UK Biobank epidemiological analyses.
+- Expanded the package description to reflect the current end-to-end scope, including RAP extraction planning, predefined variables and diseases, cohort construction, statistical modeling, machine learning, proteomics analysis, and publication-oriented visualization.
+
+### Workflow coverage
+- Consolidated predefined disease definitions and baseline variable mappings for rapid phenotype and covariate setup.
+- Standardized the analysis flow from RAP data extraction and preprocessing to multi-source endpoint definition, prevalent/incident classification, survival-ready cohort generation, and downstream analyses.
+- Added high-level machine-learning interfaces for single-model workflows and comparison across feature sets or algorithms, with ROC, threshold selection, calibration, SHAP interpretation, and validation-set evaluation helpers.
+- Extended proteomics utilities for volcano plots, Gene Ontology enrichment, STRING-based PPI retrieval, topology metrics, fast-greedy community detection, and cluster-level enrichment analysis.
+- Refined visualization helpers for forest plots, volcano plots, calibration and decision-curve analysis, ROC comparison, SHAP summaries, enrichment plots, and manuscript-ready figure export.
+
 ## UKBAnalytica 0.6.2.2（2026-04-29）
 
 ### Disease phenotyping
