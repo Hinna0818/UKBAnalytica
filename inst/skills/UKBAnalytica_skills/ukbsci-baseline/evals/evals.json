@@ -1,0 +1,12 @@
+{
+  "skill": "ukbsci-baseline",
+  "should_activate": [
+    {"id":"base-001","prompt":"Make a Table 1 stratified by AA_history.","expect_keywords":["create_baseline_table","case_col","tableone"]},
+    {"id":"base-002","prompt":"Baseline characteristics by treatment arm with SMD instead of p-values.","expect_keywords":["smd","print","create_baseline_table"]},
+    {"id":"base-003","prompt":"基线表 with Wilcoxon for skewed biomarkers like CRP and ALT.","expect_keywords":["nonnormal","create_baseline_table"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Clean missing values and derive composite variables first.","expect_route_to":"ukbsci-preprocess"},
+    {"id":"route-002","prompt":"Run multivariable Cox after the baseline table.","expect_route_to":"ukbsci-regression"}
+  ]
+}

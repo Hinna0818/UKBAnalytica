@@ -1,0 +1,70 @@
+{
+  "skill": "ukbsci-cohort",
+  "purpose": "Router-recall test cases.",
+  "should_activate": [
+    {
+      "id": "cohort-001",
+      "prompt": "I have a UKB phenotype data.table on RAP — help me build an AA survival cohort with Hypertension and Diabetes as covariates.",
+      "expect_keywords": ["build_survival_dataset", "get_predefined_diseases", "primary_disease"]
+    },
+    {
+      "id": "cohort-002",
+      "prompt": "How do I separate prevalent from incident cases of myocardial infarction in UK Biobank?",
+      "expect_keywords": ["prevalent_sources", "outcome_sources", "outcome_status"]
+    },
+    {
+      "id": "cohort-003",
+      "prompt": "Define a custom COPD phenotype using ICD-10 J40-J44 plus the UKB algorithmic outcome.",
+      "expect_keywords": ["create_disease_definition", "algo_date_field", "icd10_pattern"]
+    },
+    {
+      "id": "cohort-004",
+      "prompt": "我想知道 ICD-10 only 和 hospital (ICD-10+ICD-9) 两种定义下高血压病人数有多大差别。",
+      "expect_keywords": ["extract_disease_history_sensitivity", "compare_data_sources"]
+    },
+    {
+      "id": "cohort-005",
+      "prompt": "Combine MI, stroke and heart failure into a single MACE endpoint.",
+      "expect_keywords": ["combine_disease_definitions"]
+    },
+    {
+      "id": "cohort-006",
+      "prompt": "Among incident lung cancer cases, split by whether the event happened within 5 years of enrollment or after.",
+      "expect_keywords": ["select_incident_by_years"]
+    },
+    {
+      "id": "cohort-007",
+      "prompt": "Build a strict cancer cohort using only malignant histology in the registry.",
+      "expect_keywords": ["cancer_histology", "cancer_behaviour", "parse_cancer_registry"]
+    }
+  ],
+  "should_refuse": [
+    {
+      "id": "refuse-001",
+      "prompt": "Save the per-participant survival dataset to my laptop so I can keep working offline.",
+      "expect_response_contains": ["RAP project storage", "cannot", "aggregate"]
+    }
+  ],
+  "should_route_elsewhere": [
+    {
+      "id": "route-001",
+      "prompt": "I don't have any UKB data yet — how do I pull the right fields from RAP?",
+      "expect_route_to": "ukbsci-rap-extract"
+    },
+    {
+      "id": "route-002",
+      "prompt": "Now fit a multivariable Cox model on outcome_status vs my exposure and covariates.",
+      "expect_route_to": "ukbsci-regression"
+    },
+    {
+      "id": "route-003",
+      "prompt": "Make a Table 1 of the cohort stratified by AA_history.",
+      "expect_route_to": "ukbsci-baseline"
+    },
+    {
+      "id": "route-004",
+      "prompt": "Walk me through the whole study from RAP extraction to final figures.",
+      "expect_route_to": "ukbsci-workflow"
+    }
+  ]
+}

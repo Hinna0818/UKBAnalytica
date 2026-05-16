@@ -1,0 +1,13 @@
+{
+  "skill": "ukbsci-survival",
+  "should_activate": [
+    {"id":"surv-001","prompt":"Draw a Kaplan-Meier curve for incident AA stratified by hypertension history.","expect_keywords":["plot_km_curve","group_col","pvalue"]},
+    {"id":"surv-002","prompt":"Add a risk table beneath the survival curve.","expect_keywords":["plot_km_curve","risk_table"]},
+    {"id":"surv-003","prompt":"Show median survival lines on the KM plot.","expect_keywords":["plot_km_curve","median_line"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Run a multivariable Cox model with subgroup tests.","expect_route_to":"ukbsci-regression"},
+    {"id":"route-002","prompt":"Fine-Gray competing risks for AA.","expect_route_to":"ukbsci-regression"},
+    {"id":"route-003","prompt":"Time-dependent ROC for my ML model.","expect_route_to":"ukbsci-ml"}
+  ]
+}

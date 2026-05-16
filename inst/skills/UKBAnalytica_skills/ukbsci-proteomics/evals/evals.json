@@ -1,0 +1,13 @@
+{
+  "skill": "ukbsci-proteomics",
+  "should_activate": [
+    {"id":"prot-001","prompt":"Run GO and KEGG ORA on my list of significant Olink proteins.","expect_keywords":["run_protein_ora","run_protein_kegg_ora","protein_to_gene_symbol"]},
+    {"id":"prot-002","prompt":"Get the STRING PPI network for these proteins and rank nodes by centrality.","expect_keywords":["get_protein_ppi","rank_protein_ppi_nodes","compute_protein_ppi_metrics"]},
+    {"id":"prot-003","prompt":"Louvain communities and a robustness check for the PPI network.","expect_keywords":["run_protein_ppi_louvain","run_protein_ppi_robustness"]},
+    {"id":"prot-004","prompt":"用 MCODE 找 cluster 并提取每个 cluster 的核心节点。","expect_keywords":["run_protein_ppi_mcode","get_protein_mcode_res"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"First I need to run Cox across all 3000 Olink proteins — how?","expect_route_to":"ukbsci-regression"},
+    {"id":"route-002","prompt":"Make a volcano plot of the protein screen.","expect_route_to":"ukbsci-plot"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "skill": "ukbsci-propensity",
+  "should_activate": [
+    {"id":"ps-001","prompt":"Estimate propensity scores using GBM for treatment vs. control in my UKB cohort.","expect_keywords":["estimate_propensity_score","method","gbm"]},
+    {"id":"ps-002","prompt":"Perform 1:1 PSM with caliper 0.2 and exact match on sex.","expect_keywords":["match_propensity","caliper","exact_match"]},
+    {"id":"ps-003","prompt":"Compute stabilized ATE weights and check covariate balance.","expect_keywords":["calculate_weights","ATE","stabilized","assess_balance"]},
+    {"id":"ps-004","prompt":"Draw a Love plot to compare balance before and after matching.","expect_keywords":["plot_balance","Love"]},
+    {"id":"ps-005","prompt":"Run IPTW-weighted Cox with robust standard errors.","expect_keywords":["run_weighted_analysis","robust_se"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Vanilla multivariable Cox model without propensity adjustment.","expect_route_to":"ukbsci-regression"},
+    {"id":"route-002","prompt":"Table 1 after matching with SMD column.","expect_route_to":"ukbsci-baseline"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "skill": "ukbsci-imputation",
+  "should_activate": [
+    {"id":"imp-001","prompt":"Multiple-impute missing biomarkers and pool a Cox model across 5 imputations.","expect_keywords":["run_imputation","fit_mi_models","pool_mi_models"]},
+    {"id":"imp-002","prompt":"Show FMI per term in the pooled model.","expect_keywords":["plot_mi_diagnostics","fmi"]},
+    {"id":"imp-003","prompt":"Pool mediation TNIE across the imputed datasets.","expect_keywords":["pool_custom_estimates"]},
+    {"id":"imp-004","prompt":"使用 mice 处理缺失协变量并合并 5 个数据集的 Cox 回归。","expect_keywords":["run_imputation","pool_mi_models"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"My cohort has < 5% missingness — what about a complete-case sensitivity?","expect_route_to":"ukbsci-subgroup-sensitivity"},
+    {"id":"route-002","prompt":"Just fit a Cox model on the complete cases without imputation.","expect_route_to":"ukbsci-regression"}
+  ]
+}

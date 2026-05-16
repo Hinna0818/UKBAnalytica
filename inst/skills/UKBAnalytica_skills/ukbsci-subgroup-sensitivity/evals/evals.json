@@ -1,0 +1,13 @@
+{
+  "skill": "ukbsci-subgroup-sensitivity",
+  "should_activate": [
+    {"id":"sg-001","prompt":"Run subgroup Cox for SBP within sex strata with interaction p-value.","expect_keywords":["run_subgroup_analysis","p_interaction"]},
+    {"id":"sg-002","prompt":"Sweep subgroup analyses across sex, age band, smoking, diabetes.","expect_keywords":["run_multi_subgroup"]},
+    {"id":"sg-003","prompt":"Drop events in the first 2 years and re-run Cox.","expect_keywords":["sensitivity_exclude_early_events","n_years"]},
+    {"id":"sg-004","prompt":"Run a complete-case sensitivity analysis with a flow table.","expect_keywords":["sensitivity_exclude_missing_covariates","stepwise"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Pool Cox results across 10 imputations instead of complete-case.","expect_route_to":"ukbsci-imputation"},
+    {"id":"route-002","prompt":"Make a forest plot of the subgroup output.","expect_route_to":"ukbsci-plot"}
+  ]
+}

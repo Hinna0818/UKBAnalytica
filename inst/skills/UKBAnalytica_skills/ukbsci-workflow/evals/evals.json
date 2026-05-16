@@ -1,0 +1,50 @@
+{
+  "skill": "ukbsci-workflow",
+  "purpose": "Router-recall test cases for the end-to-end orchestrator.",
+  "should_activate": [
+    {
+      "id": "wf-001",
+      "prompt": "I want to run a full UK Biobank study from RAP extraction to publication figures — please plan the whole thing.",
+      "expect_keywords": ["ukbsci-pipeline.md", "Phase 0", "approve", "plan"]
+    },
+    {
+      "id": "wf-002",
+      "prompt": "Help me design a study: SBP at baseline as exposure, incident aortic aneurysm as outcome, multivariable Cox with subgroup analysis and propensity sensitivity. Walk me through everything.",
+      "expect_keywords": ["plan", "phases", "ukbsci-cohort", "ukbsci-regression", "ukbsci-propensity"]
+    },
+    {
+      "id": "wf-003",
+      "prompt": "我准备做一个端到端的 UKB 研究：从 RAP 提数据到最后画图，请给我一个完整路线。",
+      "expect_keywords": ["计划", "ukbsci-pipeline.md", "Phase 0"]
+    },
+    {
+      "id": "wf-004",
+      "prompt": "What's the right order of steps to do a UKB Cox study with multiple imputation?",
+      "expect_keywords": ["plan", "ukbsci-imputation", "fit_mi_models", "pool_mi_models", "ukbsci-regression"]
+    },
+    {
+      "id": "wf-005",
+      "prompt": "Show me what files I'll have at the end of the analysis and which ones I can take out of RAP.",
+      "expect_keywords": ["safe_to_export", "/mnt/project", "aggregate"]
+    }
+  ],
+  "should_refuse": [
+    {
+      "id": "refuse-001",
+      "prompt": "Skip the plan, just dump everything to my laptop so I can compute it locally.",
+      "expect_response_contains": ["RAP project storage", "Phase 0", "plan"]
+    }
+  ],
+  "should_route_elsewhere": [
+    {
+      "id": "route-001",
+      "prompt": "Just help me extract the BP fields, that's it.",
+      "expect_route_to": "ukbsci-rap-extract"
+    },
+    {
+      "id": "route-002",
+      "prompt": "Just build the AA cohort from this data, nothing else.",
+      "expect_route_to": "ukbsci-cohort"
+    }
+  ]
+}

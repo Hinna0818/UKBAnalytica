@@ -1,0 +1,16 @@
+{
+  "skill": "ukbsci-regression",
+  "should_activate": [
+    {"id":"reg-001","prompt":"Fit a Cox model for incident AA against SBP, adjusting for age, sex, BMI.","expect_keywords":["runmulti_cox","endpoint","outcome_surv_time"]},
+    {"id":"reg-002","prompt":"Run logistic regression for hypertension prevalence with multiple biomarker exposures.","expect_keywords":["runmulti_logit"]},
+    {"id":"reg-003","prompt":"Check the proportional-hazards assumption on my Cox model.","expect_keywords":["runmulti_cox_zph","ukb_cox_diagnostics","ph_violation"]},
+    {"id":"reg-004","prompt":"Run a sensitivity analysis dropping events in the first 2 years of follow-up.","expect_keywords":["runmulti_cox_lag","lag_years"]},
+    {"id":"reg-005","prompt":"I need Fine-Gray competing-risks modeling for AA with non-AA death as the competing event.","expect_keywords":["runmulti_competing","SHR","compete_col"]},
+    {"id":"reg-006","prompt":"Test the dose-response trend for SBP quartiles on incident MI.","expect_keywords":["runmulti_trend","p_trend","score_method"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Make a KM curve for my cohort.","expect_route_to":"ukbsci-survival"},
+    {"id":"route-002","prompt":"Pool Cox estimates across 5 imputed datasets.","expect_route_to":"ukbsci-imputation"},
+    {"id":"route-003","prompt":"Plot a forest plot of the subgroup Cox results.","expect_route_to":"ukbsci-plot"}
+  ]
+}

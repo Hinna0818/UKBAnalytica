@@ -1,0 +1,13 @@
+{
+  "skill": "ukbsci-mediation",
+  "should_activate": [
+    {"id":"med-001","prompt":"Run a mediation analysis: SBP → LDL → incident AA, with age and sex as confounders.","expect_keywords":["run_mediation","mediator_type","outcome_type"]},
+    {"id":"med-002","prompt":"Screen 5 candidate mediators and compare their indirect effects.","expect_keywords":["run_multi_mediator","tnie"]},
+    {"id":"med-003","prompt":"Check sensitivity of the indirect effect to unmeasured confounding.","expect_keywords":["run_sensitivity_mediation"]},
+    {"id":"med-004","prompt":"Draw a forest plot of multiple mediators.","expect_keywords":["plot_mediation_forest"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Test subgroup × interaction without mediator.","expect_route_to":"ukbsci-subgroup-sensitivity"},
+    {"id":"route-002","prompt":"Just adjust for the mediator as a covariate.","expect_route_to":"ukbsci-regression"}
+  ]
+}

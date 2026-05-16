@@ -1,0 +1,16 @@
+{
+  "skill": "ukbsci-plot",
+  "should_activate": [
+    {"id":"plot-001","prompt":"Make a publication forest plot of my subgroup Cox results.","expect_keywords":["plot_forest","ukbsci_theme","save_ukbsci_figure"]},
+    {"id":"plot-002","prompt":"Volcano plot of 3000 Olink protein associations.","expect_keywords":["plot_regression_volcano","effect_col","gene_symbol"]},
+    {"id":"plot-003","prompt":"Calibration plot of my XGBoost model's test predictions.","expect_keywords":["plot_calibration","n_bins"]},
+    {"id":"plot-004","prompt":"Combine forest + volcano + calibration into one composite figure.","expect_keywords":["patchwork","plot_annotation","ukbsci_theme"]},
+    {"id":"plot-005","prompt":"Export to SVG + PDF + PNG at 300 dpi.","expect_keywords":["save_ukbsci_figure","cairo_pdf","ragg"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"Draw a Kaplan-Meier curve.","expect_route_to":"ukbsci-survival"},
+    {"id":"route-002","prompt":"Make a Love plot for matched cohort.","expect_route_to":"ukbsci-propensity"},
+    {"id":"route-003","prompt":"SHAP beeswarm for the XGBoost model.","expect_route_to":"ukbsci-ml"},
+    {"id":"route-004","prompt":"GO bar plot of enrichment hits.","expect_route_to":"ukbsci-proteomics"}
+  ]
+}

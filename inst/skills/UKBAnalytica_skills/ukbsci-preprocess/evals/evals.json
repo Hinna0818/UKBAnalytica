@@ -1,0 +1,14 @@
+{
+  "skill": "ukbsci-preprocess",
+  "should_activate": [
+    {"id":"prep-001","prompt":"Clean UKB negative codes (-1, -3, -7) and derive SBP from two readings.","expect_keywords":["ukb_clean_missing","calculate_blood_pressure"]},
+    {"id":"prep-002","prompt":"Compute average NO2 and PM2.5 exposure per participant.","expect_keywords":["calculate_air_pollution","pollutants"]},
+    {"id":"prep-003","prompt":"Build the 0–7 healthy diet score.","expect_keywords":["calculate_diet_score","components"]},
+    {"id":"prep-004","prompt":"List the predefined biomarker variables in UKBAnalytica.","expect_keywords":["get_variable_info","biomarkers"]},
+    {"id":"prep-005","prompt":"做一个 clinical_core 变量集的统一预处理。","expect_keywords":["preprocess_baseline","get_variable_set"]}
+  ],
+  "should_route_elsewhere": [
+    {"id":"route-001","prompt":"I need to multiply-impute the missing data, m = 20.","expect_route_to":"ukbsci-imputation"},
+    {"id":"route-002","prompt":"Now build disease cases and survival outcome from the cleaned table.","expect_route_to":"ukbsci-cohort"}
+  ]
+}

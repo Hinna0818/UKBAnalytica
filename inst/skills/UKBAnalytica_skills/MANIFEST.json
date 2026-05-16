@@ -1,0 +1,106 @@
+{
+  "pack": "UKBAnalytica_skills",
+  "package": "UKBAnalytica",
+  "version": "1.1.0",
+  "compatibility": [
+    "claude-code",
+    "openai-assistants",
+    "openai-responses",
+    "langchain",
+    "llamaindex",
+    "generic-yaml-frontmatter"
+  ],
+  "charter": [
+    "RAP-only execution: never download participant-level records to local disk.",
+    "Approved-project storage only for outputs.",
+    "Large extracts go async via rap_submit_extract().",
+    "Every function name referenced must exist in UKBAnalytica NAMESPACE.",
+    "Neutral plotting names; no journal-brand styling references."
+  ],
+  "skills": [
+    {
+      "name": "ukbsci-rap-extract",
+      "phase": "P2",
+      "path": "ukbsci-rap-extract",
+      "summary": "Discover, plan, and execute UK Biobank field extractions on RAP via dx extract_dataset (sync) or table-exporter (async)."
+    },
+    {
+      "name": "ukbsci-cohort",
+      "phase": "P2",
+      "path": "ukbsci-cohort",
+      "summary": "Define UKB disease phenotypes from multiple sources and build Cox-ready survival datasets with build_survival_dataset()."
+    },
+    {
+      "name": "ukbsci-workflow",
+      "phase": "P2",
+      "path": "ukbsci-workflow",
+      "summary": "End-to-end UKB study orchestrator: produces a phased plan, calls the right sub-skills in order, and writes a wrap-up note."
+    },
+    {
+      "name": "ukbsci-regression",
+      "phase": "P3",
+      "path": "ukbsci-regression",
+      "summary": "Batch linear / logistic / Cox regression with PH diagnostics, lag sensitivity, Fine-Gray competing risks, and trend tests."
+    },
+    {
+      "name": "ukbsci-survival",
+      "phase": "P3",
+      "path": "ukbsci-survival",
+      "summary": "Kaplan-Meier curves with risk tables and log-rank p-values via plot_km_curve."
+    },
+    {
+      "name": "ukbsci-baseline",
+      "phase": "P3",
+      "path": "ukbsci-baseline",
+      "summary": "Stratified Table 1 (baseline characteristics) wrapping tableone over UKBAnalytica cohorts."
+    },
+    {
+      "name": "ukbsci-propensity",
+      "phase": "P4",
+      "path": "ukbsci-propensity",
+      "summary": "Propensity scores, PSM, IPTW (ATE/ATT/ATC), balance diagnostics, weighted regression with robust SEs."
+    },
+    {
+      "name": "ukbsci-mediation",
+      "phase": "P4",
+      "path": "ukbsci-mediation",
+      "summary": "Causal mediation analysis (regmedint 4-way decomposition); single + multi-mediator with sensitivity."
+    },
+    {
+      "name": "ukbsci-subgroup-sensitivity",
+      "phase": "P4",
+      "path": "ukbsci-subgroup-sensitivity",
+      "summary": "Subgroup × interaction tests; sensitivity filters (drop early events, complete-case)."
+    },
+    {
+      "name": "ukbsci-imputation",
+      "phase": "P4",
+      "path": "ukbsci-imputation",
+      "summary": "Multiple imputation (mice) and Rubin's-rules pooling (mitools) with FMI diagnostics; supports custom-estimate pooling."
+    },
+    {
+      "name": "ukbsci-proteomics",
+      "phase": "P5",
+      "path": "ukbsci-proteomics",
+      "summary": "UKB Olink / UKB-PPP downstream: ID mapping, GO / KEGG ORA, STRING PPI, community detection, robustness."
+    },
+    {
+      "name": "ukbsci-ml",
+      "phase": "P5",
+      "path": "ukbsci-ml",
+      "summary": "End-to-end ML workflows (classification + survival): split, feature select, tune, fit, evaluate, compare, SHAP."
+    },
+    {
+      "name": "ukbsci-preprocess",
+      "phase": "P5",
+      "path": "ukbsci-preprocess",
+      "summary": "Variable cleaning, negative-code sanitation, composite-variable builders (BP / air pollution / diet score), variable-set catalog."
+    },
+    {
+      "name": "ukbsci-plot",
+      "phase": "P6",
+      "path": "ukbsci-plot",
+      "summary": "Manuscript figure production: forest, volcano, calibration; shared neutral theme/palettes; multi-format save helper."
+    }
+  ]
+}
