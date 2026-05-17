@@ -26,6 +26,9 @@
 #'
 #' @import data.table
 #' @importFrom stats glm binomial predict as.formula
+#' @importFrom survival Surv coxph
+#' @importFrom sandwich vcovHC
+#' @importFrom lmtest coeftest
 #' @export
 estimate_propensity_score <- function(data,
                                        treatment,
@@ -534,9 +537,6 @@ run_weighted_analysis <- function(data,
 
   # Validate model-specific requirements
   if (model_type == "cox") {
-    if (!requireNamespace("survival", quietly = TRUE)) {
-      stop("Package 'survival' is required for Cox models.")
-    }
     if (is.null(endpoint) || length(endpoint) != 2) {
       stop("For Cox models, 'endpoint' must be c('time', 'status').")
     }
@@ -564,9 +564,9 @@ run_weighted_analysis <- function(data,
   weights <- data[[weight_col]]
 
   if (model_type == "cox") {
-    formula_str <- paste0("survival::Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
+    formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
     formula_obj <- stats::as.formula(formula_str)
-    model <- survival::coxph(formula_obj, data = data, weights = weights)
+    model <- coxph(formula_obj, data = data, weights = weights)
 
     # Extract results
     sum_model <- summary(model)
@@ -578,9 +578,9 @@ run_weighted_analysis <- function(data,
       stop("Exposure variable not found in model results.")
     }
 
-    if (robust_se && requireNamespace("sandwich", quietly = TRUE)) {
+    if (robust_se) {
       # Robust SE for Cox
-      robust_vcov <- sandwich::vcovHC(model, type = "HC0")
+      robust_vcov <- vcovHC(model, type = "HC0")
       robust_se_val <- sqrt(diag(robust_vcov))[exp_row]
       coef_val <- coefs[exp_row, "coef"]
       z_val <- coef_val / robust_se_val
@@ -611,10 +611,9 @@ run_weighted_analysis <- function(data,
     exp_row <- grep(paste0("^", exposure), names(stats::coef(model)))[1]
     coef_val <- stats::coef(model)[exp_row]
 
-    if (robust_se && requireNamespace("sandwich", quietly = TRUE) &&
-        requireNamespace("lmtest", quietly = TRUE)) {
-      robust_vcov <- sandwich::vcovHC(model, type = "HC0")
-      coef_test <- lmtest::coeftest(model, vcov = robust_vcov)
+    if (robust_se) {
+      robust_vcov <- vcovHC(model, type = "HC0")
+      coef_test <- coeftest(model, vcov. = robust_vcov)
       se_val <- coef_test[exp_row, "Std. Error"]
       p_val <- coef_test[exp_row, "Pr(>|z|)"]
     } else {
@@ -643,10 +642,9 @@ run_weighted_analysis <- function(data,
     exp_row <- grep(paste0("^", exposure), names(stats::coef(model)))[1]
     coef_val <- stats::coef(model)[exp_row]
 
-    if (robust_se && requireNamespace("sandwich", quietly = TRUE) &&
-        requireNamespace("lmtest", quietly = TRUE)) {
-      robust_vcov <- sandwich::vcovHC(model, type = "HC0")
-      coef_test <- lmtest::coeftest(model, vcov = robust_vcov)
+    if (robust_se) {
+      robust_vcov <- vcovHC(model, type = "HC0")
+      coef_test <- coeftest(model, vcov. = robust_vcov)
       se_val <- coef_test[exp_row, "Std. Error"]
       p_val <- coef_test[exp_row, "Pr(>|t|)"]
     } else {

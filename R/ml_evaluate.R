@@ -5,6 +5,7 @@
 #'
 #' @name ml_evaluate
 #' @keywords internal
+#' @importFrom pROC roc auc ci.auc
 NULL
 
 #' Create ROC Curve Data for Binary ML Predictions
@@ -21,9 +22,9 @@ NULL
 #' @param positive_class Optional positive class label. Defaults to the second
 #'   level after converting \code{truth} to a factor.
 #' @param ci Logical. Calculate AUC 95% confidence interval.
-#' @param ci_method Method passed to \code{pROC::ci.auc()}; usually
+#' @param ci_method Method passed to \code{ci.auc()}; usually
 #'   \code{"delong"} or \code{"bootstrap"}.
-#' @param quiet Logical passed to \code{pROC::roc()}.
+#' @param quiet Logical passed to \code{roc()}.
 #'
 #' @return A data.frame with specificity, sensitivity, false-positive rate,
 #'   threshold, AUC, and optional confidence interval columns.
@@ -71,16 +72,16 @@ ukb_ml_roc_data <- function(truth,
     stop("Both outcome classes must be present after removing missing values.", call. = FALSE)
   }
 
-  roc_obj <- pROC::roc(
+  roc_obj <- roc(
     response = truth,
     predictor = prob,
     levels = c(negative_class, positive_class),
     quiet = quiet
   )
-  auc_value <- as.numeric(pROC::auc(roc_obj))
+  auc_value <- as.numeric(auc(roc_obj))
 
   if (isTRUE(ci)) {
-    auc_ci <- as.numeric(pROC::ci.auc(roc_obj, method = ci_method))
+    auc_ci <- as.numeric(ci.auc(roc_obj, method = ci_method))
     lower95 <- auc_ci[[1]]
     upper95 <- auc_ci[[3]]
   } else {
@@ -174,8 +175,8 @@ ukb_ml_metrics <- function(object,
     if (task == "classification" && ci_method == "delong" && "auc" %in% metrics) {
       .check_ml_package("pROC")
       prob <- if (is.matrix(pred)) pred[, 2] else pred
-      roc_obj <- pROC::roc(y_true, prob, quiet = TRUE)
-      auc_ci <- as.numeric(pROC::ci.auc(roc_obj))
+      roc_obj <- roc(y_true, prob, quiet = TRUE)
+      auc_ci <- as.numeric(ci.auc(roc_obj))
       result <- list(
         metrics = result,
         ci = list(auc = c(lower = auc_ci[1], estimate = auc_ci[2], upper = auc_ci[3]))
@@ -226,7 +227,7 @@ ukb_ml_metrics <- function(object,
     
     for (m in metrics) {
       val <- switch(m,
-        auc = as.numeric(pROC::auc(pROC::roc(y_true, prob, quiet = TRUE))),
+        auc = as.numeric(auc(roc(y_true, prob, quiet = TRUE))),
         accuracy = (tp + tn) / (tp + tn + fp + fn),
         sensitivity = if (tp + fn > 0) tp / (tp + fn) else NA,
         recall      = if (tp + fn > 0) tp / (tp + fn) else NA,
@@ -389,17 +390,17 @@ ukb_ml_roc <- function(object,
     
     prob <- if (is.matrix(pred)) pred[, 2] else pred
     
-    roc_obj <- pROC::roc(y_true, prob, quiet = TRUE)
+    roc_obj <- roc(y_true, prob, quiet = TRUE)
     roc_list[[name]] <- roc_obj
     
     # AUC with CI
-    auc_val <- as.numeric(pROC::auc(roc_obj))
+    auc_val <- as.numeric(auc(roc_obj))
     
     if (ci) {
       if (ci_method == "delong") {
-        auc_ci <- as.numeric(pROC::ci.auc(roc_obj))
+        auc_ci <- as.numeric(ci.auc(roc_obj))
       } else {
-        auc_ci <- as.numeric(pROC::ci.auc(roc_obj, method = "bootstrap"))
+        auc_ci <- as.numeric(ci.auc(roc_obj, method = "bootstrap"))
       }
       auc_df <- rbind(auc_df, data.frame(
         model = name,

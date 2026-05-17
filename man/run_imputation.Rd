@@ -28,7 +28,7 @@ run_imputation(
 \item{factor_vars}{Optional character vector of variables (subset of
 \code{vars}) to treat as categorical (factors).}
 
-\item{method}{Imputation method passed to \code{mice::mice()}. Default is
+\item{method}{Imputation method passed to \code{mice()}. Default is
 \code{"pmm"}.}
 
 \item{m}{Number of multiple imputations. Default is 5.}
@@ -66,7 +66,7 @@ imputing a selected set of covariates.
 The function:
 \enumerate{
 \item Subsets the input data to the requested variables.
-\item Runs \code{mice::mice()}.
+\item Runs \code{mice()}.
 \item Creates \code{m} completed datasets and merges imputed columns back.
 \item Optionally merges additional datasets (e.g., omics) by ID.
 }

@@ -1,4 +1,5 @@
 #' @importFrom stats relevel anova pchisq
+#' @importFrom survival Surv coxph
 NULL
 
 #' Run Subgroup Analysis
@@ -84,9 +85,6 @@ run_subgroup_analysis <- function(data,
 
   # Validate model-specific requirements
   if (model_type == "cox") {
-    if (!requireNamespace("survival", quietly = TRUE)) {
-      stop("Package 'survival' is required for Cox models. Please install it.")
-    }
     if (is.null(endpoint) || length(endpoint) != 2) {
       stop("For Cox models, 'endpoint' must be a character vector of length 2: c('time', 'status').")
     }
@@ -180,7 +178,7 @@ run_subgroup_analysis <- function(data,
       if (!is.null(covariates)) {
         rhs <- paste(c(exposure, covariates), collapse = " + ")
       }
-      formula_str <- paste0("survival::Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
+      formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
     } else {
       rhs <- exposure
       if (!is.null(covariates)) {
@@ -193,7 +191,7 @@ run_subgroup_analysis <- function(data,
     # Fit model
     tryCatch({
       if (model_type == "cox") {
-        model <- survival::coxph(formula_obj, data = subset_data)
+        model <- coxph(formula_obj, data = subset_data)
         sum_model <- summary(model)
         coefs <- sum_model$coefficients
         conf <- sum_model$conf.int
@@ -434,9 +432,9 @@ run_multi_subgroup <- function(data,
       if (!is.null(covariates)) {
         rhs <- paste(c(interaction_term, covariates), collapse = " + ")
       }
-      formula_str <- paste0("survival::Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
+      formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
       formula_obj <- stats::as.formula(formula_str)
-      model <- survival::coxph(formula_obj, data = data)
+      model <- coxph(formula_obj, data = data)
 
     } else if (model_type == "logistic") {
       interaction_term <- paste0(exposure, " * ", subgroup_var)
@@ -474,9 +472,9 @@ run_multi_subgroup <- function(data,
         # Build model without interaction
         rhs_no_int <- paste(c(exposure, subgroup_var, covariates), collapse = " + ")
         formula_no_int <- stats::as.formula(
-          paste0("survival::Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs_no_int)
+          paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs_no_int)
         )
-        model_no_int <- survival::coxph(formula_no_int, data = data)
+        model_no_int <- coxph(formula_no_int, data = data)
         anova_result <- stats::anova(model_no_int, model)
         p_val <- anova_result[["Pr(>|Chi|)"]][2]
       } else if (model_type == "logistic") {

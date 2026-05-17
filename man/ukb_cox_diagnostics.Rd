@@ -14,9 +14,9 @@ ukb_cox_diagnostics(
 )
 }
 \arguments{
-\item{model}{A fitted \code{survival::coxph()} model.}
+\item{model}{A fitted \code{coxph()} model.}
 
-\item{transform}{Character scalar passed to \code{survival::cox.zph()}.}
+\item{transform}{Character scalar passed to \code{cox.zph()}.}
 
 \item{terms}{Logical; keep term-level rows.}
 

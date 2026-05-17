@@ -54,6 +54,6 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Nan He \email{nanh302311@gmail.com} (\href{https://orcid.org/0009-0008-6932-3867}{ORCID})
+\strong{Maintainer}: Nan He \email{hinna01@163.com} (\href{https://orcid.org/0009-0008-6932-3867}{ORCID})
 
 }

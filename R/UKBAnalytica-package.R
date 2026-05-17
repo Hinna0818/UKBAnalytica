@@ -50,6 +50,16 @@
 #' @importFrom stats quantile relevel sd terms model.matrix predict approx
 #' @importFrom utils head modifyList
 #' @importFrom grid unit
+#' @importFrom survival Surv coxph survfit survdiff basehaz concordance finegray cox.zph
+#' @importFrom pROC roc auc ci.auc
+#' @importFrom tableone CreateTableOne
+#' @importFrom mice mice complete
+#' @importFrom mitools MIcombine MIextract imputationList
+#' @importFrom sandwich vcovHC
+#' @importFrom lmtest coeftest
+#' @importFrom MASS glm.nb
+#' @importFrom xml2 read_html xml_find_all xml_text
+#' @importFrom igraph simplify as_undirected components induced_subgraph vcount ecount cluster_fast_greedy cut_at vertex_attr set_vertex_attr
 #'
 "_PACKAGE"
 

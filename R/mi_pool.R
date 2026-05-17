@@ -7,6 +7,9 @@
 #'
 #' @name mi_pool
 #' @keywords internal
+#' @importFrom mitools MIcombine MIextract imputationList
+#' @importFrom survival coxph
+#' @importFrom MASS glm.nb
 NULL
 
 
@@ -81,12 +84,6 @@ pool_mi_models <- function(models = NULL,
                            conf.level = 0.95,
                            exponentiate = NULL) {
 
-  # Check mitools availability
-
-if (!requireNamespace("mitools", quietly = TRUE)) {
-    stop("Package 'mitools' is required. Install with: install.packages('mitools')")
-  }
-
   model_type <- match.arg(model_type)
   call <- match.call()
 
@@ -126,12 +123,12 @@ if (is.null(models) && is.null(datasets)) {
 
   # Combine using mitools
   mi_result <- tryCatch({
-    mitools::MIcombine(models, df.complete = df.complete)
+    MIcombine(models, df.complete = df.complete)
   }, error = function(e) {
     # Fallback: extract coefficients and variances manually
-    betas <- mitools::MIextract(models, fun = stats::coef)
-    vars <- mitools::MIextract(models, fun = stats::vcov)
-    mitools::MIcombine(betas, vars, df.complete = df.complete)
+    betas <- MIextract(models, fun = stats::coef)
+    vars <- MIextract(models, fun = stats::vcov)
+    MIcombine(betas, vars, df.complete = df.complete)
   })
 
   # Build pooled results table
@@ -208,19 +205,6 @@ fit_mi_models <- function(datasets,
     stop("'datasets' must be a list of data.frames or an imputationList.")
   }
 
-  # Check required packages
-  if (model_type == "cox") {
-    if (!requireNamespace("survival", quietly = TRUE)) {
-      stop("Package 'survival' is required for Cox models.")
-    }
-  }
-
-  if (model_type == "negbin") {
-    if (!requireNamespace("MASS", quietly = TRUE)) {
-      stop("Package 'MASS' is required for negative binomial models.")
-    }
-  }
-
   # Determine fitting function
   fit_fn <- switch(model_type,
     "lm" = function(d) stats::lm(formula, data = d, ...),
@@ -232,8 +216,8 @@ fit_mi_models <- function(datasets,
       fam <- if (is.null(family)) stats::poisson() else family
       stats::glm(formula, data = d, family = fam, ...)
     },
-    "cox" = function(d) survival::coxph(formula, data = d, ...),
-    "negbin" = function(d) MASS::glm.nb(formula, data = d, ...)
+    "cox" = function(d) coxph(formula, data = d, ...),
+    "negbin" = function(d) glm.nb(formula, data = d, ...)
   )
 
   # Fit models
@@ -281,11 +265,6 @@ fit_mi_models <- function(datasets,
 #'
 #' @export
 create_imputation_list <- function(datasets, validate = TRUE) {
-
-  if (!requireNamespace("mitools", quietly = TRUE)) {
-    stop("Package 'mitools' is required.")
-  }
-
   if (!is.list(datasets) || length(datasets) < 2) {
     stop("'datasets' must be a list of at least 2 data.frames.")
   }
@@ -310,7 +289,7 @@ create_imputation_list <- function(datasets, validate = TRUE) {
     }
   }
 
-  mitools::imputationList(datasets)
+  imputationList(datasets)
 }
 
 
@@ -348,11 +327,6 @@ pool_custom_estimates <- function(estimates,
                                    df.complete = Inf,
                                    conf.level = 0.95,
                                    labels = NULL) {
-
-  if (!requireNamespace("mitools", quietly = TRUE)) {
-    stop("Package 'mitools' is required.")
-  }
-
   if (!is.list(estimates) || !is.list(variances)) {
     stop("'estimates' and 'variances' must be lists.")
   }
@@ -374,7 +348,7 @@ pool_custom_estimates <- function(estimates,
   })
 
   # Combine using mitools
-  mi_result <- mitools::MIcombine(estimates, variances, df.complete = df.complete)
+  mi_result <- MIcombine(estimates, variances, df.complete = df.complete)
 
   # Build pooled table
   pooled <- .build_pooled_table(mi_result, conf.level)

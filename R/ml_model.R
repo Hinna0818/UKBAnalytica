@@ -7,6 +7,7 @@
 #'
 #' @name ml_model
 #' @keywords internal
+#' @importFrom pROC roc auc
 NULL
 
 # Helper Functions
@@ -959,7 +960,7 @@ ukb_ml_cv <- function(formula,
     
     for (m in metrics) {
       val <- switch(m,
-        auc = as.numeric(pROC::auc(pROC::roc(y_true, prob, quiet = TRUE))),
+        auc = as.numeric(auc(roc(y_true, prob, quiet = TRUE))),
         accuracy = (tp + tn) / (tp + tn + fp + fn),
         sensitivity = if (tp + fn > 0) tp / (tp + fn) else NA,
         recall = if (tp + fn > 0) tp / (tp + fn) else NA,

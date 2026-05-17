@@ -7,6 +7,7 @@
 #' @param test whether to perform statistical tests comparing cases and controls for each variable (default: FALSE).
 #' @return a list containing table one information.
 #' @import data.table
+#' @importFrom tableone CreateTableOne
 #' @examples
 #' \dontrun{
 #' data(pbc, package = "survival")
@@ -22,9 +23,6 @@
 #' }
 #' @export
 create_baseline_table <- function(data, case_col, factor_cols = NULL, continuous_cols = NULL, test = FALSE) {
-  if (!requireNamespace("tableone", quietly = TRUE)) {
-    stop("Package 'tableone' is required but not installed. Please install it from CRAN using: install.packages(\"tableone\")")
-  }
   if (!data.table::is.data.table(data)) {
     data <- data.table::as.data.table(data)
   }
@@ -45,7 +43,7 @@ create_baseline_table <- function(data, case_col, factor_cols = NULL, continuous
   }
   
   # Create the tableone object
-  table_one <- tableone::CreateTableOne(
+  table_one <- CreateTableOne(
     vars = c(factor_cols, continuous_cols),
     strata = case_col,
     data = data,

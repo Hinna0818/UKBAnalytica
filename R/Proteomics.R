@@ -1,3 +1,7 @@
+#' @importFrom igraph simplify as_undirected components induced_subgraph vcount
+#'   ecount cluster_fast_greedy cut_at set_vertex_attr
+NULL
+
 #' Convert protein identifiers to gene symbols
 #'
 #' @description
@@ -595,34 +599,34 @@ run_protein_ppi_fastgreedy <- function(ppi,
   }
   n_clusters <- as.integer(n_clusters)
 
-  graph <- igraph::simplify(
-    igraph::as_undirected(graph),
+  graph <- simplify(
+    as_undirected(graph),
     remove.multiple = TRUE,
     remove.loops = TRUE,
     edge.attr.comb = "mean"
   )
 
   if (isTRUE(largest_component)) {
-    comp <- igraph::components(graph)
+    comp <- components(graph)
     largest <- which.max(comp$csize)
     keep_nodes <- names(comp$membership)[comp$membership == largest]
-    graph <- igraph::induced_subgraph(graph, vids = keep_nodes)
+    graph <- induced_subgraph(graph, vids = keep_nodes)
   }
 
-  if (igraph::vcount(graph) == 0L) {
+  if (vcount(graph) == 0L) {
     stop("The graph has no vertices after preprocessing.")
   }
-  if (igraph::ecount(graph) == 0L) {
+  if (ecount(graph) == 0L) {
     stop("Fast greedy clustering requires at least one edge.")
   }
 
-  n_clusters <- min(n_clusters, igraph::vcount(graph))
-  communities <- igraph::cluster_fast_greedy(graph)
-  membership <- igraph::cut_at(communities, no = n_clusters)
+  n_clusters <- min(n_clusters, vcount(graph))
+  communities <- cluster_fast_greedy(graph)
+  membership <- cut_at(communities, no = n_clusters)
   labels <- paste0(prefix, membership)
-  igraph::vertex_attr(graph, cluster_attr) <- labels
-  igraph::vertex_attr(graph, "fast_greedy_membership") <- membership
-  igraph::vertex_attr(graph, "fast_greedy_n_clusters") <- n_clusters
+  graph <- set_vertex_attr(graph, cluster_attr, value = labels)
+  graph <- set_vertex_attr(graph, "fast_greedy_membership", value = membership)
+  graph <- set_vertex_attr(graph, "fast_greedy_n_clusters", value = n_clusters)
   graph
 }
 

@@ -41,6 +41,7 @@
 #' )
 #' }
 #'
+#' @importFrom xml2 read_html xml_find_all xml_text
 #' @export
 get_field_metadata <- function(field_id = NULL,
                                query = NULL,
@@ -418,12 +419,7 @@ get_field_info <- function(field_id,
 }
 
 .field_metadata_require_xml2 <- function() {
-  if (!requireNamespace("xml2", quietly = TRUE)) {
-    stop(
-      "Live UKB field lookup requires the `xml2` package. Install it or use `ukb_data_dict` / `fields_df` instead.",
-      call. = FALSE
-    )
-  }
+  invisible(TRUE)
 }
 
 .field_metadata_parse_value_pairs <- function(cells) {
@@ -455,19 +451,19 @@ get_field_info <- function(field_id,
                                             url) {
   .field_metadata_require_xml2()
 
-  doc <- xml2::read_html(html)
-  rows <- xml2::xml_find_all(doc, ".//tr")
+  doc <- read_html(html)
+  rows <- xml_find_all(doc, ".//tr")
   pairs <- list()
 
   for (row in rows) {
-    cells <- xml2::xml_text(xml2::xml_find_all(row, ".//th|.//td"), trim = TRUE)
+    cells <- xml_text(xml_find_all(row, ".//th|.//td"), trim = TRUE)
     row_pairs <- .field_metadata_parse_value_pairs(cells)
     if (length(row_pairs) > 0) {
       pairs[names(row_pairs)] <- row_pairs
     }
   }
 
-  page_text <- .field_metadata_compact_ws(xml2::xml_text(doc))
+  page_text <- .field_metadata_compact_ws(xml_text(doc))
   title <- unname(pairs[["Description"]])
   category <- unname(pairs[["Category"]])
   participants <- unname(pairs[["Participants"]])
@@ -543,7 +539,7 @@ get_field_info <- function(field_id,
   on.exit(options(timeout = old_timeout), add = TRUE)
 
   doc <- tryCatch(
-    xml2::read_html(url),
+    read_html(url),
     error = function(e) {
       stop("Failed to retrieve UKB field page: ", conditionMessage(e), call. = FALSE)
     }

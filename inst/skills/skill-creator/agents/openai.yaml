@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Creator"
+  short_description: "Create and validate repo skills."
+  default_prompt: "Use $skill-creator to create or update a concise, validated Codex skill in this repository."

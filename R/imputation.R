@@ -12,7 +12,7 @@
 #' The function:
 #' \enumerate{
 #'   \item Subsets the input data to the requested variables.
-#'   \item Runs \code{mice::mice()}.
+#'   \item Runs \code{mice()}.
 #'   \item Creates \code{m} completed datasets and merges imputed columns back.
 #'   \item Optionally merges additional datasets (e.g., omics) by ID.
 #' }
@@ -28,7 +28,7 @@
 #' @param vars Character vector of column names to impute.
 #' @param factor_vars Optional character vector of variables (subset of
 #'   \code{vars}) to treat as categorical (factors).
-#' @param method Imputation method passed to \code{mice::mice()}. Default is
+#' @param method Imputation method passed to \code{mice()}. Default is
 #'   \code{"pmm"}.
 #' @param m Number of multiple imputations. Default is 5.
 #' @param maxit Maximum number of iterations. Default is 10.
@@ -46,6 +46,8 @@
 #'   \item \code{data_list}: a list of length \code{m} containing completed and
 #'     merged datasets
 #' }
+#'
+#' @importFrom mice mice complete
 #'
 #' @examples
 #' \dontrun{
@@ -70,13 +72,6 @@ run_imputation <- function(data,
                               additional_data = NULL,
                               additional_join = c("inner", "left")) {
   additional_join <- match.arg(additional_join)
-
-  if (!requireNamespace("mice", quietly = TRUE)) {
-    stop(
-      "Package 'mice' is required but not installed. ",
-      "Install it from CRAN with install.packages('mice')."
-    )
-  }
 
   if (missing(vars) || length(vars) == 0) {
     stop("`vars` must be a non-empty character vector.")
@@ -124,7 +119,7 @@ run_imputation <- function(data,
   imp_input <- imp_df
   imp_input[[id_col]] <- NULL
 
-  imp <- mice::mice(
+  imp <- mice(
     data = imp_input,
     m = m,
     method = method,
@@ -137,7 +132,7 @@ run_imputation <- function(data,
 
   out_list <- vector("list", length = imp$m)
   for (i in seq_len(imp$m)) {
-    completed <- mice::complete(imp, i)
+    completed <- complete(imp, i)
     completed[[id_col]] <- eid_vec
 
     # Merge imputed covariates back to static skeleton.

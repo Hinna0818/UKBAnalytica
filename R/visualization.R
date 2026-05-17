@@ -7,6 +7,7 @@
 #'   geom_abline geom_line geom_jitter coord_equal scale_size_continuous
 #'   scale_color_gradientn position_jitter guide_colorbar theme_classic
 #'   element_line margin expansion
+#' @importFrom survival Surv survfit survdiff
 NULL
 
 #' Plot Forest Plot for Subgroup Analysis
@@ -202,11 +203,6 @@ plot_km_curve <- function(data,
                            pvalue = TRUE,
                            xlim = NULL,
                            break_time = NULL) {
-
-  if (!requireNamespace("survival", quietly = TRUE)) {
-    stop("Package 'survival' is required for Kaplan-Meier curves.")
-  }
-
   # Validate inputs
   if (!is.data.frame(data)) {
     stop("'data' must be a data.frame or data.table.")
@@ -223,16 +219,16 @@ plot_km_curve <- function(data,
   # Build survival formula
   if (is.null(group_col)) {
     formula_obj <- stats::as.formula(
-      paste0("survival::Surv(", time_col, ", ", status_col, ") ~ 1")
+      paste0("Surv(", time_col, ", ", status_col, ") ~ 1")
     )
   } else {
     formula_obj <- stats::as.formula(
-      paste0("survival::Surv(", time_col, ", ", status_col, ") ~ ", group_col)
+      paste0("Surv(", time_col, ", ", status_col, ") ~ ", group_col)
     )
   }
 
   # Fit survival model
-  fit <- survival::survfit(formula_obj, data = data)
+  fit <- survfit(formula_obj, data = data)
 
   # Extract survival data for plotting
   if (is.null(group_col)) {
@@ -287,7 +283,7 @@ plot_km_curve <- function(data,
   # Calculate log-rank p-value
   p_val <- NA
   if (pvalue && !is.null(group_col)) {
-    logrank <- survival::survdiff(formula_obj, data = data)
+    logrank <- survdiff(formula_obj, data = data)
     p_val <- 1 - stats::pchisq(logrank$chisq, df = length(logrank$n) - 1)
   }
 

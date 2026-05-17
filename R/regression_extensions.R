@@ -7,18 +7,11 @@
 #'
 #' @name regression_extensions
 #' @keywords internal
+#' @importFrom survival Surv coxph finegray cox.zph
 NULL
 
 .coxext_require_survival <- function(caller) {
-  if (!requireNamespace("survival", quietly = TRUE)) {
-    stop(
-      sprintf(
-        "Package 'survival' is required for %s(). Please install it with: install.packages('survival')",
-        caller
-      ),
-      call. = FALSE
-    )
-  }
+  invisible(TRUE)
 }
 
 .coxext_validate_logical_flag <- function(x, name) {
@@ -63,7 +56,7 @@ NULL
 
   formula_obj <- stats::as.formula(
     paste0(
-      "survival::Surv(",
+      "Surv(",
       time_col,
       ", ",
       status_col,
@@ -89,7 +82,7 @@ NULL
   if (is.null(fit_args$model)) {
     fit_args$model <- TRUE
   }
-  fit <- do.call(survival::coxph, fit_args)
+  fit <- do.call(coxph, fit_args)
 
   list(
     model = fit,
@@ -342,7 +335,7 @@ NULL
 
   formula_fg <- stats::as.formula(
     paste0(
-      "survival::Surv(",
+      "Surv(",
       time_col,
       ", ",
       status_col,
@@ -351,7 +344,7 @@ NULL
     )
   )
 
-  fg_data <- survival::finegray(
+  fg_data <- finegray(
     formula_fg,
     data = data,
     etype = "event"
@@ -359,7 +352,7 @@ NULL
 
   fit_formula <- stats::as.formula(
     paste0(
-      "survival::Surv(fgstart, fgstop, fgstatus) ~ ",
+      "Surv(fgstart, fgstop, fgstatus) ~ ",
       .coxext_make_rhs(exposure, covariates)
     )
   )
@@ -378,7 +371,7 @@ NULL
   if (is.null(fit_args$model)) {
     fit_args$model <- TRUE
   }
-  fit <- do.call(survival::coxph, fit_args)
+  fit <- do.call(coxph, fit_args)
 
   list(
     model = fit,
@@ -480,8 +473,8 @@ NULL
 
 #' Diagnose Proportional Hazards Assumptions for a Cox Model
 #'
-#' @param model A fitted \code{survival::coxph()} model.
-#' @param transform Character scalar passed to \code{survival::cox.zph()}.
+#' @param model A fitted \code{coxph()} model.
+#' @param transform Character scalar passed to \code{cox.zph()}.
 #' @param terms Logical; keep term-level rows.
 #' @param global Logical; keep the GLOBAL row.
 #' @param alpha Numeric threshold for flagging PH violations.
@@ -507,7 +500,7 @@ ukb_cox_diagnostics <- function(model,
     stop("'model' must be a fitted 'coxph' object.", call. = FALSE)
   }
 
-  zph <- survival::cox.zph(model, transform = transform, terms = isTRUE(terms), global = isTRUE(global))
+  zph <- cox.zph(model, transform = transform, terms = isTRUE(terms), global = isTRUE(global))
   zph_table <- as.data.frame(zph$table, stringsAsFactors = FALSE)
   zph_table$term <- rownames(zph$table)
   rownames(zph_table) <- NULL
@@ -547,10 +540,10 @@ ukb_cox_diagnostics <- function(model,
 #' @param main_var Character vector of exposure variable names.
 #' @param covariates Optional character vector of covariate names.
 #' @param endpoint Character vector of length 2: \code{c(time, status)}.
-#' @param transform Character scalar passed to \code{survival::cox.zph()}.
+#' @param transform Character scalar passed to \code{cox.zph()}.
 #' @param alpha Numeric threshold for flagging PH violations.
 #' @param keep_models Logical; if TRUE, attach fitted models as an attribute.
-#' @param ... Additional arguments passed to \code{survival::coxph()}.
+#' @param ... Additional arguments passed to \code{coxph()}.
 #'
 #' @return A data.frame with effect estimates and PH-diagnostic columns.
 #' @export
@@ -1005,7 +998,7 @@ runmulti_competing <- function(data,
 #' @param endpoint Character vector of length 2: \code{c(time, status)}.
 #' @param lag_years Numeric vector of lag windows in years. \code{0} means no filtering.
 #' @param verbose Logical; print progress messages.
-#' @param ... Additional arguments passed to \code{survival::coxph()}.
+#' @param ... Additional arguments passed to \code{coxph()}.
 #'
 #' @return A data.frame containing lag-specific hazard-ratio estimates.
 #' @export

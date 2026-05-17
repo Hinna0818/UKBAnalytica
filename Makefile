@@ -21,7 +21,7 @@ install:
 	R CMD INSTALL $(PKGNAME)_$(PKGVERS).tar.gz
 
 check:
-	Rscript -e 'devtools::check()'
+	_R_CHECK_SYSTEM_CLOCK_=false Rscript -e 'devtools::check()'
 
 check1: rd build
 	cd ..;\

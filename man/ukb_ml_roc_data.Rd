@@ -29,10 +29,10 @@ level after converting \code{truth} to a factor.}
 
 \item{ci}{Logical. Calculate AUC 95\% confidence interval.}
 
-\item{ci_method}{Method passed to \code{pROC::ci.auc()}; usually
+\item{ci_method}{Method passed to \code{ci.auc()}; usually
 \code{"delong"} or \code{"bootstrap"}.}
 
-\item{quiet}{Logical passed to \code{pROC::roc()}.}
+\item{quiet}{Logical passed to \code{roc()}.}
 }
 \value{
 A data.frame with specificity, sensitivity, false-positive rate,

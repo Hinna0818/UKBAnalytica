@@ -27,7 +27,7 @@ runmulti_cox_lag(
 
 \item{verbose}{Logical; print progress messages.}
 
-\item{...}{Additional arguments passed to \code{survival::coxph()}.}
+\item{...}{Additional arguments passed to \code{coxph()}.}
 }
 \value{
 A data.frame containing lag-specific hazard-ratio estimates.

@@ -4,7 +4,7 @@ Version: 1.0.0
 Authors@R: person(given = "Nan", family = "He", email = "hinna01@163.com", role = c("aut", "cre"), comment = c(ORCID = "0009-0008-6932-3867"))
 Author: Nan He [aut, cre] (<https://orcid.org/0009-0008-6932-3867>)
 Maintainer: Nan He <hinna01@163.com>
-Description: Provides an integrated workflow for UK Biobank (UKB) Research
+Description: Provides an integrated workflow for UK Biobank Research
     Analysis Platform (RAP) hosted and RAP-generated analysis tables. The
     package supports RAP phenotype extraction planning, predefined variable
     sets and disease definitions, standardized baseline preprocessing,
@@ -26,21 +26,24 @@ Imports:
     stringi,
     ggplot2,
     rlang,
-    scales
-Suggests:
-    testthat,
+    scales,
     survival,
+    pROC,
     tableone,
     mice,
+    mitools,
     sandwich,
     lmtest,
+    MASS,
+    xml2,
+    igraph
+Suggests:
+    testthat,
     gbm,
     cobalt,
     survminer,
     MatchIt,
     regmedint,
-    mitools,
-    MASS,
     ranger,
     xgboost,
     glmnet,
@@ -50,14 +53,11 @@ Suggests:
     Boruta,
     rBayesianOptimization,
     fastshap,
-    pROC,
     randomForestSRC,
     clusterProfiler,
-    igraph,
     AnnotationDbi,
     org.Hs.eg.db,
-    TCMDATA,
-    xml2
+    TCMDATA
 Config/testthat/edition: 3
 Config/Needs/bioc: TRUE
 Depends: 

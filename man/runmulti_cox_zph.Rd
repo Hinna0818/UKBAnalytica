@@ -24,13 +24,13 @@ runmulti_cox_zph(
 
 \item{endpoint}{Character vector of length 2: \code{c(time, status)}.}
 
-\item{transform}{Character scalar passed to \code{survival::cox.zph()}.}
+\item{transform}{Character scalar passed to \code{cox.zph()}.}
 
 \item{alpha}{Numeric threshold for flagging PH violations.}
 
 \item{keep_models}{Logical; if TRUE, attach fitted models as an attribute.}
 
-\item{...}{Additional arguments passed to \code{survival::coxph()}.}
+\item{...}{Additional arguments passed to \code{coxph()}.}
 }
 \value{
 A data.frame with effect estimates and PH-diagnostic columns.

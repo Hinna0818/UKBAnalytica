@@ -6,6 +6,7 @@
 #'
 #' @name ml_survival
 #' @keywords internal
+#' @importFrom survival Surv coxph basehaz concordance
 NULL
 
 # Main Survival ML Function
@@ -178,7 +179,7 @@ ukb_ml_survival <- function(formula,
   
   # GBM requires Surv object as response
   gbm_formula <- as.formula(paste0(
-    "survival::Surv(", time_var, ", ", event_var, ") ~ ",
+    "Surv(", time_var, ", ", event_var, ") ~ ",
     paste(predictor_vars, collapse = " + ")
   ))
   
@@ -202,7 +203,7 @@ ukb_ml_survival <- function(formula,
   
   # Prepare X matrix and Surv object
   X <- model.matrix(~ . - 1, data = data[, predictor_vars, drop = FALSE])
-  y <- survival::Surv(data[[time_var]], data[[event_var]])
+  y <- Surv(data[[time_var]], data[[event_var]])
   
   do.call(glmnet::cv.glmnet, c(
     list(x = X, y = y),
@@ -302,8 +303,8 @@ ukb_ml_survival_predict <- function(object,
   train_risk <- predict(model, newdata = train_data, n.trees = model$n.trees, type = "link")
   
   # Fit baseline hazard
-  surv_obj <- survival::Surv(train_data[[object$time_var]], train_data[[object$event_var]])
-  basehaz_fit <- survival::basehaz(survival::coxph(surv_obj ~ offset(train_risk), data = train_data))
+  surv_obj <- Surv(train_data[[object$time_var]], train_data[[object$event_var]])
+  basehaz_fit <- basehaz(coxph(surv_obj ~ offset(train_risk), data = train_data))
   
   # Interpolate baseline hazard at requested times
   H0 <- approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
@@ -339,8 +340,8 @@ ukb_ml_survival_predict <- function(object,
   train_X <- model.matrix(~ . - 1, data = object$train_data[, object$predictors, drop = FALSE])
   train_risk <- as.numeric(predict(model, newx = train_X, s = "lambda.min", type = "link"))
   
-  surv_obj <- survival::Surv(object$train_data[[object$time_var]], object$train_data[[object$event_var]])
-  basehaz_fit <- survival::basehaz(survival::coxph(surv_obj ~ offset(train_risk), data = object$train_data))
+  surv_obj <- Surv(object$train_data[[object$time_var]], object$train_data[[object$event_var]])
+  basehaz_fit <- basehaz(coxph(surv_obj ~ offset(train_risk), data = object$train_data))
   
   H0 <- approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
   
@@ -374,10 +375,10 @@ ukb_ml_survival_predict <- function(object,
     }
   )
   
-  surv_obj <- survival::Surv(test_data[[object$time_var]], test_data[[object$event_var]])
+  surv_obj <- Surv(test_data[[object$time_var]], test_data[[object$event_var]])
   
   # Calculate concordance
-  conc <- survival::concordance(surv_obj ~ risk)
+  conc <- concordance(surv_obj ~ risk)
   conc$concordance
 }
 
@@ -427,7 +428,7 @@ ukb_ml_survival_predict <- function(object,
     stop("No features available for survival model fitting.", call. = FALSE)
   }
   stats::as.formula(paste0(
-    "survival::Surv(", time_var, ", ", event_var, ") ~ ",
+    "Surv(", time_var, ", ", event_var, ") ~ ",
     paste(features, collapse = " + ")
   ))
 }
@@ -488,7 +489,7 @@ ukb_ml_survival_predict <- function(object,
 
   list(
     X = X,
-    y = survival::Surv(mf$data[[mf$time_var]], mf$data[[mf$event_var]]),
+    y = Surv(mf$data[[mf$time_var]], mf$data[[mf$event_var]]),
     model_frame = mf$data,
     time_var = mf$time_var,
     event_var = mf$event_var,
@@ -574,7 +575,7 @@ ukb_ml_survival_predict <- function(object,
     cox = {
       default_params <- list(x = TRUE, model = TRUE)
       fit_params <- utils::modifyList(default_params, params)
-      do.call(survival::coxph, c(list(formula = formula, data = mf), fit_params))
+      do.call(coxph, c(list(formula = formula, data = mf), fit_params))
     },
     rsf = .fit_rsf(formula, mf, params, verbose),
     gbm_surv = .fit_gbm_surv(formula, mf, time_var, event_var, predictors, params, verbose),
@@ -619,9 +620,9 @@ ukb_ml_survival_predict <- function(object,
 
 #' @keywords internal
 .sml_baseline_survival <- function(time, event, risk, times) {
-  surv_obj <- survival::Surv(time, event)
-  fit <- survival::coxph(surv_obj ~ offset(risk))
-  basehaz_fit <- survival::basehaz(fit, centered = FALSE)
+  surv_obj <- Surv(time, event)
+  fit <- coxph(surv_obj ~ offset(risk))
+  basehaz_fit <- basehaz(fit, centered = FALSE)
   H0 <- stats::approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
   H0
 }
@@ -659,7 +660,7 @@ ukb_ml_survival_predict <- function(object,
   if (type == "risk") return(risk)
 
   if (object$model == "cox") {
-    basehaz_fit <- survival::basehaz(object$fitted_model, centered = FALSE)
+    basehaz_fit <- basehaz(object$fitted_model, centered = FALSE)
     H0 <- stats::approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
     chf <- outer(exp(risk), H0, "*")
     colnames(chf) <- paste0("t", times)
@@ -693,8 +694,8 @@ ukb_ml_survival_predict <- function(object,
   .check_ml_package("survival")
   keep <- stats::complete.cases(time, event, risk)
   if (sum(keep) < 2L || length(unique(event[keep])) < 2L) return(NA_real_)
-  conc <- survival::concordance(
-    survival::Surv(time[keep], event[keep]) ~ risk[keep],
+  conc <- concordance(
+    Surv(time[keep], event[keep]) ~ risk[keep],
     reverse = TRUE
   )
   as.numeric(conc$concordance)
@@ -882,7 +883,7 @@ ukb_ml_survival_feature_select <- function(split,
   if (method == "filter") {
     scores <- vapply(features, function(v) {
       f <- .sml_formula_from_features(parsed$time_var, parsed$event_var, v)
-      fit <- try(survival::coxph(f, data = as.data.frame(split$train)), silent = TRUE)
+      fit <- try(coxph(f, data = as.data.frame(split$train)), silent = TRUE)
       if (inherits(fit, "try-error")) return(0)
       z <- summary(fit)$wald["test"]
       ifelse(is.finite(z), as.numeric(z), 0)

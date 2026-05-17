@@ -9,9 +9,10 @@
 #' @param main_var A character vector of main variable names to test.
 #' @param covariates A character vector of covariate names to adjust for. Default \code{NULL} (univariate).
 #' @param endpoint A character vector of length 2: \code{c("time", "status")}, indicating survival time and event columns.
-#' @param ... Additional arguments passed to \code{survival::coxph()}.
+#' @param ... Additional arguments passed to \code{coxph()}.
 #'
 #' @importFrom stats as.formula confint
+#' @importFrom survival Surv coxph
 #' @return A data.frame with columns: \code{variable}, \code{coef},
 #'   \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
 #'   \code{pvalue}, \code{n}, and \code{n_event}.
@@ -33,11 +34,6 @@ runmulti_cox <- function(data,
                          covariates = NULL,
                          endpoint = c("time", "status"),
                          ...) {
-
-  if (!requireNamespace("survival", quietly = TRUE)) {
-    stop("Package 'survival' is required for runmulti_cox(). Please install it with: install.packages('survival')")
-  }
-
   stopifnot(length(endpoint) == 2)
   .validate_regression_inputs(data, main_var, covariates, c(endpoint))
 
@@ -49,11 +45,11 @@ runmulti_cox <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
-    formula_str <- paste0("survival::Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
+    formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
     formula_obj <- stats::as.formula(formula_str)
 
     # fit model
-    model <- survival::coxph(formula_obj, data = data, ...)
+    model <- coxph(formula_obj, data = data, ...)
 
     # extract results
     sum_model <- summary(model)

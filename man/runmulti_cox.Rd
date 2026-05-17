@@ -21,7 +21,7 @@ runmulti_cox(
 
 \item{endpoint}{A character vector of length 2: \code{c("time", "status")}, indicating survival time and event columns.}
 
-\item{...}{Additional arguments passed to \code{survival::coxph()}.}
+\item{...}{Additional arguments passed to \code{coxph()}.}
 }
 \value{
 A data.frame with columns: \code{variable}, \code{coef},
