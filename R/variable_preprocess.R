@@ -19,17 +19,24 @@ NULL
     sex = list(
       field_id = 31,
       ukb_col = "p31",
-      description = "Sex (0=Female, 1=Male)"
+      description = "Sex; coding 9: 0=Female, 1=Male"
     ),
     age = list(
       field_id = 21022,
       ukb_col = "p21022",
-      description = "Age at recruitment (years)"
+      description = "Age at recruitment; integer years"
     ),
     ethnicity = list(
       field_id = 21000,
       ukb_col = "p21000_i0",
-      description = "Ethnic background (White vs Others)"
+      description = paste(
+        "Ethnic background; coding 1001:",
+        "White (British, Irish, Any other white background);",
+        "Mixed (White and Black Caribbean, White and Black African, White and Asian, Any other mixed background);",
+        "Asian or Asian British (Indian, Pakistani, Bangladeshi, Any other Asian background);",
+        "Black or Black British (Caribbean, African, Any other Black background);",
+        "Chinese; Other ethnic group; -1=Do not know; -3=Prefer not to answer"
+      )
     ),
     
     # Anthropometrics
@@ -53,22 +60,22 @@ NULL
     smoking = list(
       field_id = 20116,
       ukb_col = "p20116_i0",
-      description = "Smoking status (0=Never, 1=Previous, 2=Current)"
+      description = "Smoking status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current"
     ),
     drinking = list(
       field_id = 20117,
       ukb_col = "p20117_i0",
-      description = "Alcohol drinker status"
+      description = "Alcohol drinker status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current"
     ),
     sleep_duration = list(
       field_id = 1160,
       ukb_col = "p1160_i0",
-      description = "Sleep duration (hours/day)"
+      description = "Sleep duration; integer hours/day; special values -1=Do not know, -3=Prefer not to answer"
     ),
     exercise_intensity = list(
       field_id = 22032,
       ukb_col = "p22032_i0",
-      description = "Physical activity intensity (MET)"
+      description = "IPAQ activity group; coding 100700: 0=low, 1=moderate, 2=high"
     ),
     
     # Socioeconomic
@@ -106,11 +113,11 @@ NULL
     ),
     
     # Biomarkers
-    triglycerides = list(field_id = 30870, ukb_col = "p30870_i0", description = "Triglycerides (mmol/L)"),
-    ldl = list(field_id = 30780, ukb_col = "p30780_i0", description = "LDL cholesterol (mmol/L)"),
-    hdl = list(field_id = 30760, ukb_col = "p30760_i0", description = "HDL cholesterol (mmol/L)"),
-    hba1c = list(field_id = 30750, ukb_col = "p30750_i0", description = "HbA1c (mmol/mol)"),
-    glucose = list(field_id = 30740, ukb_col = "p30740_i0", description = "Glucose (mmol/L)"),
+    triglycerides = list(field_id = 30870, ukb_col = "p30870_i0", description = "Triglycerides; continuous mmol/L"),
+    ldl = list(field_id = 30780, ukb_col = "p30780_i0", description = "LDL direct; continuous mmol/L"),
+    hdl = list(field_id = 30760, ukb_col = "p30760_i0", description = "HDL cholesterol; continuous mmol/L"),
+    hba1c = list(field_id = 30750, ukb_col = "p30750_i0", description = "Glycated haemoglobin (HbA1c); continuous mmol/mol"),
+    glucose = list(field_id = 30740, ukb_col = "p30740_i0", description = "Glucose; continuous mmol/L"),
     
     # Air Pollution
     no2_2005 = list(field_id = 24016, ukb_col = "p24016", description = "NO2 air pollution 2005"),

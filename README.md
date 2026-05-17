@@ -18,7 +18,7 @@ RAP-controlled storage.
 
 **For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica_v2/)
 
-![](docs/image.png)
+![](docs/assets/workflow.png)
 
 
 ## Installation
