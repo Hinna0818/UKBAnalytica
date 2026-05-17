@@ -21,8 +21,8 @@ The package **does not ship UK Biobank participant-level source records**. Examp
 use field IDs, simulated toy data, or user-provided tables that remain within
 RAP-controlled storage.
 
-[Get started](01-rap-download.qmd){.btn .btn-primary}
-[View GitHub](https://github.com/Hinna0818/UKBAnalytica_v2){.btn .btn-outline}
+[<i class="bi bi-rocket-takeoff"></i> Get started](01-rap-download.qmd){.btn .btn-primary}
+[<i class="bi bi-github"></i> View GitHub](https://github.com/Hinna0818/UKBAnalytica_v2){.btn .btn-outline}
 :::
 
 ::: {.hero-logo}
@@ -34,41 +34,41 @@ RAP-controlled storage.
 
 ::: {.feature-grid}
 ::: {.feature-card}
-### RAP-native extraction
+### <i class="bi bi-cloud-arrow-down"></i> RAP-native extraction
 
 Plan and extract UK Biobank fields within the approved RAP environment.
 :::
 
 ::: {.feature-card}
-### Baseline preprocessing
+### <i class="bi bi-tools"></i> Baseline preprocessing
 
 Standardize common baseline variables, recode UKB missing-value conventions,
 and derive reusable covariates.
 :::
 
 ::: {.feature-card}
-### Multi-source phenotyping
+### <i class="bi bi-clipboard2-data"></i> Multi-source phenotyping
 
 Define disease endpoints using ICD-10, ICD-9, self-report, death registry,
 OPCS4, cancer registry, first-occurrence, and algorithm-defined outcomes.
 :::
 
 ::: {.feature-card}
-### Survival-ready cohorts
+### <i class="bi bi-heart-pulse"></i> Survival-ready cohorts
 
 Separate prevalent history from incident outcomes and compute follow-up time
 for downstream Cox and survival analyses.
 :::
 
 ::: {.feature-card}
-### Downstream analysis
+### <i class="bi bi-graph-up"></i> Downstream analysis
 
 Run baseline tables, regression workflows, imputation, subgroup analysis,
 propensity score methods, mediation, and sensitivity analyses.
 :::
 
 ::: {.feature-card}
-### ML and omics modules
+### <i class="bi bi-cpu"></i> ML and omics modules
 
 Support machine-learning workflows, SHAP interpretation, and bioinformatics analyses like proteomics enrichment,
 and STRING-based PPI analysis.
@@ -77,7 +77,7 @@ and STRING-based PPI analysis.
 
 ## Workflow overview
 
-![](assets/workflow.png){fig-alt="Overview of the UKBAnalytica workflow"}
+![](assets/workflow.png){.workflow-img fig-alt="Overview of the UKBAnalytica workflow"}
 
 ## Installation
 
@@ -117,25 +117,30 @@ analysis_dt <- build_survival_dataset(
 )
 ```
 
-## Privacy boundary
-
+::: {.callout-important title="Privacy boundary"}
 UKBAnalytica documentation and skills are designed for RAP-based analysis.
 Participant-level UK Biobank data should remain inside approved RAP project
 storage. For AI-assisted scripting, users should describe the dataframe schema
 and intended analysis only; synthetic toy data can be used for interface tests,
 while real analyses are run by the user inside RAP. Only aggregate outputs or
 non-identifying rendered figures should be shared for interpretation.
+:::
 
+## About
 
-## Author information
-
+::: {.grid}
+::: {.g-col-12 .g-col-md-7}
+### Author
 UKBAnalytica is developed and maintained by **Nan He (Hinna)** from the Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University.
 
-For questions, suggestions, or bug reports, please contact the maintainer via GitHub issues or email: [hinna01@163.com](mailto:hinna01@163.com).
+[<i class="bi bi-envelope"></i> Contact Maintainer](mailto:hinna01@163.com){.btn .btn-outline}
+:::
 
-
-## Citation
+::: {.g-col-12 .g-col-md-5}
+### Citation
 If you use UKBAnalytica in your study, please cite:
 ```bash
 DOI pending
 ```
+:::
+:::

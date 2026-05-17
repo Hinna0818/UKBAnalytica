@@ -528,9 +528,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#workflow-overview" id="toc-workflow-overview" class="nav-link" data-scroll-target="#workflow-overview">Workflow overview</a></li>
   <li><a href="#installation" id="toc-installation" class="nav-link" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#minimal-example" id="toc-minimal-example" class="nav-link" data-scroll-target="#minimal-example">Minimal example</a></li>
-  <li><a href="#privacy-boundary" id="toc-privacy-boundary" class="nav-link" data-scroll-target="#privacy-boundary">Privacy boundary</a></li>
-  <li><a href="#author-information" id="toc-author-information" class="nav-link" data-scroll-target="#author-information">Author information</a></li>
-  <li><a href="#citation" id="toc-citation" class="nav-link" data-scroll-target="#citation">Citation</a></li>
+  <li><a href="#about" id="toc-about" class="nav-link" data-scroll-target="#about">About</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/index.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -553,7 +551,7 @@ UKBAnalytica
 
 <p>UKBAnalytica is an R package for analyzing with the UK Biobank Research Analysis Platform (RAP) data inside approved RAP projects. It focuses on standardized phenotyping, survival-ready datasets, scalable preprocessing, and downstream analysis.</p>
 <p>The package <strong>does not ship UK Biobank participant-level source records</strong>. Examples use field IDs, simulated toy data, or user-provided tables that remain within RAP-controlled storage.</p>
-<p><a href="./01-rap-download.html" class="btn btn-primary">Get started</a> <a href="https://github.com/Hinna0818/UKBAnalytica_v2" class="btn btn-outline">View GitHub</a></p>
+<p><a href="./01-rap-download.html" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Get started</a> <a href="https://github.com/Hinna0818/UKBAnalytica_v2" class="btn btn-outline"><i class="bi bi-github"></i> View GitHub</a></p>
 </div>
 <div class="hero-logo">
 <p><img src="assets/logo.png" class="img-fluid" alt="UKBAnalytica logo"></p>
@@ -563,34 +561,34 @@ UKBAnalytica
 <h2 class="anchored" data-anchor-id="what-the-package-covers">What the package covers</h2>
 <div class="feature-grid">
 <section id="rap-native-extraction" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="rap-native-extraction">RAP-native extraction</h3>
+<h3 class="anchored" data-anchor-id="rap-native-extraction"><i class="bi bi-cloud-arrow-down"></i> RAP-native extraction</h3>
 <p>Plan and extract UK Biobank fields within the approved RAP environment.</p>
 </section>
 <section id="baseline-preprocessing" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="baseline-preprocessing">Baseline preprocessing</h3>
+<h3 class="anchored" data-anchor-id="baseline-preprocessing"><i class="bi bi-tools"></i> Baseline preprocessing</h3>
 <p>Standardize common baseline variables, recode UKB missing-value conventions, and derive reusable covariates.</p>
 </section>
 <section id="multi-source-phenotyping" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="multi-source-phenotyping">Multi-source phenotyping</h3>
+<h3 class="anchored" data-anchor-id="multi-source-phenotyping"><i class="bi bi-clipboard2-data"></i> Multi-source phenotyping</h3>
 <p>Define disease endpoints using ICD-10, ICD-9, self-report, death registry, OPCS4, cancer registry, first-occurrence, and algorithm-defined outcomes.</p>
 </section>
 <section id="survival-ready-cohorts" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="survival-ready-cohorts">Survival-ready cohorts</h3>
+<h3 class="anchored" data-anchor-id="survival-ready-cohorts"><i class="bi bi-heart-pulse"></i> Survival-ready cohorts</h3>
 <p>Separate prevalent history from incident outcomes and compute follow-up time for downstream Cox and survival analyses.</p>
 </section>
 <section id="downstream-analysis" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="downstream-analysis">Downstream analysis</h3>
+<h3 class="anchored" data-anchor-id="downstream-analysis"><i class="bi bi-graph-up"></i> Downstream analysis</h3>
 <p>Run baseline tables, regression workflows, imputation, subgroup analysis, propensity score methods, mediation, and sensitivity analyses.</p>
 </section>
 <section id="ml-and-omics-modules" class="level3 feature-card">
-<h3 class="anchored" data-anchor-id="ml-and-omics-modules">ML and omics modules</h3>
+<h3 class="anchored" data-anchor-id="ml-and-omics-modules"><i class="bi bi-cpu"></i> ML and omics modules</h3>
 <p>Support machine-learning workflows, SHAP interpretation, and bioinformatics analyses like proteomics enrichment, and STRING-based PPI analysis.</p>
 </section>
 </div>
 </section>
 <section id="workflow-overview" class="level2">
 <h2 class="anchored" data-anchor-id="workflow-overview">Workflow overview</h2>
-<p><img src="assets/workflow.png" class="img-fluid" alt="Overview of the UKBAnalytica workflow"></p>
+<p><img src="assets/workflow.png" class="workflow-img img-fluid" alt="Overview of the UKBAnalytica workflow"></p>
 </section>
 <section id="installation" class="level2">
 <h2 class="anchored" data-anchor-id="installation">Installation</h2>
@@ -624,20 +622,34 @@ UKBAnalytica
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">show_flow =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">dt_threads =</span> <span class="dv">8</span></span>
 <span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="privacy-boundary" class="level2">
-<h2 class="anchored" data-anchor-id="privacy-boundary">Privacy boundary</h2>
+<div class="callout callout-style-default callout-important callout-titled" title="Privacy boundary">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Privacy boundary
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <p>UKBAnalytica documentation and skills are designed for RAP-based analysis. Participant-level UK Biobank data should remain inside approved RAP project storage. For AI-assisted scripting, users should describe the dataframe schema and intended analysis only; synthetic toy data can be used for interface tests, while real analyses are run by the user inside RAP. Only aggregate outputs or non-identifying rendered figures should be shared for interpretation.</p>
+</div>
+</div>
 </section>
-<section id="author-information" class="level2">
-<h2 class="anchored" data-anchor-id="author-information">Author information</h2>
+<section id="about" class="level2">
+<h2 class="anchored" data-anchor-id="about">About</h2>
+<div class="grid">
+<section id="author" class="level3 g-col-12 g-col-md-7">
+<h3 class="anchored" data-anchor-id="author">Author</h3>
 <p>UKBAnalytica is developed and maintained by <strong>Nan He (Hinna)</strong> from the Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University.</p>
-<p>For questions, suggestions, or bug reports, please contact the maintainer via GitHub issues or email: <a href="mailto:hinna01@163.com">hinna01@163.com</a>.</p>
+<p><a href="mailto:hinna01@163.com" class="btn btn-outline"><i class="bi bi-envelope"></i> Contact Maintainer</a></p>
 </section>
-<section id="citation" class="level2">
-<h2 class="anchored" data-anchor-id="citation">Citation</h2>
+<section id="citation" class="level3 g-col-12 g-col-md-5">
+<h3 class="anchored" data-anchor-id="citation">Citation</h3>
 <p>If you use UKBAnalytica in your study, please cite:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">DOI</span> pending</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</div>
 
 
 </section>
