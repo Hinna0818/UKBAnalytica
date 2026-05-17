@@ -13,26 +13,26 @@ description: >
   dose-response trend across ordered exposure categories. Triggers: UKB
   regression, Cox model, logistic regression, batch regression, proportional
   hazards test, competing risks, Fine-Gray, p_trend, UKB 回归, Cox 模型,
-  /ukbsci-regression. Hard rule: cohort data with participant-level rows stays
-  inside RAP project storage; aggregate coefficient tables and de-identified
-  diagnostic figures can be exported.
+  /ukbsci-regression. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-regression — UK Biobank batch regression
 
 ## 0. RAP guardrails
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 Input: a cohort `data.table` produced by `ukbsci-cohort` (or any
 preprocessed UKB analysis dataset) that **already lives in RAP project
 storage**. Output: aggregate coefficient tables (estimate / CI / p-value),
-which are safe to export.
+which may be shared with the local agent.
 
 Forbidden: writing per-participant predicted values / residuals / influence
 diagnostics to local disk. Keep those in `/mnt/project/...` if you need them

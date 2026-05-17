@@ -16,11 +16,7 @@ description: >
   asks for a UKB-based predictive model, ML pipeline, SHAP interpretation,
   C-index for a survival model, or comparison between several ML algorithms.
   Triggers: UKB ML, machine learning, XGBoost, random forest, SHAP, C-index,
-  survival ML, calibration, decision curve, AUC, /ukbsci-ml. Hard rule:
-  do not export UK Biobank participant-level raw data, direct identifiers
-  such as eid, or row-level source tables linked to participants. Aggregate
-  metrics, model-evaluation plots, and de-identified figures are generally
-  safe to export.
+  survival ML, calibration, decision curve, AUC, /ukbsci-ml. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-ml — Machine learning workflows for UKB cohorts
@@ -31,26 +27,28 @@ description: >
 identifiers (`eid`, exact dates, raw RAP fields), or row-level source tables
 that can be linked back to participants.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
-| Output | Export rule |
+| Output | Sharing rule |
 |--------|-------------|
 | UK Biobank RAP raw participant-level data | Do not export. |
 | Direct identifiers (`eid`, raw dates, RAP field values) | Do not export. |
 | Train / validation / test datasets with raw fields or `eid` | Do not export. |
 | Trained model `.rds` | Keep in RAP project workspace unless sharing is explicitly permitted by project governance. |
 | Per-row predictions containing `eid` or re-identifiable row index | Do not export. |
-| Per-row predictions without any identifier | Keep in RAP by default; export only if de-identified and permitted by project policy. |
-| Aggregate metrics table (AUC, C-index, calibration intercept, RMSE…) | Exportable. |
-| ROC / PR / calibration / DCA / KS / gain plots | Exportable. |
-| SHAP global importance table (mean \|SHAP\| per feature) | Exportable — aggregate only. |
-| SHAP beeswarm / dependence / summary plots | Exportable as de-identified figures, provided no row-level source data or identifiers accompany the file. |
-| SHAP force plot for a real participant row | Avoid for publication; use a synthetic or representative prototype instead. |
+| Per-row predictions without any identifier | Keep in RAP; do not share with the local agent. Export only aggregate metrics or rendered figures. |
+| Aggregate metrics table (AUC, C-index, calibration intercept, RMSE…) | Shareable with the local agent. |
+| ROC / PR / calibration / DCA / KS / gain plots | Shareable as rendered figures. |
+| SHAP global importance table (mean \|SHAP\| per feature) | Shareable — aggregate only. |
+| SHAP beeswarm / dependence / summary plots | Shareable as rendered figures only, provided no row-level source data, row indices, or identifiers accompany the file. |
+| SHAP force plot for a real participant row | Do not share with the local agent. Use a synthetic or representative prototype instead. |
 
 ---
 
@@ -143,7 +141,7 @@ flow <- ukb_ml_flow(
   verbose = TRUE
 )
 
-flow$metrics                   # aggregate — safe to export
+flow$metrics                   # aggregate — shareable with the local agent
 # flow$predictions              # keep on RAP (may contain row indices)
 
 ggplot2::ggsave("/mnt/project/<area>/05-figs/Fig13-roc.pdf",
@@ -179,7 +177,7 @@ flow <- ukb_ml_workflow(
   seed           = 1234
 )
 
-flow$final_test_metrics                           # aggregate — safe to export
+flow$final_test_metrics                           # aggregate — shareable
 # flow$final_test_predictions                     # keep on RAP
 
 ggplot2::ggsave("/mnt/project/<area>/05-figs/Fig13-roc.pdf",
@@ -314,17 +312,18 @@ shap <- ukb_shap(
 )
 ```
 
-**Export rules for SHAP outputs:**
+**Sharing rules for SHAP outputs:**
 
-| SHAP output | Export rule |
+| SHAP output | Sharing rule |
 |-------------|-------------|
-| Importance table (mean \|SHAP\| per feature) | Exportable — aggregate summary, no identifiers. |
-| Summary / beeswarm / dependence plots | Exportable as de-identified figures; do **not** attach the row-level SHAP source matrix as a CSV if it contains row indices or `eid`. |
-| Force plot for a real participant row | Avoid for publication. Use a synthetic or representative prototype — a row constructed from group medians, not an actual participant. |
-| Raw `shap$shap_values` matrix | Keep on RAP; it has one row per observation. Strip `eid` and row indices before any export, even for supplementary material. |
+| Importance table (mean \|SHAP\| per feature) | Shareable — aggregate summary, no identifiers. |
+| Summary / beeswarm / dependence plots | Shareable as rendered figures only; do **not** attach the row-level SHAP source matrix or feature-value table. |
+| Force plot for a real participant row | Do not share with the local agent. Use a synthetic or representative prototype — a row constructed from group medians, not an actual participant. |
+| Raw `shap$shap_values` matrix | Keep on RAP and out of the agent context; it has one row per observation, even if `eid` is absent. |
 
 ```r
-# Summary + beeswarm — aggregate, safe to export
+# Summary table is aggregate; beeswarm is a rendered figure. Do not export
+# the row-level SHAP matrix or feature-value table.
 fwrite(ukb_shap_summary(shap, top_n = 20, plot = FALSE),
        "/mnt/project/<area>/04-results/08-ml_shap_summary.csv")
 ggplot2::ggsave("/mnt/project/<area>/05-figs/Fig17-shap_summary.pdf",
@@ -388,11 +387,11 @@ ggplot2::ggsave("/mnt/project/<area>/05-figs/Fig19-dca.pdf",
 7. **SHAP cost.** `nsim = 100` is fine; pushing to 1000 multiplies cost.
    For ~50k test rows use `sample_n = 2000` (random subsample is honest for
    the global summary).
-8. **Force plots:** avoid publishing or sharing a force plot built from a real
-   participant's raw feature values. Construct a synthetic prototype (e.g.
-   group-median row) for any published force-plot figure. The SHAP source
-   matrix (`shap$shap_values`) has one row per observation — strip identifiers
-   before exporting any per-row derivative.
+8. **Force plots:** do not share a force plot built from a real participant's
+   raw feature values with the local agent. Construct a synthetic prototype
+   (e.g. group-median row) for any illustrative force-plot figure. The SHAP
+   source matrix (`shap$shap_values`) has one row per observation and stays
+   inside RAP.
 9. **`fastshap` vs native XGBoost.** With `method = "auto"`, the function
    picks the native XGBoost SHAP for tree models (fast, exact). `fastshap`
    handles everything else but is slower.

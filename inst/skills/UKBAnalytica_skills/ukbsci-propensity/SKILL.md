@@ -12,25 +12,25 @@ description: >
   score matching, PSM, IPTW, ATE / ATT, covariate balance, Love plot, PS
   distribution check, or a weighted Cox / logistic / linear analysis on a
   UKB cohort. Triggers: propensity score, PSM, IPTW, ATE, ATT, Love plot,
-  covariate balance, 倾向评分, 倾向得分匹配, /ukbsci-propensity. Hard rule:
-  matched/weighted participant-level datasets stay in RAP; aggregate balance
-  tables, weighted-effect tables, and de-identified figures can be exported.
+  covariate balance, 倾向评分, 倾向得分匹配, /ukbsci-propensity. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-propensity — Propensity scores, matching, and IPTW on UKB cohorts
 
 ## 0. RAP guardrails
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 The matched / weighted dataset is **participant-level** and stays in RAP
-project storage. Exportable artefacts: balance tables, Love plots, PS
-distribution figures, and final weighted-effect estimates.
+project storage. Shareable artefacts are aggregate: balance tables, Love
+plots, PS distribution figures, and final weighted-effect estimates.
 
 ---
 

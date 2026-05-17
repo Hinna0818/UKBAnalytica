@@ -24,7 +24,7 @@ p <- ggplot(df, aes(x = time, y = surv)) +
 logo_args <- list(
   subplot = p,
   package = "UKBAnalytica",
-  p_size = 18,
+  p_size = 28,
   p_color = "#2C3E50",
   p_fontface = "bold",
   p_y = 1.4,
@@ -41,8 +41,3 @@ logo_args <- list(
 
 # Generate transparent-background raster and vector versions.
 do.call(sticker, c(logo_args, filename = "man/figures/logo.png"))
-#do.call(sticker, c(logo_args, filename = "man/figures/logo.svg"))
-#do.call(sticker, c(logo_args, filename = "man/figures/ukbanalytica-logo.svg"))
-#do.call(sticker, c(logo_args, filename = "man/figures/ukbanalytica-logo.pdf"))
-
-message("Logo saved to man/figures/logo.png, man/figures/logo.svg, and man/figures/ukbanalytica-logo.svg")

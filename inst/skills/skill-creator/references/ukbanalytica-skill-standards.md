@@ -2,25 +2,46 @@
 
 ## Privacy Boundary
 
-All UKBAnalytica skills must distinguish prohibited raw-data export from
-acceptable analytical outputs.
+All UKBAnalytica skills must make clear that a local AI agent is used for
+script generation, workflow planning, package guidance, and interpretation of
+aggregate outputs only. The agent must not read, inspect, summarize, or process
+real UK Biobank participant-level RAP data.
 
-Do not export:
+The agent may:
+
+- Generate scripts to run inside RAP.
+- Review package code, documentation, function signatures, and simulated-data
+  examples.
+- Interpret aggregate outputs created inside RAP.
+
+The agent must not receive, read, inspect, summarize, or process:
 
 - UK Biobank RAP individual-level raw data.
 - Direct identifiers such as `eid`.
 - Exact participant dates.
 - Raw RAP fields.
 - Row-level source tables that can be linked back to participants.
+- Real `.csv`, `.rds`, `.fst`, `.parquet`, `.feather`, or R objects containing
+  participant rows, even when identifiers were removed.
+- Console output, screenshots, tracebacks, or logs containing row-level values.
 
-Generally exportable:
+Acceptable material:
 
 - De-identified rendered figures.
 - Aggregate baseline tables and participant-flow counts.
 - Regression coefficients, hazard ratios, odds ratios, CIs, and P values.
 - Model metrics, ROC/PR/calibration/DCA curve data, and feature-level SHAP
-  summaries.
+  summaries; never raw per-row prediction tables or SHAP matrices.
 - Enrichment, PPI, and feature-level omics results.
+
+If uncertain, assume the object is participant-level and keep it inside RAP.
+
+## Schema-Only Examples
+
+If a skill needs runnable examples, use schema-only synthetic data. The user
+may describe a dataframe by column names and roles, but the agent must not ask
+for or inspect real UKB rows. Example code should include a small synthetic-data
+smoke test and a separate RAP-executable script for the real analysis.
 
 ## Package-First Examples
 

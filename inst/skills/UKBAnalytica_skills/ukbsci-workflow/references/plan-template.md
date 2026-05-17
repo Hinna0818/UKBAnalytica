@@ -143,8 +143,11 @@ approval (`"开始分析"` / `"start"`) before Phase 1.**
 
 ## 8. RAP guardrails reminder
 
-All participant-level files stay under `/mnt/project/<area>/...`. Only the
-following are safe to export off RAP:
+The local agent must not read or inspect real participant-level RAP files or
+R objects. It should generate scripts for RAP execution and interpret only
+aggregate outputs returned by the user. All participant-level files stay under
+`/mnt/project/<area>/...`. Only the following aggregate outputs or
+non-identifying rendered figures can be shared with the agent:
 
 - `cohort_flow.csv` (aggregate counts)
 - `01-baseline_table.csv` (aggregate summary)
@@ -153,7 +156,8 @@ following are safe to export off RAP:
 - `05-figs/data/*.csv` (figure source — verify it contains aggregates only,
   not per-participant rows)
 - `06-note/*.md` (text)
-- `07-log/*.log` (script logs)
+- `07-log/*.log` only after confirming they contain no row-level values,
+  identifiers, exact dates, or data previews
 
 Anything in `02-extract/` or `03-cohort/` that retains per-participant rows
 **must not leave RAP**.

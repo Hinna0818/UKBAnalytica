@@ -11,8 +11,7 @@ description: >
   column names or coded values, or build the upstream phenotype table that
   feeds ukbsci-cohort. Triggers: UK Biobank RAP extract, dx extract_dataset,
   table-exporter, UKB field search, RAP 提取, 字段搜索, 表型提取,
-  /ukbsci-rap-extract. Hard rule: never instruct the user to download
-  participant-level data to a local laptop; outputs stay in RAP project storage.
+  /ukbsci-rap-extract. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-rap-extract — UK Biobank RAP Phenotype Extraction
@@ -24,11 +23,15 @@ session running *inside* a UK Biobank RAP project (typically
 `RAP JupyterLab → Terminal → R`). The DNAnexus `dx` CLI must be on `PATH` and
 already logged in.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. Public field-level
-metadata, extraction manifests without participant rows, de-identified
-analytical figures, and aggregate summaries are generally exportable.
+Strict local-agent boundary: this skill is for script generation, extraction
+planning, package guidance, and interpretation of aggregate outputs. The agent
+must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including extracted phenotype files, de-identified
+row-level tables, raw RAP fields, exact dates, screenshots, tracebacks, or logs
+containing row-level values. Generate scripts for the user to run inside RAP;
+only public field-level metadata, extraction manifests without participant
+rows, aggregate results, or rendered figures may be shared back with the
+agent. See `../references/agent-privacy-boundary.md`.
 
 **Forbidden actions** (refuse or rewrite if the user asks):
 
@@ -256,6 +259,7 @@ inside RAP:
 ```r
 out_path <- file.path("/mnt/project", paste0(job$output, ".csv"))
 dt <- data.table::fread(out_path)
+# Do not print `head(dt)` or share row-level previews with the local agent.
 ```
 
 ### Phase 5 — Decode column names and coded values

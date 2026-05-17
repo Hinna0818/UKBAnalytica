@@ -292,7 +292,7 @@ other than `{0, 1}`, on invalid date formats.
 
 - Always inspect `attr(cohort, "participant_flow")` after
   `build_survival_dataset()` and present it to the user — the attrition table
-  is **safe to export** because it contains only aggregate counts.
+  may be shared with the local agent because it contains only aggregate counts.
 - For sensitivity comparisons, prefer `extract_disease_history_sensitivity()`
   + a downstream `runmulti_*()` call to a custom loop.
 - For composite endpoints, use `combine_disease_definitions()` rather than

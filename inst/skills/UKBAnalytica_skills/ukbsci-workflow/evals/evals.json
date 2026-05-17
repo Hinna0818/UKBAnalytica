@@ -24,8 +24,8 @@
     },
     {
       "id": "wf-005",
-      "prompt": "Show me what files I'll have at the end of the analysis and which ones I can take out of RAP.",
-      "expect_keywords": ["safe_to_export", "/mnt/project", "aggregate"]
+      "prompt": "Show me what files I'll have at the end of the analysis and which aggregate outputs I can share with the local agent.",
+      "expect_keywords": ["shareable_aggregate_outputs", "/mnt/project", "aggregate"]
     }
   ],
   "should_refuse": [

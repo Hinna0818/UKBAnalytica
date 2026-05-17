@@ -16,25 +16,24 @@ description: >
   and asks for PPI network analysis, gene-set enrichment, clustering, or
   network-robustness assessment. Triggers: UKB proteomics, Olink hits,
   UKB-PPP, STRING PPI, GO ORA, KEGG ORA, MCODE, Louvain, gene-set
-  enrichment, 蛋白组分析, 通路富集, /ukbsci-proteomics. Hard rule: protein
-  IDs and gene symbols are non-identifying — they can move off RAP for
-  enrichment workflows, but participant-level Olink intensity matrices and
-  source tables with identifiers remain inside RAP project storage.
+  enrichment, 蛋白组分析, 通路富集, /ukbsci-proteomics. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-proteomics — UKB Olink / UKB-PPP downstream analyses
 
 ## 0. RAP guardrails
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
-- Participant-level Olink intensities and per-participant protein
-  associations (effect sizes, p-values **with eid columns**) stay in RAP.
+- Participant-level Olink intensities, protein matrices, and any tables that
+  retain participant identifiers or row-level values stay in RAP.
 - A **list of significant protein IDs / gene symbols** (no participant
   rows) is non-identifying and may be exported when needed (e.g. for
   cross-cohort replication, or for running STRING enrichment outside RAP

@@ -107,6 +107,7 @@ job$job_id
 # When the job is done, load the result back into R **inside RAP**:
 out_path <- file.path("/mnt/project", paste0(job$output, ".csv"))
 dt <- fread(out_path)
+# Do not print data rows or share row-level previews with the local agent.
 
 # Decode columns + values
 meta <- ukb_metadata_setup(source = "auto", dataset = dataset, cache = TRUE)
@@ -181,7 +182,7 @@ cat("Suggested mode:", mode, "\n")
 
 ---
 
-## Snippet — reproducibility footer (safe to export)
+## Snippet — reproducibility footer (aggregate/shareable)
 
 Append to every script. Captures provenance with **no participant rows**.
 

@@ -25,7 +25,7 @@ flow <- ukb_ml_workflow(
   seed = 1234
 )
 
-# Aggregate metrics — safe to export
+# Aggregate metrics — shareable with the local agent
 fwrite(as.data.frame(t(flow$final_test_metrics)),
        "/mnt/project/<area>/04-results/07-ml_metrics_xgb.csv")
 

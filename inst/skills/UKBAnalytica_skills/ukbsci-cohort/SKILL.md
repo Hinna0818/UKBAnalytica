@@ -16,21 +16,21 @@ description: >
   survival dataset, compare diagnostic sources, or compute follow-up time.
   Triggers: UKB cohort, UKB disease definition, prevalent vs incident,
   survival dataset, build_survival_dataset, ICD10 phenotyping, UKB 队列,
-  病例定义, 生存数据集, /ukbsci-cohort. Hard rule: keep phenotype tables with
-  participant-level rows inside RAP project storage; export only de-identified
-  figures or aggregate cohort summaries.
+  病例定义, 生存数据集, /ukbsci-cohort. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-cohort — UK Biobank disease cohort & survival dataset builder
 
 ## 0. RAP guardrails (must always hold)
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 This skill assumes its input — the phenotype `data.table` — was extracted by
 **`ukbsci-rap-extract`** (or equivalent `rap_*` calls) and lives in RAP
@@ -39,7 +39,7 @@ project storage. The same rules carry over:
 - Inputs and outputs default to `/mnt/project/...`. Do not emit code that
   writes the cohort table or per-disease case files to a local laptop path.
 - Aggregate results (cohort flow tables, Table 1, regression coefficients)
-  are **safe to export**. Per-participant tables are not.
+  may be shared with the local agent. Per-participant tables are not.
 - If the user asks "can I just run this locally with a small sample?", answer
   with a *simulated* toy dataset — never a sample of real participants.
 
@@ -267,11 +267,15 @@ cohort <- build_survival_dataset(
 flow <- attr(cohort, "participant_flow")
 if (!is.null(flow)) print(flow)
 
-# Inspect the new columns
-head(cohort[, .(eid,
-                AA_history, Hypertension_history, Diabetes_history,
-                AA_incident,
-                outcome_status, outcome_surv_time)])
+# Check created columns without printing participant rows
+stopifnot(all(c("AA_history", "AA_incident",
+                "outcome_status", "outcome_surv_time") %in% names(cohort)))
+cohort[, .(
+  n = .N,
+  n_incident = sum(outcome_status == 1, na.rm = TRUE),
+  n_censored = sum(outcome_status == 0, na.rm = TRUE),
+  n_prevalent = sum(is.na(outcome_status))
+)]
 ```
 
 Column semantics added by `build_survival_dataset()`:

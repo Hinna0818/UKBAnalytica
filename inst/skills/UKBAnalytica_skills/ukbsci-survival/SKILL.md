@@ -10,9 +10,7 @@ description: >
   visualize stratified survival across exposure / treatment groups.
   Triggers: UKB KM curve, Kaplan-Meier, survival curve, log-rank, risk
   table, cumulative incidence, UKB 生存曲线, KM 曲线, /ukbsci-survival.
-  Hard rule: do not export RAP raw participant-level data, direct identifiers,
-  or re-identifiable row-level tables; aggregate survival figures and source
-  summaries may leave the project.
+  Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-survival — Survival visualization for UK Biobank cohorts
@@ -21,16 +19,18 @@ description: >
 
 This skill consumes a cohort `data.table` from `ukbsci-cohort` and produces
 PNG / PDF figures plus an aggregate "data behind the figure" CSV. Figures
-contain curves + numbers-at-risk only — they are safe to export.
+contain curves + numbers-at-risk only and may be shared with the local agent.
 Per-participant intermediate tables (e.g. expanded long-format survival
 sets) stay in `/mnt/project/...`.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 ---
 
@@ -112,7 +112,7 @@ p <- plot_km_curve(
 
 Log-rank p-value is computed **only when `group_col` is supplied**.
 
-### Phase 3 — Save figure source data (safe to export)
+### Phase 3 — Save aggregate figure source data
 
 `plot_km_curve()` does not write a source CSV automatically. Build it from
 `survival::survfit()` and save alongside the figure for transparency:

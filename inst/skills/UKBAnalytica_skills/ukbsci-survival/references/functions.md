@@ -61,4 +61,5 @@ km_data <- data.table::data.table(
 )
 ```
 
-The CSV is aggregate (counts + Kaplan-Meier point estimates), safe to export.
+The CSV is aggregate (counts + Kaplan-Meier point estimates) and may be shared
+with the local agent.

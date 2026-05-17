@@ -57,12 +57,12 @@ python3 inst/skills/skill-creator/scripts/validate_skill.py inst/skills
 
 ## UKBAnalytica Standards
 
-- Preserve RAP privacy boundaries: never instruct users to export UK Biobank
-  individual-level raw data, `eid`, exact dates, raw RAP fields, or
-  re-identifiable row-level tables.
-- Allow de-identified figures, aggregate tables, model metrics, coefficients,
-  feature-level tables, and bin/strata summaries when no identifying fields
-  accompany them.
+- Preserve the strict RAP privacy boundary: local agents generate scripts and
+  interpret aggregate outputs only. They must not read, inspect, summarize, or
+  process real UK Biobank participant-level RAP data or logs containing row
+  values.
+- Allow script generation, package guidance, simulated-data smoke tests, and
+  interpretation of aggregate tables/figures.
 - Prefer package functions over ad hoc code in examples.
 - Remind users to install or load the latest UKBAnalytica before high-level
   workflow examples.

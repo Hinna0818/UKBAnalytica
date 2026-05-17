@@ -8,7 +8,8 @@ restatement of the plan.
 The skill should:
 
 1. Run `list.files()` against the project tree to enumerate real files.
-2. Run `wc -l` against `07-log/*.log` to verify non-empty runs.
+2. Run `wc -l` against `07-log/*.log` to verify non-empty runs without
+   copying log contents into the agent context.
 3. Read the main coefficient table to extract the headline effect estimate.
 4. Read the baseline table to extract Ns.
 5. Generate the file from the template below.
@@ -66,7 +67,7 @@ Final report generated <UTC timestamp>.
 ├── 03-cohort/
 │   ├── cohort.csv                       (RAP-resident)
 │   ├── cohort_clean.csv                 (RAP-resident)
-│   ├── cohort_flow.csv                  (aggregate — safe to export)
+│   ├── cohort_flow.csv                  (aggregate — shareable)
 │   └── source_compare.csv
 ├── 04-results/
 │   ├── 01-baseline_table.csv
@@ -130,7 +131,7 @@ The workflow skill can generate this file programmatically:
 
 ```r
 template <- readLines(
-  system.file("skills/UKBAnalytica_skills/skills/ukbsci-workflow/references/wrap-up-template.md",
+  system.file("skills/UKBAnalytica_skills/ukbsci-workflow/references/wrap-up-template.md",
               package = "UKBAnalytica")
 )
 

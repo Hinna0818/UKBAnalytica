@@ -4,31 +4,32 @@ description: >
   Create a stratified baseline characteristics table (Table 1) for a
   UK Biobank Research Analysis Platform (RAP) cohort built with
   UKBAnalytica. Wraps create_baseline_table() over the tableone package,
-  producing a printable / CSV-exportable summary with appropriate
+  producing a printable / aggregate CSV summary with appropriate
   chi-square / Fisher / t-test / Wilcoxon comparisons across a case-control
   or exposure strata column. Use this skill when the user asks for a Table
   1, baseline characteristics, demographic summary, case-vs-control
   comparison, or stratified descriptive statistics. Triggers: Table 1,
   baseline table, baseline characteristics, demographics summary, UKB
-  Table 1, 基线表, 基线特征, /ukbsci-baseline. Hard rule: do not export UKB
-  RAP raw participant-level data or direct identifiers; aggregate baseline
-  summaries are safe to export.
+  Table 1, 基线表, 基线特征, /ukbsci-baseline. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-baseline — Table 1 generator for UKBAnalytica cohorts
 
 ## 0. RAP guardrails
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 Input: cohort `data.table` from `ukbsci-cohort` (or its preprocessed
 version). Output: an aggregate Table 1 (counts, means, medians, p-values)
-— **safe to export** off RAP.
+that may be shared with the local agent because it contains no participant
+rows.
 
 ---
 

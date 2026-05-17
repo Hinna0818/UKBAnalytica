@@ -17,10 +17,10 @@ UK Biobank participant-level data is governed by:
 - your institution's Research Ethics / Data Governance approval.
 
 All three converge on one principle: **participant-level records must remain
-inside the approved RAP project**. They may be transformed, summarized, and
-*aggregate* results (e.g. effect sizes, calibrated risk scores, anonymized
-tables) may be exported — but the raw rows may not be moved to a personal
-laptop, an unapproved bucket, or an external collaborator's machine.
+inside the approved RAP project and must not be exposed to a local AI agent**.
+The agent should generate scripts and interpret aggregate outputs only. Real
+rows may not be moved to a personal laptop, an unapproved bucket, an external
+collaborator's machine, or an external LLM/API context.
 
 ---
 
@@ -36,6 +36,8 @@ laptop, an unapproved bucket, or an external collaborator's machine.
 | Pushing participant-level CSV to GitHub / GitLab / Google Drive / Box | **Refuse.** |
 | "Send me a sample of the data so I can prototype locally." | **Refuse for real data.** Offer to generate a *simulated* toy dataset with the same column schema and zero real rows. |
 | "Cache the extract to my personal cache dir on my laptop." | **Refuse.** Caches must stay on the RAP node. |
+| "Open this RDS/CSV so you can debug it." | **Refuse for real RAP data.** Ask for sanitized structure, column names, aggregate counts, package versions, and error text with row values removed. |
+| "Here is a screenshot/log with data rows." | **Refuse to inspect row-level content.** Ask for a redacted log or aggregate summary. |
 
 ### Permitted (no participant rows involved)
 
@@ -50,7 +52,8 @@ laptop, an unapproved bucket, or an external collaborator's machine.
 - Pushing **code** (R scripts, Quarto/Rmd source) between local and RAP.
 
 When in doubt, ask the user: *"Is this an aggregate summary or does it contain
-participant-level rows?"* Aggregate → OK. Rows → keep on RAP.
+participant-level rows or row-level values?"* Aggregate → OK. Rows → keep on
+RAP and out of the agent context.
 
 ---
 
@@ -183,4 +186,5 @@ cat("Extraction time    : ", format(Sys.time(), tz = "UTC"), " UTC\n")
 sink()
 ```
 
-This footer is **safe to export** because it contains no participant rows.
+This footer may be shared with the local agent because it contains no
+participant rows.

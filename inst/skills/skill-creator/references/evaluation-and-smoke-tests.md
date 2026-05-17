@@ -20,10 +20,12 @@ Add a smoke test when a skill demonstrates code that may drift with package
 interfaces. A good smoke test should:
 
 - use simulated or toy data only;
-- avoid UK Biobank individual-level data;
+- avoid UK Biobank individual-level data entirely, including de-identified
+  row-level examples;
 - run quickly;
-- assert object classes, required columns, and privacy-sensitive fields are
-  absent from exported outputs;
+- assert object classes, required columns, and that exported outputs are
+  aggregate-only with no `eid`, exact dates, row indices, raw RAP fields, or
+  row-level predictions / SHAP values;
 - fail loudly when an interface changes.
 
 ## Suggested Locations

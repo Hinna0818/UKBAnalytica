@@ -6,8 +6,8 @@ description" loaded from YAML front-matter + Markdown (Claude Code skills,
 OpenAI Assistants instructions / function-tool descriptions, custom RAG-driven
 agents, etc.).
 
-The pack lives at `skills/UKBAnalytica_skills/` in the repository root.
-Load it via `file.path(getwd(), "skills/UKBAnalytica_skills")` or see
+The pack lives at `inst/skills/UKBAnalytica_skills/` in the repository root.
+Load it via `file.path(getwd(), "inst/skills/UKBAnalytica_skills")` or see
 [INSTALL.md](INSTALL.md) for per-runtime loader snippets.
 
 ---
@@ -16,24 +16,30 @@ Load it via `file.path(getwd(), "skills/UKBAnalytica_skills")` or see
 
 All skills in this pack enforce the following non-negotiable rules:
 
-1. **RAP-only execution.** Every code example assumes an authenticated session
-   inside the UK Biobank Research Analysis Platform (RAP), typically
-   `RAP JupyterLab → Terminal → R`. Skills never instruct the user to download
-   UK Biobank participant-level raw data to a local laptop.
-2. **RAP privacy boundary.** Do not export UK Biobank participant-level raw
-   data, direct identifiers (e.g. `eid`, exact dates), or row-level source
-   tables that can be linked back to participants. Aggregate results (model
-   metrics, regression summaries, figures), and de-identified analytical
-   outputs are generally acceptable for export. For individual-level
-   visualizations (e.g. SHAP force plots), ensure no `eid`, raw RAP fields,
-   exact dates, or re-identifiable row-level data are included.
-3. **Large extracts go async.** When the requested field count is large,
+1. **Script-generation boundary.** These skills help a local agent generate
+   scripts, analysis plans, package-usage guidance, and manuscript text from
+   aggregate outputs. They are not permission for an agent to read or process
+   real UK Biobank RAP participant-level data.
+2. **RAP-only execution.** Scripts that touch real UK Biobank data must be run
+   by the user inside the approved UK Biobank Research Analysis Platform (RAP),
+   typically `RAP JupyterLab → Terminal → R`.
+3. **No real rows in agent context.** Do not give the agent participant-level
+   files, R objects, screenshots, logs, tracebacks, row samples, `head(data)`,
+   `eid`, exact dates, raw RAP fields, per-row predictions, or row-level SHAP
+   matrices. This applies even when identifiers have been removed.
+4. **Aggregate outputs only.** The user may share aggregate summaries with the
+   agent, including participant-flow counts, baseline tables, regression
+   summaries, model metrics, enrichment results, and rendered figures.
+5. **Schema-only prompts.** The user may describe column names, variable roles,
+   and intended analyses. The agent uses synthetic toy data for smoke tests and
+   writes final scripts for RAP execution.
+6. **Large extracts go async.** When the requested field count is large,
    skills route the user through `rap_submit_extract()` (DNAnexus
    `table-exporter`) rather than pulling everything into the R session.
-4. **`UKBAnalytica` is the sole executor.** Skills wrap real exported
+7. **`UKBAnalytica` is the sole executor.** Skills wrap real exported
    functions only — every function name in a skill must be present in
    `NAMESPACE`.
-5. **No journal-brand styling.** Plotting guidance uses neutral palette names
+8. **No journal-brand styling.** Plotting guidance uses neutral palette names
    (`ukbsci_clinical`, `ukbsci_diverging`, `ukbsci_sequential`) and avoids
    referencing specific top-tier journal brands.
 
@@ -43,38 +49,39 @@ All skills in this pack enforce the following non-negotiable rules:
 
 | Runtime | Loader pattern |
 |---------|----------------|
-| Claude Code skills | Drop `skills/UKBAnalytica_skills/` into `~/.claude/skills/` (or workspace `.claude/skills/`); each `skills/<name>/SKILL.md` is auto-discovered via its `name` + `description` front-matter. |
+| Claude Code skills | Drop `inst/skills/UKBAnalytica_skills/` into `~/.claude/skills/` (or workspace `.claude/skills/`); each `ukbsci-*/SKILL.md` is auto-discovered via its `name` + `description` front-matter. |
 | OpenAI Assistants / Responses | Concatenate `SKILL.md` files into the assistant `instructions` (or attach as file-search documents); use the `description` field as the routing summary. |
-| LangChain / LlamaIndex agents | Treat each `skills/<name>/` as a Tool whose docstring = `description`, whose body = `SKILL.md` + `references/*.md`. |
+| LangChain / LlamaIndex agents | Treat each `ukbsci-*/` directory as a Tool whose docstring = `description`, whose body = `SKILL.md` + `references/*.md`. |
 | Generic JSON tool list | Read each `SKILL.md` YAML header → `{name, description}`; load body lazily when the agent decides to invoke. |
 
 The front-matter is intentionally minimal (`name`, `description`) so it parses
-identically across providers. No provider-specific keys are used.
+identically across providers. No provider-specific keys are used. Regardless
+of provider, these skills must not be used to send real participant-level RAP
+data to the agent.
 
 ---
 
 ## Pack layout
 
 ```
-skills/UKBAnalytica_skills/
+inst/skills/UKBAnalytica_skills/
 ├── README.md                       ← this file
 ├── INSTALL.md                      ← per-provider install snippets
 ├── MANIFEST.json                   ← machine-readable index (name, description, path)
-└── skills/
-    ├── ukbsci-rap-extract/         (P2) RAP discover / plan / extract
-    ├── ukbsci-cohort/              (P2) disease definitions + survival cohort
-    ├── ukbsci-workflow/            (P2) end-to-end orchestrator
-    ├── ukbsci-regression/          (P3) batch lm / logit / Cox + extensions
-    ├── ukbsci-survival/            (P3) KM + risk table + log-rank
-    ├── ukbsci-baseline/            (P3) tableone Table 1
-    ├── ukbsci-propensity/          (P4) PS / PSM / IPTW / balance
-    ├── ukbsci-mediation/           (P4) regmedint 4-way decomposition
-    ├── ukbsci-subgroup-sensitivity/(P4) subgroup × interaction + sensitivity
-    ├── ukbsci-imputation/          (P4) mice + Rubin pooling
-    ├── ukbsci-proteomics/          (P5) Olink / STRING / GO / KEGG / PPI
-    ├── ukbsci-ml/                  (P5) classification + survival ML + SHAP
-    ├── ukbsci-preprocess/          (P5) variable cleaning + composites
-    └── ukbsci-plot/                (P6) forest / volcano / calibration / theme
+├── ukbsci-rap-extract/             (P2) RAP discover / plan / extract
+├── ukbsci-cohort/                  (P2) disease definitions + survival cohort
+├── ukbsci-workflow/                (P2) end-to-end orchestrator
+├── ukbsci-regression/              (P3) batch lm / logit / Cox + extensions
+├── ukbsci-survival/                (P3) KM + risk table + log-rank
+├── ukbsci-baseline/                (P3) tableone Table 1
+├── ukbsci-propensity/              (P4) PS / PSM / IPTW / balance
+├── ukbsci-mediation/               (P4) regmedint 4-way decomposition
+├── ukbsci-subgroup-sensitivity/    (P4) subgroup × interaction + sensitivity
+├── ukbsci-imputation/              (P4) mice + Rubin pooling
+├── ukbsci-proteomics/              (P5) Olink / STRING / GO / KEGG / PPI
+├── ukbsci-ml/                      (P5) classification + survival ML + SHAP
+├── ukbsci-preprocess/              (P5) variable cleaning + composites
+└── ukbsci-plot/                    (P6) forest / volcano / calibration / theme
 ```
 
 Each skill directory contains:

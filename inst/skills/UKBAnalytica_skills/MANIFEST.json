@@ -11,8 +11,11 @@
     "generic-yaml-frontmatter"
   ],
   "charter": [
-    "RAP-only execution: never download participant-level records to local disk.",
-    "Approved-project storage only for outputs.",
+    "Script-generation boundary: local agents generate scripts and interpret aggregate outputs only.",
+    "RAP-only execution: real participant-level records stay inside the approved RAP project.",
+    "Do not expose real row-level tables, identifiers, exact dates, per-row predictions, SHAP matrices, screenshots, tracebacks, or logs with row-level values to the agent.",
+    "Only aggregate outputs and non-identifying rendered figures may be shared back with the agent.",
+    "Schema-only prompts are allowed: infer column roles from the user's description, use synthetic toy data for smoke tests, and write final scripts for RAP execution.",
     "Large extracts go async via rap_submit_extract().",
     "Every function name referenced must exist in UKBAnalytica NAMESPACE.",
     "Neutral plotting names; no journal-brand styling references."

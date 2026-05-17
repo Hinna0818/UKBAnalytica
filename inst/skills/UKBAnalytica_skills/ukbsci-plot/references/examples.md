@@ -3,7 +3,7 @@
 ```r
 library(UKBAnalytica); library(ggplot2); library(patchwork); library(data.table)
 # Load shared theme helpers (adjust path to your repo root)
-source(file.path(getwd(), "skills/UKBAnalytica_skills/ukbsci-plot/references/theme-and-palettes.R"))
+source(file.path(getwd(), "inst/skills/UKBAnalytica_skills/ukbsci-plot/references/theme-and-palettes.R"))
 ```
 
 ## A. Forest plot from subgroup output

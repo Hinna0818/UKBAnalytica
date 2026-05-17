@@ -2,7 +2,8 @@
 
 Multiple imputation (mice) and Rubin's-rules pooling (mitools) for
 UKBAnalytica cohorts. Imputed datasets are participant-level — keep them on
-RAP. Only pooled coefficient tables and diagnostic plots are exportable.
+RAP. Only pooled coefficient tables and diagnostic plots may be shared with
+the local agent.
 
 ## File map
 ```

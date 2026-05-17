@@ -1,7 +1,7 @@
 # Install / loading recipes
 
 Copy-paste blocks for each agent runtime that might consume this skill pack.
-The pack lives at `skills/UKBAnalytica_skills/` in the repository root.
+The pack lives at `inst/skills/UKBAnalytica_skills/` in the repository root.
 
 ---
 
@@ -9,17 +9,17 @@ The pack lives at `skills/UKBAnalytica_skills/` in the repository root.
 
 ```r
 # From R — using the repo root directly:
-pack_dir <- file.path(getwd(), "skills/UKBAnalytica_skills")
+pack_dir <- file.path(getwd(), "inst/skills/UKBAnalytica_skills")
 list.files(pack_dir, pattern = "^ukbsci")
 #> [1] "ukbsci-baseline" "ukbsci-cohort" "ukbsci-imputation" ...
 
 # Or with here::here() for scripts that may run from a subdirectory:
-pack_dir <- here::here("skills/UKBAnalytica_skills")
+pack_dir <- here::here("inst/skills/UKBAnalytica_skills")
 ```
 
 ```bash
 # From shell (repo root):
-ls skills/UKBAnalytica_skills/ | grep '^ukbsci'
+ls inst/skills/UKBAnalytica_skills/ | grep '^ukbsci'
 ```
 
 ---
@@ -33,7 +33,7 @@ Claude Code auto-discovers skills under `~/.claude/skills/` (user-scope) or
 
 ```bash
 # Run from the repo root
-PACK_DIR="$(pwd)/skills/UKBAnalytica_skills"
+PACK_DIR="$(pwd)/inst/skills/UKBAnalytica_skills"
 mkdir -p ~/.claude/skills
 ln -snf "$PACK_DIR" ~/.claude/skills/UKBAnalytica_skills
 ```
@@ -46,7 +46,7 @@ Add to `.claude/settings.json`:
 
 ```json
 {
-  "skillDirs": ["skills/UKBAnalytica_skills"]
+  "skillDirs": ["inst/skills/UKBAnalytica_skills"]
 }
 ```
 
@@ -66,7 +66,7 @@ Each `SKILL.md` is a self-contained system-prompt fragment. Two common patterns:
 from pathlib import Path
 from openai import OpenAI
 
-PACK = Path("skills/UKBAnalytica_skills")
+PACK = Path("inst/skills/UKBAnalytica_skills")
 skills = "\n\n---\n\n".join(
     (p / "SKILL.md").read_text()
     for p in sorted(PACK.iterdir())
@@ -79,9 +79,11 @@ asst = client.beta.assistants.create(
     model="gpt-4o",
     instructions=(
         "You are a UK Biobank RAP analysis assistant. "
-        "Follow the skills below. Never export UK Biobank participant-level "
-        "raw data, direct identifiers, or row-level source tables that can "
-        "be linked back to participants.\n\n" + skills
+        "Follow the skills below. Use them to generate scripts and interpret "
+        "aggregate outputs only. Do not read, inspect, summarize, or process "
+        "real UK Biobank RAP participant-level data, direct identifiers, raw "
+        "RAP fields, exact dates, row-level tables, screenshots, tracebacks, "
+        "or logs containing row-level values.\n\n" + skills
     ),
 )
 ```
@@ -130,7 +132,7 @@ def load_skill(skill_dir: Path) -> dict:
         } if refs_dir.exists() else {},
     }
 
-PACK = Path("skills/UKBAnalytica_skills")
+PACK = Path("inst/skills/UKBAnalytica_skills")
 tools = [load_skill(d) for d in sorted(PACK.iterdir()) if (d / "SKILL.md").exists()]
 ```
 
@@ -147,15 +149,15 @@ The pack ships a manifest you can ingest directly without parsing YAML:
 import json
 from pathlib import Path
 
-m = json.load(open("skills/UKBAnalytica_skills/MANIFEST.json"))
+m = json.load(open("inst/skills/UKBAnalytica_skills/MANIFEST.json"))
 for skill in m["skills"]:
     print(skill["name"], "->", skill["path"])
-    # path is relative to skills/UKBAnalytica_skills/
+    # path is relative to inst/skills/UKBAnalytica_skills/
 ```
 
 ```r
 library(jsonlite)
-m <- fromJSON("skills/UKBAnalytica_skills/MANIFEST.json")
+m <- fromJSON("inst/skills/UKBAnalytica_skills/MANIFEST.json")
 print(m$skills[, c("name", "phase")])
 ```
 
@@ -165,12 +167,12 @@ print(m$skills[, c("name", "phase")])
 
 ```bash
 # 14 skill directories present
-ls skills/UKBAnalytica_skills/ | grep '^ukbsci' | wc -l   # expected: 14
+ls inst/skills/UKBAnalytica_skills/ | grep '^ukbsci' | wc -l   # expected: 14
 
 # All SKILL.md have valid YAML frontmatter
 python3 - <<'PY'
 import re, pathlib
-for sk in sorted(pathlib.Path("skills/UKBAnalytica_skills").iterdir()):
+for sk in sorted(pathlib.Path("inst/skills/UKBAnalytica_skills").iterdir()):
     sm = sk / "SKILL.md"
     if not sm.exists(): continue
     txt = sm.read_text()

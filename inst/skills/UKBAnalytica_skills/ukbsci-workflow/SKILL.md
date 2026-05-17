@@ -15,9 +15,7 @@ description: >
   plan covering multiple phases, or "RAP-to-publication" guidance. Triggers:
   end-to-end UKB analysis, UKB pipeline, RAP to publication, full study plan,
   端到端 UKB 分析, RAP 到论文, 完整流程, 项目计划, /ukbsci-workflow.
-  Hard rule: every emitted plan keeps RAP raw participant-level data, direct
-  identifiers, and re-identifiable row-level tables inside approved RAP
-  storage; aggregate and de-identified analysis outputs may be exported.
+  Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-workflow — UK Biobank end-to-end study orchestrator
@@ -38,12 +36,14 @@ to the specialist `ukbsci-*` skills. Its responsibility is:
 
 Think of it as an analyst-PM: it owns the project plan, not the math.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 ---
 
@@ -89,7 +89,7 @@ All outputs live inside RAP project storage. The canonical tree:
 │   └── pheno.csv                    # stays on RAP
 ├── 03-cohort/                        # outputs from ukbsci-cohort
 │   ├── cohort.csv
-│   ├── cohort_flow.csv              # aggregate — safe to export
+│   ├── cohort_flow.csv              # aggregate — shareable with agent
 │   └── source_compare.csv
 ├── 04-results/
 │   ├── 01-baseline_table.csv
@@ -238,7 +238,8 @@ unit harmonisation, composite variables (BP, diet score, air pollution).
 ### Phase 4 — Baseline (Table 1)
 
 Hand off to `ukbsci-baseline`. Confirm strata variable with the user.
-Output goes to `04-results/01-baseline_table.csv` — **safe to export**.
+Output goes to `04-results/01-baseline_table.csv` as an aggregate table that
+may be shared with the local agent.
 
 ### Phase 5 — Imputation (optional)
 

@@ -12,25 +12,25 @@ description: >
   for multiple imputation, MI pooling, Rubin's rules, FMI, or wants to merge
   per-imputation analyses across covariate / proteomics datasets. Triggers:
   multiple imputation, MI, mice, Rubin's rules, FMI, pool imputations,
-  imputed dataset, 多重插补, 插补合并, /ukbsci-imputation. Hard rule: imputed
-  participant-level datasets stay in RAP project storage; pooled estimates,
-  diagnostics, and de-identified figures can be exported.
+  imputed dataset, 多重插补, 插补合并, /ukbsci-imputation. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-imputation — Multiple imputation and pooling for UKB cohorts
 
 ## 0. RAP guardrails
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 The list of `m` imputed `data.tables` is **per-participant** and must remain
 inside RAP project storage. Pooled coefficient tables and `plot_mi_*` figures
-are aggregate — safe to export. Recommended on-disk layout:
+are aggregate and may be shared with the local agent. Recommended on-disk layout:
 
 ```
 /mnt/project/<area>/03-cohort/

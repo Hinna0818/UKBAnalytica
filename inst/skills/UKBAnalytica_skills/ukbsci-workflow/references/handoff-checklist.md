@@ -52,7 +52,7 @@ Below are the per-phase hand-off contracts.
 **Expected outputs:**
 
 - `02-extract/pheno.csv` (RAP-resident)
-- `02-extract/manifest.csv` (safe to export — field-level only)
+- `02-extract/manifest.csv` (field-level only; shareable)
 
 **Post-condition the workflow must check:**
 
@@ -85,8 +85,8 @@ stopifnot(file.exists("/mnt/project/<area>/02-extract/pheno.csv"))
 **Expected outputs:**
 
 - `03-cohort/cohort.csv`
-- `03-cohort/cohort_flow.csv` (safe to export)
-- `03-cohort/source_compare.csv` (optional, safe to export)
+- `03-cohort/cohort_flow.csv` (aggregate; shareable)
+- `03-cohort/source_compare.csv` (optional aggregate; shareable)
 
 **Post-condition:**
 
@@ -123,7 +123,7 @@ stopifnot(file.exists("/mnt/project/<area>/02-extract/pheno.csv"))
 
 **Expected outputs:**
 
-- `04-results/01-baseline_table.csv` (safe to export).
+- `04-results/01-baseline_table.csv` (aggregate; shareable).
 
 ---
 
@@ -174,7 +174,8 @@ The workflow skill may invoke several of these in sequence. Each gets:
 | `ukbsci-mediation` | `04-results/06-mediation.csv` |
 | `ukbsci-subgroup-sensitivity` | `04-results/03-cox_subgroup.csv`, `04-results/04-cox_sensitivity.csv` |
 
-All outputs are aggregate (estimates, CIs, p-values) — safe to export.
+All outputs are aggregate (estimates, CIs, p-values) and may be shared with
+the local agent.
 
 ---
 
@@ -214,29 +215,34 @@ After the plotting phase, the workflow skill writes
 
 ---
 
-## Aggregate-only export bundle (final step)
+## Aggregate-only sharing manifest (final step)
 
-The workflow skill produces an export manifest enumerating which files in the
-project tree are safe to leave RAP. This is **the only** bundle the user
-should attempt to download. Generate it with:
+The workflow skill produces a manifest enumerating aggregate files and
+non-identifying rendered figures that may be shared with the local agent.
+The user must review the manifest before sharing and remove any file that
+contains row-level values, identifiers, exact dates, data previews, or raw RAP
+fields. Generate it with:
 
 ```r
 exportable <- c(
   list.files("/mnt/project/<area>/04-results", full.names = TRUE),
   list.files("/mnt/project/<area>/05-figs",   full.names = TRUE,
              pattern = "\\.(png|pdf)$"),
+  # Include figure data CSVs only after confirming they are aggregate
+  # (per-bin, per-stratum, per-feature, or per-cluster), never per-participant.
   list.files("/mnt/project/<area>/05-figs/data", full.names = TRUE,
              pattern = "\\.csv$"),
   list.files("/mnt/project/<area>/06-note",   full.names = TRUE),
-  list.files("/mnt/project/<area>/07-log",    full.names = TRUE),
   "/mnt/project/<area>/03-cohort/cohort_flow.csv",
   "/mnt/project/<area>/02-extract/manifest.csv"
 )
-writeLines(exportable, "/mnt/project/<area>/06-note/safe_to_export.txt")
+writeLines(exportable, "/mnt/project/<area>/06-note/shareable_aggregate_outputs.txt")
 ```
 
 The workflow skill then tells the user:
 
-> Everything in `safe_to_export.txt` is aggregate-level and can be transferred
-> off RAP. Everything else (extract / cohort participant-level tables) must
-> remain in the project.
+> Everything in `shareable_aggregate_outputs.txt` should be aggregate-level or
+> a rendered non-identifying figure before it is shared with the local agent.
+> Everything else (extract / cohort
+> participant-level tables) must remain in the RAP project and out of the
+> agent context.

@@ -43,7 +43,7 @@ cohort <- build_survival_dataset(
   dt_threads          = 8
 )
 
-# Inspect attrition (safe to export — aggregate counts only)
+# Inspect attrition (aggregate counts only; shareable with the local agent)
 flow <- attr(cohort, "participant_flow")
 print(flow)
 

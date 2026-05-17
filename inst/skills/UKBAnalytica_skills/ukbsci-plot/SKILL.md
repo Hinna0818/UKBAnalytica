@@ -15,9 +15,7 @@ description: >
   Love plots, SHAP summaries, multi-panel composites, or PDF / SVG
   high-resolution export. Triggers: UKB plotting, forest plot, volcano,
   calibration, manuscript figure, ggplot helper, ukbsci 画图, 论文级图,
-  /ukbsci-plot. Hard rule: do not export raw participant-level figure source
-  tables or direct identifiers; de-identified rendered figures and aggregate
-  source tables may be exported.
+  /ukbsci-plot. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-plot — Manuscript figure production for UKBAnalytica
@@ -28,20 +26,22 @@ description: >
 identifiers (`eid`, exact dates, raw RAP fields), or row-level source tables
 that can be linked back to participants.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
-| Output | Export rule |
+| Output | Sharing rule |
 |--------|-------------|
-| Rendered PDF / SVG / PNG figure | Exportable — contains only visual encoding, no raw participant data. |
-| `05-figs/data/Fig*.csv` source CSV | Exportable **only if aggregate** (per-bin, per-strata, per-feature means/CIs). Never export a source CSV that contains raw per-participant values or identifiers. |
-| Coefficient / metric table from `04-results/*.csv` | Exportable — aggregate only. |
+| Rendered PDF / SVG / PNG figure | Shareable if it does not expose identifiers, exact dates, raw RAP fields, row labels, or data previews. |
+| `05-figs/data/Fig*.csv` source CSV | Shareable **only if aggregate** (per-bin, per-strata, per-feature means/CIs). Never share a source CSV that contains raw per-participant values or identifiers. |
+| Coefficient / metric table from `04-results/*.csv` | Shareable — aggregate only. |
 | Per-participant raw values used to build a figure | Do not export. Keep intermediate data on RAP. |
-| Individual-level interpretation figure (e.g. SHAP force plot) | De-identified figures are acceptable when no `eid`, raw RAP fields, exact dates, or re-identifiable row-level data accompany them. For publication, use a synthetic prototype row rather than a real participant's values. |
+| Individual-level interpretation figure (e.g. SHAP force plot) | Do not use a real participant row with the local agent. Generate synthetic or representative prototype-row figures inside RAP if needed. |
 
 ---
 

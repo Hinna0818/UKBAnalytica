@@ -12,9 +12,7 @@ description: >
   complete-case sensitivity, or early-event exclusion sensitivity. Triggers:
   subgroup analysis, interaction p-value, effect modification,
   sensitivity analysis, complete-case analysis, lag analysis, 亚组分析,
-  敏感性分析, /ukbsci-subgroup-sensitivity. Hard rule: do not export RAP raw
-  participant-level data, direct identifiers, or re-identifiable row-level
-  tables; aggregate and de-identified analysis outputs may leave the project.
+  敏感性分析, /ukbsci-subgroup-sensitivity. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-subgroup-sensitivity — Subgroup & sensitivity analyses
@@ -22,14 +20,16 @@ description: >
 ## 0. RAP guardrails
 
 Input: cohort `data.table`. Output: aggregate subgroup-effect tables and
-sensitivity flow tables — safe to export.
+sensitivity flow tables that may be shared with the local agent.
 
-Shared privacy boundary: do not export UK Biobank RAP individual-level raw
-data, direct identifiers (`eid`), exact dates, raw RAP fields, or row-level
-source tables that can be linked back to participants. De-identified analytical
-figures and aggregate summaries (curves, coefficients, metrics, feature-level
-or bin-level source tables) are generally exportable when no identifying or raw
-participant-level fields accompany them.
+Strict local-agent boundary: this skill is for script generation,
+workflow planning, package guidance, and interpretation of aggregate outputs.
+The agent must not read, inspect, summarize, or process real UK Biobank RAP
+participant-level data, including de-identified row-level tables, raw RAP
+fields, exact dates, per-row predictions, row-level SHAP matrices, screenshots,
+tracebacks, or logs containing row-level values. Generate scripts for the user
+to run inside RAP; only aggregate results or rendered figures may be shared
+back with the agent. See `../references/agent-privacy-boundary.md`.
 
 ---
 
