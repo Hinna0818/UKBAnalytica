@@ -1,0 +1,156 @@
+# Advanced analysis {#advanced-analysis}
+
+This chapter summarizes the advanced statistical modules in **UKBAnalytica**.
+These functions are intended for common epidemiological extensions after the
+main regression analyses: subgroup analysis, propensity score analysis, and
+causal mediation analysis.
+
+## Module overview
+
+| Analysis task | Main functions | Typical use |
+|---|---|---|
+| Subgroup analysis | `run_subgroup_analysis()`, `run_multi_subgroup()` | Estimate effects within strata and report interaction p-values |
+| Propensity score analysis | `estimate_propensity_score()`, `match_propensity()`, `calculate_weights()`, `run_weighted_analysis()` | Reduce confounding in observational treatment or exposure comparisons |
+| Mediation analysis | `run_mediation()`, `run_multi_mediator()` | Decompose total effects into direct and indirect pathways |
+
+For multiple imputation workflows, see the [Multiple imputation](06-imputation.qmd)
+chapter.
+
+## Subgroup analysis {#subgroup}
+
+`run_subgroup_analysis()` fits the same model within each level of a subgroup
+variable and reports an interaction p-value. Cox, logistic, and linear models
+are supported.
+
+```{r subgroup-basic, eval=FALSE}
+subgroup_res <- run_subgroup_analysis(
+  data = analysis_data,
+  exposure = "smoking_status",
+  subgroup_var = "sex",
+  model_type = "cox",
+  endpoint = c("follow_up_time", "incident_status"),
+  covariates = c("age", "bmi", "ethnic")
+)
+
+subgroup_res
+```
+
+For multiple subgroup variables, use `run_multi_subgroup()` and visualize the
+result with `plot_forest()`.
+
+```{r subgroup-multi, eval=FALSE}
+subgroup_all <- run_multi_subgroup(
+  data = analysis_data,
+  exposure = "smoking_status",
+  subgroup_vars = c("sex", "age_group", "bmi_group"),
+  model_type = "cox",
+  endpoint = c("follow_up_time", "incident_status"),
+  covariates = c("age", "bmi", "ethnic")
+)
+
+plot_forest(
+  subgroup_all,
+  estimate_col = "estimate",
+  lower_col = "lower95",
+  upper_col = "upper95",
+  null_value = 1,
+  log_scale = TRUE
+)
+```
+
+## Propensity score analysis {#propensity}
+
+Propensity score methods can be used when comparing an exposure or treatment
+group in observational data. The workflow is: estimate propensity scores,
+perform matching or weighting, then fit the outcome model.
+
+```{r ps-workflow, eval=FALSE}
+ps_data <- estimate_propensity_score(
+  data = analysis_data,
+  treatment = "exposure_group",
+  covariates = c("age", "sex", "bmi", "smoking_status", "ethnic"),
+  method = "logistic"
+)
+
+matched_data <- match_propensity(
+  data = ps_data,
+  treatment = "exposure_group",
+  ps_col = "ps",
+  ratio = 1,
+  caliper = 0.20
+)
+```
+
+For IPTW analyses, use `calculate_weights()` followed by
+`run_weighted_analysis()`.
+
+```{r iptw-workflow, eval=FALSE}
+weighted_data <- calculate_weights(
+  data = ps_data,
+  treatment = "exposure_group",
+  ps_col = "ps",
+  weight_type = "ATE",
+  stabilized = TRUE
+)
+
+weighted_res <- run_weighted_analysis(
+  data = weighted_data,
+  exposure = "exposure_group",
+  model_type = "cox",
+  endpoint = c("follow_up_time", "incident_status"),
+  weight_col = "weight"
+)
+
+weighted_res
+```
+
+## Mediation analysis {#mediation}
+
+`run_mediation()` wraps regression-based mediation analysis and supports linear,
+logistic, and Cox outcomes. It is useful when testing whether an exposure effect
+is partly explained through an intermediate variable.
+
+```{r mediation-basic, eval=FALSE}
+med_res <- run_mediation(
+  data = analysis_data,
+  exposure = "smoking_status",
+  mediator = "inflammatory_marker",
+  outcome = "follow_up_time",
+  outcome_type = "cox",
+  endpoint = c("follow_up_time", "incident_status"),
+  mediator_type = "continuous",
+  covariates = c("age", "sex", "bmi", "ethnic"),
+  exposure_levels = c(0, 1),
+  boot = TRUE,
+  boot_n = 1000
+)
+
+summary(med_res)
+```
+
+For screening several candidate mediators, use `run_multi_mediator()`.
+
+```{r mediation-multi, eval=FALSE}
+multi_med <- run_multi_mediator(
+  data = analysis_data,
+  exposure = "smoking_status",
+  mediators = c("bmi", "crp", "hba1c"),
+  outcome = "follow_up_time",
+  outcome_type = "cox",
+  endpoint = c("follow_up_time", "incident_status"),
+  covariates = c("age", "sex", "ethnic")
+)
+
+multi_med
+```
+
+## Practical notes
+
+- Keep the adjustment set consistent with the main analysis unless the advanced
+  analysis has a specific causal estimand.
+- Check subgroup sample sizes and event counts before interpreting interaction
+  p-values.
+- Inspect propensity score overlap and covariate balance before reporting
+  matching or weighting results.
+- For mediation analysis, define the temporal and biological ordering of
+  exposure, mediator, and outcome before model fitting.

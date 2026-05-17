@@ -1,0 +1,145 @@
+# Main analysis {#main-analysis}
+
+This chapter shows the core statistical-analysis functions in
+**UKBAnalytica**. The main workflow is intentionally simple: first inspect
+correlations among candidate variables, then run one of three regression
+families according to the outcome type.
+
+## Correlation pre-analysis {#correlation}
+
+Before regression modeling, `run_correlation()` can be used to inspect
+correlations among candidate exposures or covariates. This is useful for
+identifying highly correlated variables before building adjusted models.
+
+```{r correlation-basic, eval=FALSE}
+library(UKBAnalytica)
+
+corr_mat <- run_correlation(
+  df = analysis_data,
+  vars = c("age", "bmi", "sbp", "dbp", "glucose", "hba1c"),
+  method = "pearson",
+  threshold = 0.70
+)
+
+corr_mat
+```
+
+Use `plot_correlation()` when a visual summary is needed.
+
+```{r correlation-plot, eval=FALSE}
+plot_correlation(
+  corr_mat,
+  show_values = TRUE,
+  upper_triangle = TRUE,
+  title = "Correlation matrix"
+)
+```
+
+Common choices are `method = "pearson"` for approximately continuous variables
+and `method = "spearman"` for rank-based or skewed variables.
+
+## Regression analyses {#regression}
+
+The three main regression functions share the same design: each variable in
+`main_var` is tested separately, and `covariates` defines the adjustment set.
+This makes it straightforward to screen multiple exposures while keeping model
+specification consistent.
+
+| Outcome type | Function | Effect estimate |
+|---|---|---|
+| Continuous outcome | `runmulti_lm()` | beta |
+| Binary outcome | `runmulti_logit()` | odds ratio (OR) |
+| Time-to-event outcome | `runmulti_cox()` | hazard ratio (HR) |
+
+For high-dimensional analyses, such as biomarker or protein screening, adjust
+the returned p-values with `p.adjust()`.
+
+```{r p-adjust, eval=FALSE}
+results$p_bh <- p.adjust(results$pvalue, method = "BH")
+results$p_bonferroni <- p.adjust(results$pvalue, method = "bonferroni")
+```
+
+### Linear regression
+
+Use `runmulti_lm()` for continuous outcomes.
+
+```{r lm-example, eval=FALSE}
+lm_res <- runmulti_lm(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status", "hba1c"),
+  outcome = "sbp",
+  covariates = c("age", "sex", "ethnic")
+)
+
+lm_res
+```
+
+The output includes `variable`, `beta`, `lower95`, `upper95`, and `pvalue`.
+Here, `beta` represents the adjusted mean difference in the continuous outcome
+per unit increase or category contrast of the tested variable.
+
+### Logistic regression
+
+Use `runmulti_logit()` for binary outcomes coded as 0/1.
+
+```{r logit-example, eval=FALSE}
+logit_res <- runmulti_logit(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status", "hba1c"),
+  outcome = "diabetes_status",
+  covariates = c("age", "sex", "ethnic")
+)
+
+logit_res
+```
+
+The output includes `variable`, `OR`, `lower95`, `upper95`, and `pvalue`.
+The outcome must be binary, with 1 indicating the event or case group.
+
+### Cox proportional hazards regression
+
+Use `runmulti_cox()` for incident outcomes with follow-up time.
+
+```{r cox-example, eval=FALSE}
+cox_res <- runmulti_cox(
+  data = survival_data,
+  main_var = c("bmi", "smoking_status", "hba1c"),
+  endpoint = c("follow_up_time", "incident_status"),
+  covariates = c("age", "sex", "ethnic")
+)
+
+cox_res
+```
+
+The output includes `variable`, `coef`, `HR`, `lower95`, `upper95`, `pvalue`,
+`n`, and `n_event`. The `endpoint` argument should contain the follow-up time
+column followed by the event indicator column, where 1 indicates an incident
+event and 0 indicates censoring.
+
+## Minimal workflow
+
+```{r minimal-workflow, eval=FALSE}
+exposures <- c("bmi", "smoking_status", "hba1c")
+adjustment <- c("age", "sex", "ethnic")
+
+corr_mat <- run_correlation(
+  analysis_data,
+  vars = c(exposures, adjustment),
+  method = "spearman",
+  threshold = 0.70
+)
+
+cox_res <- runmulti_cox(
+  data = survival_data,
+  main_var = exposures,
+  endpoint = c("follow_up_time", "incident_status"),
+  covariates = adjustment
+)
+
+cox_res$p_bh <- p.adjust(cox_res$pvalue, method = "BH")
+cox_res
+```
+
+This structure covers the main statistical layer of UKBAnalytica: correlation
+pre-analysis followed by linear, logistic, or Cox regression according to the
+outcome definition.

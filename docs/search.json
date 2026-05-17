@@ -1,0 +1,1190 @@
+[
+  {
+    "objectID": "12-skill-creator.html",
+    "href": "12-skill-creator.html",
+    "title": "Skill Creator",
+    "section": "",
+    "text": "The skill-creator folder contains a toolkit and agent instructions for generating and evaluating new custom skills.\n\n\nThe skill creator provides instructions and evaluation templates (e.g., smoke_test_core.R) allowing developers to programmatically create and validate new AI agent skills based on the UKBAnalytica standard.\nBy utilizing these templates, you can extend the built-in capabilities and ensure new custom skills accurately conform to data privacy guidelines, UK Biobank workflow requirements, and the correct API designs for UKBAnalytica.",
+    "crumbs": [
+      "Overview",
+      "AI Agent Skills",
+      "Skill Creator"
+    ]
+  },
+  {
+    "objectID": "12-skill-creator.html#programmatic-skill-generation",
+    "href": "12-skill-creator.html#programmatic-skill-generation",
+    "title": "Skill Creator",
+    "section": "",
+    "text": "The skill creator provides instructions and evaluation templates (e.g., smoke_test_core.R) allowing developers to programmatically create and validate new AI agent skills based on the UKBAnalytica standard.\nBy utilizing these templates, you can extend the built-in capabilities and ensure new custom skills accurately conform to data privacy guidelines, UK Biobank workflow requirements, and the correct API designs for UKBAnalytica.",
+    "crumbs": [
+      "Overview",
+      "AI Agent Skills",
+      "Skill Creator"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html",
+    "href": "10-proteomics-enrichment.html",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "This chapter introduces the omics-analysis layer in UKBAnalytica. The current implementation focuses on plasma proteomics workflows, especially Olink proteins from UK Biobank RAP analyses. Metabolomics support will be documented in a future update.\nThe proteomics workflow is organized around three tasks:\n\nassociation screening between proteins and clinical outcomes;\nfunctional enrichment analysis of selected proteins;\nSTRING-based protein-protein interaction (PPI) network analysis.\n\nIn RAP projects, participant-level matrices should remain inside the approved analysis environment. The examples below assume that users export only aggregate regression results, enrichment summaries, and figures.\n\n\nProteomics enrichment and network analysis use optional Bioconductor and network packages. Install them before running the examples.\n\ninstall.packages(\"BiocManager\")\nBiocManager::install(c(\"clusterProfiler\", \"AnnotationDbi\", \"org.Hs.eg.db\"))\n\n# Optional helper used by several PPI and enrichment wrappers\nremotes::install_github(\"Hinna0818/TCMDATA\")\n\n\n\n\nRAP-exported Olink protein columns often appear as lower-case field-derived names, for example olink_instance_0.gdf15 or olink_instance_0.il6. protein_to_gene_symbol() converts these identifiers to HGNC gene symbols for enrichment and PPI analyses. It also supports UKB coding 143 style labels such as IL6;Interleukin-6 and multi-target labels such as IL12A_IL12B.\n\nlibrary(UKBAnalytica)\n\nprotein_to_gene_symbol(c(\n  \"olink_instance_0.gdf15\",\n  \"olink_instance_0.il6\",\n  \"IL12A_IL12B;Interleukin-12\"\n))\n\nIf an upstream platform uses UniProt IDs or panel-specific identifiers, provide a custom mapping table.\n\ncustom_map &lt;- data.frame(\n  protein = c(\"P05231\", \"P01375\"),\n  gene_symbol = c(\"IL6\", \"TNF\")\n)\n\nprotein_to_gene_symbol(\n  proteins = c(\"P05231\", \"P01375\"),\n  from_type = \"UNIPROT\",\n  mapping_table = custom_map\n)\n\n\n\n\nFor incident disease outcomes, proteins can be screened with Cox proportional hazards models using runmulti_cox(). Each protein is fitted as the main exposure in a separate model, while the same adjustment covariates are applied across all proteins.\n\nprotein_cols &lt;- grep(\"^olink_instance_0\\\\.\", names(train_data), value = TRUE)\n\ncox_res &lt;- runmulti_cox(\n  data = train_data,\n  main_var = protein_cols,\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\n    \"age\", \"sex\", \"bmi\", \"smoking_status\",\n    \"TDI\", \"ethnic\", \"education\"\n  )\n)\n\nrunmulti_cox() returns one row per protein with variable, coef, HR, lower95, upper95, pvalue, n, and n_event. Multiple-testing correction should be applied before selecting candidate proteins.\n\ncox_res$p_bh &lt;- p.adjust(cox_res$pvalue, method = \"BH\")\ncox_res$p_bonferroni &lt;- p.adjust(cox_res$pvalue, method = \"bonferroni\")\n\ncox_res &lt;- merge(\n  cox_res,\n  protein_to_gene_symbol(cox_res, protein_col = \"variable\"),\n  by.x = \"variable\",\n  by.y = \"protein\",\n  all.x = TRUE\n)\n\nsig_proteins &lt;- subset(cox_res, p_bonferroni &lt; 0.05)\n\nFor binary outcomes, the same structure can be used with runmulti_logit(), followed by BH or Bonferroni correction of the returned p-values.\n\n\n\nplot_regression_volcano() accepts outputs from runmulti_cox() or runmulti_logit(). Users specify the effect column, raw p-value column, and the adjusted p-value column used for highlighting.\n\nvolcano_plot &lt;- plot_regression_volcano(\n  cox_res,\n  effect_col = \"HR\",\n  p_col = \"pvalue\",\n  adjusted_p_col = \"p_bonferroni\",\n  label_col = \"gene_symbol\",\n  significance_cutoff = 0.05,\n  top_n_label_each = 5,\n  null_effect = 1,\n  x_lab = \"Hazard ratio\"\n)\n\nvolcano_plot\n\nFor logistic regression results, set effect_col = \"OR\" and keep null_effect = 1.\n\n\n\nAfter selecting significant proteins, run_protein_ora() performs GO over-representation analysis through clusterProfiler::enrichGO(). For proteomics panels, the measured protein panel should usually be used as the background universe instead of the whole genome.\n\nsig_gene_symbols &lt;- unique(na.omit(sig_proteins$gene_symbol))\n\ngo_bp &lt;- run_protein_ora(\n  proteins = sig_gene_symbols,\n  universe = protein_cols,\n  ont = \"BP\",\n  pAdjustMethod = \"BH\",\n  pvalueCutoff = 0.05,\n  qvalueCutoff = 0.20\n)\n\ngo_table &lt;- as.data.frame(go_bp$ora_result)\ngo_table[, c(\"ID\", \"Description\", \"GeneRatio\", \"p.adjust\", \"Count\")]\n\nThe package provides light plotting helpers for enrichment results.\n\nplot_enrichment_lollipop(\n  go_bp,\n  top_n = 10,\n  plot_title = \"GO biological process enrichment\"\n)\n\nKEGG ORA can be run with run_protein_kegg_ora() when pathway-level annotation is needed.\n\nkegg_res &lt;- run_protein_kegg_ora(\n  proteins = sig_gene_symbols,\n  universe = protein_cols,\n  pAdjustMethod = \"BH\"\n)\n\n\n\n\nget_protein_ppi() maps proteins to gene symbols and retrieves STRING PPI networks through clusterProfiler::getPPI(). The returned object stores both the mapped symbols and the network, which helps users inspect identifier conversion before downstream network analysis.\n\nppi_res &lt;- get_protein_ppi(\n  proteins = sig_gene_symbols,\n  taxID = 9606,\n  network_type = \"functional\",\n  output = \"igraph\"\n)\n\nppi_res$gene_symbols\nppi_res$ppi\n\nThe network can then be filtered and annotated with topological metrics.\n\nppi_filtered &lt;- subset_protein_ppi(\n  ppi_res,\n  score_cutoff = 0.70,\n  rm_isolates = TRUE\n)\n\nppi_metrics &lt;- compute_protein_ppi_metrics(\n  ppi_filtered,\n  weight_attr = \"score\"\n)\n\nnode_rank &lt;- rank_protein_ppi_nodes(ppi_metrics)\nhead(node_rank$table)\n\n\n\n\nFor module detection, run_protein_ppi_fastgreedy() applies igraph fast-greedy community detection to the PPI graph. By default, it works on the largest connected component and stores cluster labels in the fast_greedy_cluster vertex attribute.\n\nppi_fg &lt;- run_protein_ppi_fastgreedy(\n  ppi_metrics,\n  n_clusters = 4,\n  largest_component = TRUE\n)\n\nfg_scores &lt;- score_protein_ppi_clusters(\n  ppi_fg,\n  cluster_attr = \"fast_greedy_cluster\",\n  min_size = 3\n)\n\nfg_scores\n\nCluster labels can be used for module-specific biological interpretation. A common strategy is to run GO BP enrichment separately for proteins in each cluster or to pass cluster-specific gene lists to clusterProfiler::compareCluster().\n\nlibrary(igraph)\n\ncluster_df &lt;- data.frame(\n  gene_symbol = V(ppi_fg)$name,\n  cluster = V(ppi_fg)$fast_greedy_cluster\n)\n\ncluster_gene_list &lt;- split(cluster_df$gene_symbol, cluster_df$cluster)\n\ncluster_go &lt;- clusterProfiler::compareCluster(\n  geneCluster = cluster_gene_list,\n  fun = \"enrichGO\",\n  OrgDb = org.Hs.eg.db::org.Hs.eg.db,\n  keyType = \"SYMBOL\",\n  ont = \"BP\",\n  pAdjustMethod = \"BH\"\n)\n\nWhen interpreting PPI clusters, keep the STRING score cutoff, disconnected components, and cluster size threshold explicit in the methods section.\n\n\n\nMetabolomics workflows will be added in a future release. This section is reserved for regression screening, multiple-testing correction, pathway annotation, and metabolite-set enrichment examples.\n\n\n\n\nUse the measured proteomics panel as the enrichment background when possible.\nReport both the raw p-value and the adjusted p-value method used for protein screening.\nKeep protein scaling and covariate adjustment consistent between training and validation analyses.\nFor PPI analyses, record the STRING network type, score cutoff, filtering rules, and clustering algorithm.\nExport only aggregate summaries and publication figures from RAP projects.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#required-packages",
+    "href": "10-proteomics-enrichment.html#required-packages",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "Proteomics enrichment and network analysis use optional Bioconductor and network packages. Install them before running the examples.\n\ninstall.packages(\"BiocManager\")\nBiocManager::install(c(\"clusterProfiler\", \"AnnotationDbi\", \"org.Hs.eg.db\"))\n\n# Optional helper used by several PPI and enrichment wrappers\nremotes::install_github(\"Hinna0818/TCMDATA\")",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#proteomics-input-and-identifier-handling",
+    "href": "10-proteomics-enrichment.html#proteomics-input-and-identifier-handling",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "RAP-exported Olink protein columns often appear as lower-case field-derived names, for example olink_instance_0.gdf15 or olink_instance_0.il6. protein_to_gene_symbol() converts these identifiers to HGNC gene symbols for enrichment and PPI analyses. It also supports UKB coding 143 style labels such as IL6;Interleukin-6 and multi-target labels such as IL12A_IL12B.\n\nlibrary(UKBAnalytica)\n\nprotein_to_gene_symbol(c(\n  \"olink_instance_0.gdf15\",\n  \"olink_instance_0.il6\",\n  \"IL12A_IL12B;Interleukin-12\"\n))\n\nIf an upstream platform uses UniProt IDs or panel-specific identifiers, provide a custom mapping table.\n\ncustom_map &lt;- data.frame(\n  protein = c(\"P05231\", \"P01375\"),\n  gene_symbol = c(\"IL6\", \"TNF\")\n)\n\nprotein_to_gene_symbol(\n  proteins = c(\"P05231\", \"P01375\"),\n  from_type = \"UNIPROT\",\n  mapping_table = custom_map\n)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#protein-outcome-regression-analysis",
+    "href": "10-proteomics-enrichment.html#protein-outcome-regression-analysis",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "For incident disease outcomes, proteins can be screened with Cox proportional hazards models using runmulti_cox(). Each protein is fitted as the main exposure in a separate model, while the same adjustment covariates are applied across all proteins.\n\nprotein_cols &lt;- grep(\"^olink_instance_0\\\\.\", names(train_data), value = TRUE)\n\ncox_res &lt;- runmulti_cox(\n  data = train_data,\n  main_var = protein_cols,\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\n    \"age\", \"sex\", \"bmi\", \"smoking_status\",\n    \"TDI\", \"ethnic\", \"education\"\n  )\n)\n\nrunmulti_cox() returns one row per protein with variable, coef, HR, lower95, upper95, pvalue, n, and n_event. Multiple-testing correction should be applied before selecting candidate proteins.\n\ncox_res$p_bh &lt;- p.adjust(cox_res$pvalue, method = \"BH\")\ncox_res$p_bonferroni &lt;- p.adjust(cox_res$pvalue, method = \"bonferroni\")\n\ncox_res &lt;- merge(\n  cox_res,\n  protein_to_gene_symbol(cox_res, protein_col = \"variable\"),\n  by.x = \"variable\",\n  by.y = \"protein\",\n  all.x = TRUE\n)\n\nsig_proteins &lt;- subset(cox_res, p_bonferroni &lt; 0.05)\n\nFor binary outcomes, the same structure can be used with runmulti_logit(), followed by BH or Bonferroni correction of the returned p-values.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#volcano-visualization",
+    "href": "10-proteomics-enrichment.html#volcano-visualization",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "plot_regression_volcano() accepts outputs from runmulti_cox() or runmulti_logit(). Users specify the effect column, raw p-value column, and the adjusted p-value column used for highlighting.\n\nvolcano_plot &lt;- plot_regression_volcano(\n  cox_res,\n  effect_col = \"HR\",\n  p_col = \"pvalue\",\n  adjusted_p_col = \"p_bonferroni\",\n  label_col = \"gene_symbol\",\n  significance_cutoff = 0.05,\n  top_n_label_each = 5,\n  null_effect = 1,\n  x_lab = \"Hazard ratio\"\n)\n\nvolcano_plot\n\nFor logistic regression results, set effect_col = \"OR\" and keep null_effect = 1.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#gene-enrichment-analysis",
+    "href": "10-proteomics-enrichment.html#gene-enrichment-analysis",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "After selecting significant proteins, run_protein_ora() performs GO over-representation analysis through clusterProfiler::enrichGO(). For proteomics panels, the measured protein panel should usually be used as the background universe instead of the whole genome.\n\nsig_gene_symbols &lt;- unique(na.omit(sig_proteins$gene_symbol))\n\ngo_bp &lt;- run_protein_ora(\n  proteins = sig_gene_symbols,\n  universe = protein_cols,\n  ont = \"BP\",\n  pAdjustMethod = \"BH\",\n  pvalueCutoff = 0.05,\n  qvalueCutoff = 0.20\n)\n\ngo_table &lt;- as.data.frame(go_bp$ora_result)\ngo_table[, c(\"ID\", \"Description\", \"GeneRatio\", \"p.adjust\", \"Count\")]\n\nThe package provides light plotting helpers for enrichment results.\n\nplot_enrichment_lollipop(\n  go_bp,\n  top_n = 10,\n  plot_title = \"GO biological process enrichment\"\n)\n\nKEGG ORA can be run with run_protein_kegg_ora() when pathway-level annotation is needed.\n\nkegg_res &lt;- run_protein_kegg_ora(\n  proteins = sig_gene_symbols,\n  universe = protein_cols,\n  pAdjustMethod = \"BH\"\n)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#ppi-network-analysis",
+    "href": "10-proteomics-enrichment.html#ppi-network-analysis",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "get_protein_ppi() maps proteins to gene symbols and retrieves STRING PPI networks through clusterProfiler::getPPI(). The returned object stores both the mapped symbols and the network, which helps users inspect identifier conversion before downstream network analysis.\n\nppi_res &lt;- get_protein_ppi(\n  proteins = sig_gene_symbols,\n  taxID = 9606,\n  network_type = \"functional\",\n  output = \"igraph\"\n)\n\nppi_res$gene_symbols\nppi_res$ppi\n\nThe network can then be filtered and annotated with topological metrics.\n\nppi_filtered &lt;- subset_protein_ppi(\n  ppi_res,\n  score_cutoff = 0.70,\n  rm_isolates = TRUE\n)\n\nppi_metrics &lt;- compute_protein_ppi_metrics(\n  ppi_filtered,\n  weight_attr = \"score\"\n)\n\nnode_rank &lt;- rank_protein_ppi_nodes(ppi_metrics)\nhead(node_rank$table)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#fast-greedy-clustering-of-ppi-modules",
+    "href": "10-proteomics-enrichment.html#fast-greedy-clustering-of-ppi-modules",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "For module detection, run_protein_ppi_fastgreedy() applies igraph fast-greedy community detection to the PPI graph. By default, it works on the largest connected component and stores cluster labels in the fast_greedy_cluster vertex attribute.\n\nppi_fg &lt;- run_protein_ppi_fastgreedy(\n  ppi_metrics,\n  n_clusters = 4,\n  largest_component = TRUE\n)\n\nfg_scores &lt;- score_protein_ppi_clusters(\n  ppi_fg,\n  cluster_attr = \"fast_greedy_cluster\",\n  min_size = 3\n)\n\nfg_scores\n\nCluster labels can be used for module-specific biological interpretation. A common strategy is to run GO BP enrichment separately for proteins in each cluster or to pass cluster-specific gene lists to clusterProfiler::compareCluster().\n\nlibrary(igraph)\n\ncluster_df &lt;- data.frame(\n  gene_symbol = V(ppi_fg)$name,\n  cluster = V(ppi_fg)$fast_greedy_cluster\n)\n\ncluster_gene_list &lt;- split(cluster_df$gene_symbol, cluster_df$cluster)\n\ncluster_go &lt;- clusterProfiler::compareCluster(\n  geneCluster = cluster_gene_list,\n  fun = \"enrichGO\",\n  OrgDb = org.Hs.eg.db::org.Hs.eg.db,\n  keyType = \"SYMBOL\",\n  ont = \"BP\",\n  pAdjustMethod = \"BH\"\n)\n\nWhen interpreting PPI clusters, keep the STRING score cutoff, disconnected components, and cluster size threshold explicit in the methods section.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#metabolomics-analysis",
+    "href": "10-proteomics-enrichment.html#metabolomics-analysis",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "Metabolomics workflows will be added in a future release. This section is reserved for regression screening, multiple-testing correction, pathway annotation, and metabolite-set enrichment examples.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "10-proteomics-enrichment.html#practical-recommendations",
+    "href": "10-proteomics-enrichment.html#practical-recommendations",
+    "title": "Bioinformatic and omics analyses",
+    "section": "",
+    "text": "Use the measured proteomics panel as the enrichment background when possible.\nReport both the raw p-value and the adjusted p-value method used for protein screening.\nKeep protein scaling and covariate adjustment consistent between training and validation analyses.\nFor PPI analyses, record the STRING network type, score cutoff, filtering rules, and clustering algorithm.\nExport only aggregate summaries and publication figures from RAP projects.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Bioinformatic and omics analyses"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html",
+    "href": "08-advanced-analysis.html",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "This chapter summarizes the advanced statistical modules in UKBAnalytica. These functions are intended for common epidemiological extensions after the main regression analyses: subgroup analysis, propensity score analysis, and causal mediation analysis.\n\n\n\n\n\n\n\n\n\n\nAnalysis task\nMain functions\nTypical use\n\n\n\n\nSubgroup analysis\nrun_subgroup_analysis(), run_multi_subgroup()\nEstimate effects within strata and report interaction p-values\n\n\nPropensity score analysis\nestimate_propensity_score(), match_propensity(), calculate_weights(), run_weighted_analysis()\nReduce confounding in observational treatment or exposure comparisons\n\n\nMediation analysis\nrun_mediation(), run_multi_mediator()\nDecompose total effects into direct and indirect pathways\n\n\n\nFor multiple imputation workflows, see the Multiple imputation chapter.\n\n\n\nrun_subgroup_analysis() fits the same model within each level of a subgroup variable and reports an interaction p-value. Cox, logistic, and linear models are supported.\n\nsubgroup_res &lt;- run_subgroup_analysis(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  subgroup_var = \"sex\",\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"bmi\", \"ethnic\")\n)\n\nsubgroup_res\n\nFor multiple subgroup variables, use run_multi_subgroup() and visualize the result with plot_forest().\n\nsubgroup_all &lt;- run_multi_subgroup(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  subgroup_vars = c(\"sex\", \"age_group\", \"bmi_group\"),\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"bmi\", \"ethnic\")\n)\n\nplot_forest(\n  subgroup_all,\n  estimate_col = \"estimate\",\n  lower_col = \"lower95\",\n  upper_col = \"upper95\",\n  null_value = 1,\n  log_scale = TRUE\n)\n\n\n\n\nPropensity score methods can be used when comparing an exposure or treatment group in observational data. The workflow is: estimate propensity scores, perform matching or weighting, then fit the outcome model.\n\nps_data &lt;- estimate_propensity_score(\n  data = analysis_data,\n  treatment = \"exposure_group\",\n  covariates = c(\"age\", \"sex\", \"bmi\", \"smoking_status\", \"ethnic\"),\n  method = \"logistic\"\n)\n\nmatched_data &lt;- match_propensity(\n  data = ps_data,\n  treatment = \"exposure_group\",\n  ps_col = \"ps\",\n  ratio = 1,\n  caliper = 0.20\n)\n\nFor IPTW analyses, use calculate_weights() followed by run_weighted_analysis().\n\nweighted_data &lt;- calculate_weights(\n  data = ps_data,\n  treatment = \"exposure_group\",\n  ps_col = \"ps\",\n  weight_type = \"ATE\",\n  stabilized = TRUE\n)\n\nweighted_res &lt;- run_weighted_analysis(\n  data = weighted_data,\n  exposure = \"exposure_group\",\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  weight_col = \"weight\"\n)\n\nweighted_res\n\n\n\n\nrun_mediation() wraps regression-based mediation analysis and supports linear, logistic, and Cox outcomes. It is useful when testing whether an exposure effect is partly explained through an intermediate variable.\n\nmed_res &lt;- run_mediation(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  mediator = \"inflammatory_marker\",\n  outcome = \"follow_up_time\",\n  outcome_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  mediator_type = \"continuous\",\n  covariates = c(\"age\", \"sex\", \"bmi\", \"ethnic\"),\n  exposure_levels = c(0, 1),\n  boot = TRUE,\n  boot_n = 1000\n)\n\nsummary(med_res)\n\nFor screening several candidate mediators, use run_multi_mediator().\n\nmulti_med &lt;- run_multi_mediator(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  mediators = c(\"bmi\", \"crp\", \"hba1c\"),\n  outcome = \"follow_up_time\",\n  outcome_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nmulti_med\n\n\n\n\n\nKeep the adjustment set consistent with the main analysis unless the advanced analysis has a specific causal estimand.\nCheck subgroup sample sizes and event counts before interpreting interaction p-values.\nInspect propensity score overlap and covariate balance before reporting matching or weighting results.\nFor mediation analysis, define the temporal and biological ordering of exposure, mediator, and outcome before model fitting.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html#module-overview",
+    "href": "08-advanced-analysis.html#module-overview",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "Analysis task\nMain functions\nTypical use\n\n\n\n\nSubgroup analysis\nrun_subgroup_analysis(), run_multi_subgroup()\nEstimate effects within strata and report interaction p-values\n\n\nPropensity score analysis\nestimate_propensity_score(), match_propensity(), calculate_weights(), run_weighted_analysis()\nReduce confounding in observational treatment or exposure comparisons\n\n\nMediation analysis\nrun_mediation(), run_multi_mediator()\nDecompose total effects into direct and indirect pathways\n\n\n\nFor multiple imputation workflows, see the Multiple imputation chapter.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html#subgroup",
+    "href": "08-advanced-analysis.html#subgroup",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "run_subgroup_analysis() fits the same model within each level of a subgroup variable and reports an interaction p-value. Cox, logistic, and linear models are supported.\n\nsubgroup_res &lt;- run_subgroup_analysis(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  subgroup_var = \"sex\",\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"bmi\", \"ethnic\")\n)\n\nsubgroup_res\n\nFor multiple subgroup variables, use run_multi_subgroup() and visualize the result with plot_forest().\n\nsubgroup_all &lt;- run_multi_subgroup(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  subgroup_vars = c(\"sex\", \"age_group\", \"bmi_group\"),\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"bmi\", \"ethnic\")\n)\n\nplot_forest(\n  subgroup_all,\n  estimate_col = \"estimate\",\n  lower_col = \"lower95\",\n  upper_col = \"upper95\",\n  null_value = 1,\n  log_scale = TRUE\n)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html#propensity",
+    "href": "08-advanced-analysis.html#propensity",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "Propensity score methods can be used when comparing an exposure or treatment group in observational data. The workflow is: estimate propensity scores, perform matching or weighting, then fit the outcome model.\n\nps_data &lt;- estimate_propensity_score(\n  data = analysis_data,\n  treatment = \"exposure_group\",\n  covariates = c(\"age\", \"sex\", \"bmi\", \"smoking_status\", \"ethnic\"),\n  method = \"logistic\"\n)\n\nmatched_data &lt;- match_propensity(\n  data = ps_data,\n  treatment = \"exposure_group\",\n  ps_col = \"ps\",\n  ratio = 1,\n  caliper = 0.20\n)\n\nFor IPTW analyses, use calculate_weights() followed by run_weighted_analysis().\n\nweighted_data &lt;- calculate_weights(\n  data = ps_data,\n  treatment = \"exposure_group\",\n  ps_col = \"ps\",\n  weight_type = \"ATE\",\n  stabilized = TRUE\n)\n\nweighted_res &lt;- run_weighted_analysis(\n  data = weighted_data,\n  exposure = \"exposure_group\",\n  model_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  weight_col = \"weight\"\n)\n\nweighted_res",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html#mediation",
+    "href": "08-advanced-analysis.html#mediation",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "run_mediation() wraps regression-based mediation analysis and supports linear, logistic, and Cox outcomes. It is useful when testing whether an exposure effect is partly explained through an intermediate variable.\n\nmed_res &lt;- run_mediation(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  mediator = \"inflammatory_marker\",\n  outcome = \"follow_up_time\",\n  outcome_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  mediator_type = \"continuous\",\n  covariates = c(\"age\", \"sex\", \"bmi\", \"ethnic\"),\n  exposure_levels = c(0, 1),\n  boot = TRUE,\n  boot_n = 1000\n)\n\nsummary(med_res)\n\nFor screening several candidate mediators, use run_multi_mediator().\n\nmulti_med &lt;- run_multi_mediator(\n  data = analysis_data,\n  exposure = \"smoking_status\",\n  mediators = c(\"bmi\", \"crp\", \"hba1c\"),\n  outcome = \"follow_up_time\",\n  outcome_type = \"cox\",\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nmulti_med",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "08-advanced-analysis.html#practical-notes",
+    "href": "08-advanced-analysis.html#practical-notes",
+    "title": "Advanced analysis",
+    "section": "",
+    "text": "Keep the adjustment set consistent with the main analysis unless the advanced analysis has a specific causal estimand.\nCheck subgroup sample sizes and event counts before interpreting interaction p-values.\nInspect propensity score overlap and covariate balance before reporting matching or weighting results.\nFor mediation analysis, define the temporal and biological ordering of exposure, mediator, and outcome before model fitting.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Advanced analysis"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html",
+    "href": "06-imputation.html",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "Missing data are common in large cohort studies. UKBAnalytica provides run_imputation(), a wrapper around the mice package that handles the subset-impute-merge workflow in a single call.\n\n\nA typical imputation pipeline for UKB data involves:\n\nSelecting the covariates to impute.\nRunning mice::mice().\nExtracting each completed dataset.\nMerging the imputed covariates back to the full data (exposures, outcomes, etc.).\nOptionally joining additional omics datasets (proteomics, metabolomics).\n\nrun_imputation() automates all five steps.\n\n\n\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\ndt &lt;- fread(\"population.csv\")\n\n# Variables to impute\nimp_vars &lt;- c(\n  \"sex\", \"age\", \"bmi\",\n  \"smoking\", \"drinking\",\n  \"education\", \"income\",\n  \"exercise_intensity\", \"sleep_duration\",\n  \"ethnicity\",\n  \"ldl\", \"hdl\", \"hba1c\",\n  \"sbp\", \"dbp\"\n)\n\n# Categorical variables (will be coerced to factor)\ncat_vars &lt;- c(\n  \"sex\", \"smoking\", \"drinking\",\n  \"education\", \"income\", \"ethnicity\",\n  \"exercise_intensity\"\n)\n\nres &lt;- run_imputation(\n  data        = dt,\n  id_col      = \"eid\",\n  vars        = imp_vars,\n  factor_vars = cat_vars,\n  method      = \"pmm\",\n  m           = 5,\n  maxit       = 10,\n  seed        = 1234,\n  print       = FALSE\n)\n\n\n\nrun_imputation() returns a list with two elements:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nimp\nThe mice mids object (for diagnostics, pooling, etc.)\n\n\ndata_list\nA list of m completed datasets with imputed covariates merged back\n\n\n\nAccess individual datasets:\n# First completed dataset\nimputed_dt1 &lt;- res$data_list[[1]]\ndim(imputed_dt1)\n\n# Second completed dataset\nimputed_dt2 &lt;- res$data_list[[2]]\nAll columns that were not in vars (exposures, outcomes, follow-up time, etc.) are preserved as-is.\n\n\n\nIf you have separate omics datasets (e.g., proteomics, metabolomics), you can merge them automatically:\npro_df  &lt;- fread(\"protein_imputed.csv\")\nmeta_df &lt;- fread(\"metabolomics_imputed.csv\")\n\nres &lt;- run_imputation(\n  data        = dt,\n  id_col      = \"eid\",\n  vars        = imp_vars,\n  factor_vars = cat_vars,\n  m           = 5,\n  seed        = 1234,\n  print       = FALSE,\n  additional_data = list(\n    protein      = pro_df,\n    metabolomics = meta_df\n  ),\n  additional_join = \"inner\"\n)\n\n# Each element of data_list now includes the\n# omics columns as well\ndim(res$data_list[[1]])\nSet additional_join = \"left\" if you want to keep all participants even when they are missing from the omics data.\n\n\n\nBecause the raw mids object is returned, you can use standard mice diagnostics:\nlibrary(mice)\n\n# Convergence plots\nplot(res$imp)\n\n# Strip plots for a specific variable\nstripplot(res$imp, bmi ~ .imp)\n\n# Density plots\ndensityplot(res$imp, ~ bmi)\n\n\n\nFor analyses that account for imputation uncertainty, use mice::with() and mice::pool():\nlibrary(mice)\nlibrary(survival)\n\nfit &lt;- with(res$imp, lm(bmi ~ age + sex))\npooled &lt;- pool(fit)\nsummary(pooled)\n\n\n\nfor (i in seq_along(res$data_list)) {\n  saveRDS(\n    res$data_list[[i]],\n    file = sprintf(\"imputed_dataset_%d.rds\", i)\n  )\n}\n\n\n\n\n\n\nArgument\nDefault\nDescription\n\n\n\n\ndata\n–\nInput data.frame or data.table\n\n\nid_col\n\"eid\"\nName of the ID column\n\n\nvars\n–\nVariables to impute\n\n\nfactor_vars\nNULL\nSubset of vars to treat as factors\n\n\nmethod\n\"pmm\"\nImputation method (passed to mice)\n\n\nm\n5\nNumber of imputations\n\n\nmaxit\n10\nMaximum iterations\n\n\nseed\n1234\nRandom seed\n\n\nprint\nTRUE\nShow iteration logs\n\n\nadditional_data\nNULL\nNamed list of extra datasets to merge\n\n\nadditional_join\n\"inner\"\nJoin type for additional datasets",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#motivation",
+    "href": "06-imputation.html#motivation",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "A typical imputation pipeline for UKB data involves:\n\nSelecting the covariates to impute.\nRunning mice::mice().\nExtracting each completed dataset.\nMerging the imputed covariates back to the full data (exposures, outcomes, etc.).\nOptionally joining additional omics datasets (proteomics, metabolomics).\n\nrun_imputation() automates all five steps.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#basic-usage",
+    "href": "06-imputation.html#basic-usage",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "library(UKBAnalytica)\nlibrary(data.table)\n\ndt &lt;- fread(\"population.csv\")\n\n# Variables to impute\nimp_vars &lt;- c(\n  \"sex\", \"age\", \"bmi\",\n  \"smoking\", \"drinking\",\n  \"education\", \"income\",\n  \"exercise_intensity\", \"sleep_duration\",\n  \"ethnicity\",\n  \"ldl\", \"hdl\", \"hba1c\",\n  \"sbp\", \"dbp\"\n)\n\n# Categorical variables (will be coerced to factor)\ncat_vars &lt;- c(\n  \"sex\", \"smoking\", \"drinking\",\n  \"education\", \"income\", \"ethnicity\",\n  \"exercise_intensity\"\n)\n\nres &lt;- run_imputation(\n  data        = dt,\n  id_col      = \"eid\",\n  vars        = imp_vars,\n  factor_vars = cat_vars,\n  method      = \"pmm\",\n  m           = 5,\n  maxit       = 10,\n  seed        = 1234,\n  print       = FALSE\n)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#working-with-the-output",
+    "href": "06-imputation.html#working-with-the-output",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "run_imputation() returns a list with two elements:\n\n\n\n\n\n\n\nElement\nDescription\n\n\n\n\nimp\nThe mice mids object (for diagnostics, pooling, etc.)\n\n\ndata_list\nA list of m completed datasets with imputed covariates merged back\n\n\n\nAccess individual datasets:\n# First completed dataset\nimputed_dt1 &lt;- res$data_list[[1]]\ndim(imputed_dt1)\n\n# Second completed dataset\nimputed_dt2 &lt;- res$data_list[[2]]\nAll columns that were not in vars (exposures, outcomes, follow-up time, etc.) are preserved as-is.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#merging-additional-datasets",
+    "href": "06-imputation.html#merging-additional-datasets",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "If you have separate omics datasets (e.g., proteomics, metabolomics), you can merge them automatically:\npro_df  &lt;- fread(\"protein_imputed.csv\")\nmeta_df &lt;- fread(\"metabolomics_imputed.csv\")\n\nres &lt;- run_imputation(\n  data        = dt,\n  id_col      = \"eid\",\n  vars        = imp_vars,\n  factor_vars = cat_vars,\n  m           = 5,\n  seed        = 1234,\n  print       = FALSE,\n  additional_data = list(\n    protein      = pro_df,\n    metabolomics = meta_df\n  ),\n  additional_join = \"inner\"\n)\n\n# Each element of data_list now includes the\n# omics columns as well\ndim(res$data_list[[1]])\nSet additional_join = \"left\" if you want to keep all participants even when they are missing from the omics data.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#diagnostics",
+    "href": "06-imputation.html#diagnostics",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "Because the raw mids object is returned, you can use standard mice diagnostics:\nlibrary(mice)\n\n# Convergence plots\nplot(res$imp)\n\n# Strip plots for a specific variable\nstripplot(res$imp, bmi ~ .imp)\n\n# Density plots\ndensityplot(res$imp, ~ bmi)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#pooled-analysis",
+    "href": "06-imputation.html#pooled-analysis",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "For analyses that account for imputation uncertainty, use mice::with() and mice::pool():\nlibrary(mice)\nlibrary(survival)\n\nfit &lt;- with(res$imp, lm(bmi ~ age + sex))\npooled &lt;- pool(fit)\nsummary(pooled)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#saving-completed-datasets",
+    "href": "06-imputation.html#saving-completed-datasets",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "for (i in seq_along(res$data_list)) {\n  saveRDS(\n    res$data_list[[i]],\n    file = sprintf(\"imputed_dataset_%d.rds\", i)\n  )\n}",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "06-imputation.html#parameters",
+    "href": "06-imputation.html#parameters",
+    "title": "Multiple Imputation",
+    "section": "",
+    "text": "Argument\nDefault\nDescription\n\n\n\n\ndata\n–\nInput data.frame or data.table\n\n\nid_col\n\"eid\"\nName of the ID column\n\n\nvars\n–\nVariables to impute\n\n\nfactor_vars\nNULL\nSubset of vars to treat as factors\n\n\nmethod\n\"pmm\"\nImputation method (passed to mice)\n\n\nm\n5\nNumber of imputations\n\n\nmaxit\n10\nMaximum iterations\n\n\nseed\n1234\nRandom seed\n\n\nprint\nTRUE\nShow iteration logs\n\n\nadditional_data\nNULL\nNamed list of extra datasets to merge\n\n\nadditional_join\n\"inner\"\nJoin type for additional datasets",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Multiple Imputation"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html",
+    "href": "04-survival-analysis.html",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "The main function for building a Cox-regression-ready dataset is build_survival_dataset(). It handles prevalent/incident classification, follow-up time calculation, and supports separate source definitions for baseline exclusion and outcome ascertainment. It also supports participant-flow reporting (show_flow) and temporary data.table thread tuning (dt_threads) for large datasets.\n\n\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\nukb_data &lt;- fread(\"population.csv\")\n\ndiseases &lt;- get_predefined_diseases()[\n  c(\"AA\", \"Hypertension\", \"Diabetes\")\n]\n\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  primary_disease = \"AA\",\n  censor_date = as.Date(\"2023-10-31\"),\n  show_flow = TRUE,\n  dt_threads = 8\n)\n\n\n\nThe wide-format output contains the following columns for each disease:\n\n\n\n\n\n\n\nColumn\nDescription\n\n\n\n\n{Disease}_history\n1 if prevalent (diagnosed at or before baseline)\n\n\n{Disease}_incident\n1 if incident (diagnosed after baseline)\n\n\noutcome_status\nPrimary disease event indicator (1 = event, 0 = censored, NA = prevalent)\n\n\noutcome_surv_time\nFollow-up time in years (NA for prevalent cases)\n\n\n\nPrevalent cases of the primary disease receive NA for both outcome_status and outcome_surv_time because they are not at risk for incident disease. In a Cox model you should exclude or handle them explicitly.\n\n\n\nWhen show_flow = TRUE and output = \"wide\", the function prints a step-by-step participant attrition table in terminal and stores it in the returned object:\nflow_dt &lt;- attr(analysis_dt, \"participant_flow\")\nif (!is.null(flow_dt)) {\n  print(flow_dt)\n}\n\n\n\nThe function classifies each participant as follows:\n\nPrevalent case – earliest diagnosis date (from prevalent_sources) is on or before the baseline date. The participant already had the disease at enrollment.\nIncident case – earliest diagnosis date (from outcome_sources) is after the baseline date. This is a new event during follow-up.\nCensored – no diagnosis by the end of follow-up. Follow-up ends at death or the administrative censor date, whichever comes first.\n\n\n\n\nFor most prospective UKB analyses, use build_survival_dataset() as the only disease-phenotyping entry point. The user-facing workflow is:\n\nChoose diseases with get_predefined_diseases() or create one custom definition with create_disease_definition().\nChoose primary_disease, which controls outcome_status and outcome_surv_time.\nUse prevalent_sources for baseline exclusion/history covariates.\nUse outcome_sources for incident endpoint ascertainment.\nAfter the function returns, keep participants with non-missing outcome_status and valid non-negative outcome_surv_time for Cox models.\n\nExample for an arrhythmia endpoint using ICD-10 and death registry records:\nrhythm_defs &lt;- get_predefined_diseases()[\n  c(\"Arrhythmia\", \"Atrial_Fibrillation\", \"Ventricular_Arrhythmia\")\n]\n\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = rhythm_defs,\n  primary_disease = \"Arrhythmia\",\n  baseline_col = \"p53_i0\",\n  censor_date = as.Date(\"2023-10-31\"),\n  prevalent_sources = c(\"ICD10\", \"ICD9\", \"Self-report\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\"),\n  show_flow = TRUE,\n  dt_threads = 8\n)\n\ncox_dt &lt;- analysis_dt[\n  !is.na(outcome_status) &\n    !is.na(outcome_surv_time) &\n    outcome_surv_time &gt;= 0\n]\nThis keeps the full cohort in analysis_dt for auditing and covariate merges, while cox_dt is the at-risk analysis subset. Prevalent primary-disease cases are encoded as outcome_status = NA and outcome_surv_time = NA because they were not at risk for an incident event.\n\n\n\nFollow-up time for the primary disease is calculated as:\n\nPrevalent case: NA (not at risk).\nIncident case: (diagnosis_date - baseline_date) / 365.25.\nCensored: (min(death_date, censor_date) - baseline_date) / 365.25.\n\n\n\n\nThe prevalent_sources and outcome_sources arguments let you use different data sources for baseline exclusion versus outcome ascertainment. This is recommended because:\n\n\n\n\n\n\n\n\nAspect\nPrevalent (history)\nOutcome (incident)\n\n\n\n\nPurpose\nExclude baseline cases / define history\nDefine endpoint\n\n\nSelf-report\nInclude (captures pre-existing)\nExclude (imprecise dates)\n\n\nDate precision\nLess critical\nCritical for survival time\n\n\nDeath records\nUsually not required for history\nUseful for fatal events and censoring\n\n\n\n\"Algorithm\" can be added to either source list when your disease definition includes algo_date_field (and optionally algo_source_field). The parser accepts both UKB column naming styles: p{field}_i0 and p{field}.\n\"CancerRegistry\" can be added for malignant neoplasm endpoints when the extracted dataset contains cancer registry fields (p40006_i*, p40005_i*, and optionally p40011_i* / p40012_i*). For example:\nlung_defs &lt;- get_predefined_diseases()[\"Lung_Cancer\"]\n\nlung_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = lung_defs,\n  prevalent_sources = c(\"CancerRegistry\", \"ICD10\"),\n  outcome_sources = c(\"CancerRegistry\", \"ICD10\", \"Death\"),\n  primary_disease = \"Lung_Cancer\"\n)\n\"FirstOccurrence\" can also be added when your dataset contains UKB Category 1712 fields. Predefined diseases include common First Occurrence field IDs, so most users only need to add the source name:\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = get_predefined_diseases()[c(\"MI\", \"Stroke\", \"Diabetes\")],\n  prevalent_sources = c(\"ICD10\", \"ICD9\", \"Self-report\", \"FirstOccurrence\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\", \"FirstOccurrence\"),\n  primary_disease = \"MI\"\n)\nFirst Occurrence dates with UKB special date coding 819 are treated as missing and excluded before prevalent/incident classification.\nDefault settings reflect this design:\n# prevalent_sources includes Self-report\n# outcome_sources excludes Self-report\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\",\n                        \"Self-report\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\"),\n  primary_disease = \"AA\",\n  show_flow = TRUE\n)\n\n\n\nFor very large cohorts, you can limit or increase the threads used by data.table during this function call:\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  primary_disease = \"AA\",\n  dt_threads = 8\n)\ndt_threads only applies inside this call. The previous data.table thread setting is restored automatically when the function exits.\nDate parsing in this pipeline is robust to malformed values: non-standard dates are converted to NA with warnings instead of stopping the full run.\n\n\n\nAfter building the survival dataset, exclude prevalent primary-disease cases and fit a Cox model:\nlibrary(survival)\n\n# Exclude prevalent AA cases (they have NA outcome)\ncox_data &lt;- analysis_dt[!is.na(outcome_status)]\n\ncox_model &lt;- coxph(\n  Surv(outcome_surv_time, outcome_status) ~\n    Hypertension_history + Diabetes_history,\n  data = cox_data\n)\nsummary(cox_model)\n\n\n\nYou can run sensitivity analyses by varying the source definitions:\n# Sensitivity 1: hospital records only (strictest)\nstrict_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\"),\n  outcome_sources   = c(\"ICD10\", \"ICD9\"),\n  primary_disease   = \"AA\"\n)\n\n# Sensitivity 2: broad baseline history and fatal events\nbroad_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\",\n                        \"Self-report\"),\n  outcome_sources   = c(\"ICD10\", \"ICD9\",\n                        \"Death\"),\n  primary_disease   = \"AA\"\n)\n\n\n\nIf you need a case-level (long) table instead of the wide cohort table, set output = \"long\":\nlong_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  primary_disease = \"AA\",\n  output = \"long\",\n  include_all = TRUE\n)\nhead(long_dt)\nWith output = \"long\" and include_all = TRUE, the function returns one row per participant per disease, including non-cases with status = 0. With include_all = FALSE, it returns only extracted case records from the selected outcome sources.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#quick-start",
+    "href": "04-survival-analysis.html#quick-start",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "library(UKBAnalytica)\nlibrary(data.table)\n\nukb_data &lt;- fread(\"population.csv\")\n\ndiseases &lt;- get_predefined_diseases()[\n  c(\"AA\", \"Hypertension\", \"Diabetes\")\n]\n\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  primary_disease = \"AA\",\n  censor_date = as.Date(\"2023-10-31\"),\n  show_flow = TRUE,\n  dt_threads = 8\n)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#output-columns",
+    "href": "04-survival-analysis.html#output-columns",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "The wide-format output contains the following columns for each disease:\n\n\n\n\n\n\n\nColumn\nDescription\n\n\n\n\n{Disease}_history\n1 if prevalent (diagnosed at or before baseline)\n\n\n{Disease}_incident\n1 if incident (diagnosed after baseline)\n\n\noutcome_status\nPrimary disease event indicator (1 = event, 0 = censored, NA = prevalent)\n\n\noutcome_surv_time\nFollow-up time in years (NA for prevalent cases)\n\n\n\nPrevalent cases of the primary disease receive NA for both outcome_status and outcome_surv_time because they are not at risk for incident disease. In a Cox model you should exclude or handle them explicitly.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#participant-flow-reporting",
+    "href": "04-survival-analysis.html#participant-flow-reporting",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "When show_flow = TRUE and output = \"wide\", the function prints a step-by-step participant attrition table in terminal and stores it in the returned object:\nflow_dt &lt;- attr(analysis_dt, \"participant_flow\")\nif (!is.null(flow_dt)) {\n  print(flow_dt)\n}",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#case-classification-logic",
+    "href": "04-survival-analysis.html#case-classification-logic",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "The function classifies each participant as follows:\n\nPrevalent case – earliest diagnosis date (from prevalent_sources) is on or before the baseline date. The participant already had the disease at enrollment.\nIncident case – earliest diagnosis date (from outcome_sources) is after the baseline date. This is a new event during follow-up.\nCensored – no diagnosis by the end of follow-up. Follow-up ends at death or the administrative censor date, whichever comes first.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#recommended-workflow-for-users",
+    "href": "04-survival-analysis.html#recommended-workflow-for-users",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "For most prospective UKB analyses, use build_survival_dataset() as the only disease-phenotyping entry point. The user-facing workflow is:\n\nChoose diseases with get_predefined_diseases() or create one custom definition with create_disease_definition().\nChoose primary_disease, which controls outcome_status and outcome_surv_time.\nUse prevalent_sources for baseline exclusion/history covariates.\nUse outcome_sources for incident endpoint ascertainment.\nAfter the function returns, keep participants with non-missing outcome_status and valid non-negative outcome_surv_time for Cox models.\n\nExample for an arrhythmia endpoint using ICD-10 and death registry records:\nrhythm_defs &lt;- get_predefined_diseases()[\n  c(\"Arrhythmia\", \"Atrial_Fibrillation\", \"Ventricular_Arrhythmia\")\n]\n\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = rhythm_defs,\n  primary_disease = \"Arrhythmia\",\n  baseline_col = \"p53_i0\",\n  censor_date = as.Date(\"2023-10-31\"),\n  prevalent_sources = c(\"ICD10\", \"ICD9\", \"Self-report\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\"),\n  show_flow = TRUE,\n  dt_threads = 8\n)\n\ncox_dt &lt;- analysis_dt[\n  !is.na(outcome_status) &\n    !is.na(outcome_surv_time) &\n    outcome_surv_time &gt;= 0\n]\nThis keeps the full cohort in analysis_dt for auditing and covariate merges, while cox_dt is the at-risk analysis subset. Prevalent primary-disease cases are encoded as outcome_status = NA and outcome_surv_time = NA because they were not at risk for an incident event.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#follow-up-time",
+    "href": "04-survival-analysis.html#follow-up-time",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "Follow-up time for the primary disease is calculated as:\n\nPrevalent case: NA (not at risk).\nIncident case: (diagnosis_date - baseline_date) / 365.25.\nCensored: (min(death_date, censor_date) - baseline_date) / 365.25.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#dual-source-design",
+    "href": "04-survival-analysis.html#dual-source-design",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "The prevalent_sources and outcome_sources arguments let you use different data sources for baseline exclusion versus outcome ascertainment. This is recommended because:\n\n\n\n\n\n\n\n\nAspect\nPrevalent (history)\nOutcome (incident)\n\n\n\n\nPurpose\nExclude baseline cases / define history\nDefine endpoint\n\n\nSelf-report\nInclude (captures pre-existing)\nExclude (imprecise dates)\n\n\nDate precision\nLess critical\nCritical for survival time\n\n\nDeath records\nUsually not required for history\nUseful for fatal events and censoring\n\n\n\n\"Algorithm\" can be added to either source list when your disease definition includes algo_date_field (and optionally algo_source_field). The parser accepts both UKB column naming styles: p{field}_i0 and p{field}.\n\"CancerRegistry\" can be added for malignant neoplasm endpoints when the extracted dataset contains cancer registry fields (p40006_i*, p40005_i*, and optionally p40011_i* / p40012_i*). For example:\nlung_defs &lt;- get_predefined_diseases()[\"Lung_Cancer\"]\n\nlung_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = lung_defs,\n  prevalent_sources = c(\"CancerRegistry\", \"ICD10\"),\n  outcome_sources = c(\"CancerRegistry\", \"ICD10\", \"Death\"),\n  primary_disease = \"Lung_Cancer\"\n)\n\"FirstOccurrence\" can also be added when your dataset contains UKB Category 1712 fields. Predefined diseases include common First Occurrence field IDs, so most users only need to add the source name:\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = get_predefined_diseases()[c(\"MI\", \"Stroke\", \"Diabetes\")],\n  prevalent_sources = c(\"ICD10\", \"ICD9\", \"Self-report\", \"FirstOccurrence\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\", \"FirstOccurrence\"),\n  primary_disease = \"MI\"\n)\nFirst Occurrence dates with UKB special date coding 819 are treated as missing and excluded before prevalent/incident classification.\nDefault settings reflect this design:\n# prevalent_sources includes Self-report\n# outcome_sources excludes Self-report\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\",\n                        \"Self-report\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\"),\n  primary_disease = \"AA\",\n  show_flow = TRUE\n)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#performance-tuning-large-data",
+    "href": "04-survival-analysis.html#performance-tuning-large-data",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "For very large cohorts, you can limit or increase the threads used by data.table during this function call:\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  primary_disease = \"AA\",\n  dt_threads = 8\n)\ndt_threads only applies inside this call. The previous data.table thread setting is restored automatically when the function exits.\nDate parsing in this pipeline is robust to malformed values: non-standard dates are converted to NA with warnings instead of stopping the full run.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#running-a-cox-model",
+    "href": "04-survival-analysis.html#running-a-cox-model",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "After building the survival dataset, exclude prevalent primary-disease cases and fit a Cox model:\nlibrary(survival)\n\n# Exclude prevalent AA cases (they have NA outcome)\ncox_data &lt;- analysis_dt[!is.na(outcome_status)]\n\ncox_model &lt;- coxph(\n  Surv(outcome_surv_time, outcome_status) ~\n    Hypertension_history + Diabetes_history,\n  data = cox_data\n)\nsummary(cox_model)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#sensitivity-analyses",
+    "href": "04-survival-analysis.html#sensitivity-analyses",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "You can run sensitivity analyses by varying the source definitions:\n# Sensitivity 1: hospital records only (strictest)\nstrict_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\"),\n  outcome_sources   = c(\"ICD10\", \"ICD9\"),\n  primary_disease   = \"AA\"\n)\n\n# Sensitivity 2: broad baseline history and fatal events\nbroad_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\",\n                        \"Self-report\"),\n  outcome_sources   = c(\"ICD10\", \"ICD9\",\n                        \"Death\"),\n  primary_disease   = \"AA\"\n)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "04-survival-analysis.html#long-format-output",
+    "href": "04-survival-analysis.html#long-format-output",
+    "title": "Survival Analysis",
+    "section": "",
+    "text": "If you need a case-level (long) table instead of the wide cohort table, set output = \"long\":\nlong_dt &lt;- build_survival_dataset(\n  ukb_data, diseases,\n  primary_disease = \"AA\",\n  output = \"long\",\n  include_all = TRUE\n)\nhead(long_dt)\nWith output = \"long\" and include_all = TRUE, the function returns one row per participant per disease, including non-cases with status = 0. With include_all = FALSE, it returns only extracted case records from the selected outcome sources.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Survival Analysis"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html",
+    "href": "02-preprocessing.html",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "After extracting data within RAP, the next step is to clean and recode baseline variables. UKBAnalytica provides preprocess_baseline() and several helper functions to handle this in a standardised way.\n\n\nUse get_variable_info() to inspect the built-in variable catalogue:\nlibrary(UKBAnalytica)\n\n# View all variables in a category\nget_variable_info(\"demographics\")\nget_variable_info(\"lifestyle\")\nget_variable_info(\"biomarkers\")\n&gt; get_variable_info(\"demographics\")\n   variable     category field_id ukb_column\n1       sex demographics       31        p31\n2       age demographics    21022     p21022\n3 ethnicity demographics    21000  p21000_i0\n                                                                                                                                                                                                                                                                                                                                                                                                                      description\n1                                                                                                                                                                                                                                                                                                                                                                                                 Sex; coding 9: 0=Female, 1=Male\n2                                                                                                                                                                                                                                                                                                                                                                                               Age at recruitment; integer years\n3 Ethnic background; coding 1001: White (British, Irish, Any other white background); Mixed (White and Black Caribbean, White and Black African, White and Asian, Any other mixed background); Asian or Asian British (Indian, Pakistani, Bangladeshi, Any other Asian background); Black or Black British (Caribbean, African, Any other Black background); Chinese; Other ethnic group; -1=Do not know; -3=Prefer not to answer\n&gt; get_variable_info(\"lifestyle\")\n            variable  category field_id ukb_column\n1            smoking lifestyle    20116  p20116_i0\n2           drinking lifestyle    20117  p20117_i0\n3     sleep_duration lifestyle     1160   p1160_i0\n4 exercise_intensity lifestyle    22032  p22032_i0\n                                                                                 description\n1         Smoking status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current\n2 Alcohol drinker status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current\n3  Sleep duration; integer hours/day; special values -1=Do not know, -3=Prefer not to answer\n4                              IPAQ activity group; coding 100700: 0=low, 1=moderate, 2=high\n&gt; get_variable_info(\"biomarkers\")\n       variable   category field_id ukb_column\n1 triglycerides biomarkers    30870  p30870_i0\n2           ldl biomarkers    30780  p30780_i0\n3           hdl biomarkers    30760  p30760_i0\n4         hba1c biomarkers    30750  p30750_i0\n5       glucose biomarkers    30740  p30740_i0\n                                        description\n1                  Triglycerides; continuous mmol/L\n2                     LDL direct; continuous mmol/L\n3                HDL cholesterol; continuous mmol/L\n4 Glycated haemoglobin (HbA1c); continuous mmol/mol\n5                        Glucose; continuous mmol/L\nEach entry maps a human-readable name (e.g., \"bmi\") to the corresponding UKB field column (e.g., p21001_i0).\n\n\n\npreprocess_baseline() uses the built-in variable catalogue to find the raw UKB column, creates a standardized output column, and applies a variable-specific processor when one is available.\nThe variables with automatic recoding are:\n\n\n\n\n\n\n\n\nVariable\nRaw UKB coding\nProcessed output\n\n\n\n\nsex\nField 31; 0=Female, 1=Male\nFactor: Female, Male\n\n\nage\nField 21022; integer years\nNumeric age\n\n\nethnicity\nField 21000; multiple ethnic background categories\nFactor: White, Others\n\n\nbmi\nField 21001; kg/m2\nNumeric BMI\n\n\nheight\nField 50; cm\nNumeric height\n\n\nweight\nField 21002; kg\nNumeric weight\n\n\nsmoking\nField 20116; 0=Never, 1=Previous, 2=Current\nFactor: Never, Previous, Current\n\n\ndrinking\nField 20117; 0=Never, 1=Previous, 2=Current\nFactor: Never, Previous, Current\n\n\nsleep_duration\nField 1160; hours/day\nNumeric sleep duration; values outside 1–24 set to NA\n\n\neducation\nField 6138; qualifications\nFactor: Low, Medium, High\n\n\nincome\nField 738; household income category\nInteger category\n\n\n\nFor mapped variables without a dedicated processor, including most biomarkers, air-pollution variables, diet variables, blood-pressure raw readings, and custom variables, the function does a conservative default operation:\n\ncopy the raw UKB column to the standardized variable name;\nif the raw column is numeric, convert invalid_codes to NA;\nleave the variable type otherwise unchanged.\n\nThis means that if a variable is not supported by a dedicated processor, it is still useful for field extraction, column-name standardization, and basic missing-value handling, but study-specific recoding should be added by the user or by a downstream helper function.\n\n\n\npreprocess_baseline() selects, renames, and recodes the requested variables:\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\nukb_data &lt;- fread(\"population.csv\")\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"sex\", \"age\", \"ethnicity\", \"bmi\",\n                \"smoking\", \"education\"),\n  missing_action = \"keep\")\n  \nhead(processed)\nSet missing_action = \"drop\" to remove any row that has NA in the selected variables.\n\n\n\nUKB records automated and manual BP readings. The helper calculate_blood_pressure() averages available readings per participant:\nprocessed &lt;- calculate_blood_pressure(processed, type = \"sbp\")\nprocessed &lt;- calculate_blood_pressure(processed, type = \"dbp\")\nThis will create columns sbp and dbp from whichever readings are present (automated preferred, manual as fallback).\n\n\n\nExtract binary indicators for medication use at baseline:\nprocessed &lt;- extract_medications(\n  processed,\n  c(\"cholesterol\", \"blood_pressure\", \"insulin\")\n)\nThe resulting columns are named anti_cho, antihypertensive, and insulin (1 = taking medication, 0 = not).\n\n\n\nCalculate averaged air pollution exposures from the UKB environmental data:\nprocessed &lt;- calculate_air_pollution(\n  processed,\n  c(\"NO2\", \"PM2.5\", \"PM10\", \"NOx\")\n)\n\n\n\nIf you need a UKB field that is not in the built-in catalogue, pass a custom_mapping list:\ncustom &lt;- list(\n  my_biomarker = list(\n    ukb_col = \"p30000_i0\",\n    description = \"Custom biomarker\"\n  )\n)\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"sex\", \"age\", \"my_biomarker\"),\n  custom_mapping = custom\n)\nThe custom entry will be treated like any built-in variable – the column is renamed and included in the output.\nFor a custom variable, preprocess_baseline() will not guess the scientific recoding rule. A recommended pattern is to let UKBAnalytica standardize the column names first, and then apply a study-specific derivation function.\nderive_air_pollution_score &lt;- function(dt) {\n  if (!data.table::is.data.table(dt)) {\n    dt &lt;- data.table::as.data.table(dt)\n  }\n\n  dt[, air_pollution_score :=\n       as.numeric(scale(pm25)) + as.numeric(scale(no2))]\n  dt\n}\n\ncustom &lt;- list(\n  pm25 = list(\n    ukb_col = \"p24006\",\n    description = \"PM2.5 air pollution; annual average\"\n  ),\n  no2 = list(\n    ukb_col = \"p24003\",\n    description = \"NO2 air pollution; 2010 estimate\"\n  )\n)\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"age\", \"sex\", \"pm25\", \"no2\"),\n  custom_mapping = custom,\n  missing_action = \"keep\"\n)\n\nprocessed &lt;- derive_air_pollution_score(processed)\nThis approach keeps the package responsible for UKB column matching, standard names, and basic missing-value handling, while keeping the research-specific definition explicit in the analysis script.\n\n\n\nA typical preprocessing pipeline for a cardiovascular study might look like this:\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\ndt &lt;- fread(\"population.csv\")\n\n# Step 1: demographics + lifestyle + biomarkers\ndt &lt;- preprocess_baseline(\n  dt,\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\", \"bmi\",\n    \"smoking\", \"drinking\",\n    \"sleep_duration\", \"exercise_intensity\",\n    \"education\", \"income\",\n    \"triglycerides\", \"ldl\", \"hdl\", \"hba1c\"\n  )\n)\n\n# Step 2: blood pressure\ndt &lt;- calculate_blood_pressure(dt, \"sbp\")\ndt &lt;- calculate_blood_pressure(dt, \"dbp\")\n\n# Step 3: medications\ndt &lt;- extract_medications(\n  dt, c(\"cholesterol\", \"blood_pressure\", \"insulin\")\n)\n\n# Step 4: air pollution\ndt &lt;- calculate_air_pollution(dt, c(\"NO2\", \"PM2.5\"))\n\nstr(dt)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#available-variables",
+    "href": "02-preprocessing.html#available-variables",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "Use get_variable_info() to inspect the built-in variable catalogue:\nlibrary(UKBAnalytica)\n\n# View all variables in a category\nget_variable_info(\"demographics\")\nget_variable_info(\"lifestyle\")\nget_variable_info(\"biomarkers\")\n&gt; get_variable_info(\"demographics\")\n   variable     category field_id ukb_column\n1       sex demographics       31        p31\n2       age demographics    21022     p21022\n3 ethnicity demographics    21000  p21000_i0\n                                                                                                                                                                                                                                                                                                                                                                                                                      description\n1                                                                                                                                                                                                                                                                                                                                                                                                 Sex; coding 9: 0=Female, 1=Male\n2                                                                                                                                                                                                                                                                                                                                                                                               Age at recruitment; integer years\n3 Ethnic background; coding 1001: White (British, Irish, Any other white background); Mixed (White and Black Caribbean, White and Black African, White and Asian, Any other mixed background); Asian or Asian British (Indian, Pakistani, Bangladeshi, Any other Asian background); Black or Black British (Caribbean, African, Any other Black background); Chinese; Other ethnic group; -1=Do not know; -3=Prefer not to answer\n&gt; get_variable_info(\"lifestyle\")\n            variable  category field_id ukb_column\n1            smoking lifestyle    20116  p20116_i0\n2           drinking lifestyle    20117  p20117_i0\n3     sleep_duration lifestyle     1160   p1160_i0\n4 exercise_intensity lifestyle    22032  p22032_i0\n                                                                                 description\n1         Smoking status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current\n2 Alcohol drinker status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current\n3  Sleep duration; integer hours/day; special values -1=Do not know, -3=Prefer not to answer\n4                              IPAQ activity group; coding 100700: 0=low, 1=moderate, 2=high\n&gt; get_variable_info(\"biomarkers\")\n       variable   category field_id ukb_column\n1 triglycerides biomarkers    30870  p30870_i0\n2           ldl biomarkers    30780  p30780_i0\n3           hdl biomarkers    30760  p30760_i0\n4         hba1c biomarkers    30750  p30750_i0\n5       glucose biomarkers    30740  p30740_i0\n                                        description\n1                  Triglycerides; continuous mmol/L\n2                     LDL direct; continuous mmol/L\n3                HDL cholesterol; continuous mmol/L\n4 Glycated haemoglobin (HbA1c); continuous mmol/mol\n5                        Glucose; continuous mmol/L\nEach entry maps a human-readable name (e.g., \"bmi\") to the corresponding UKB field column (e.g., p21001_i0).",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#how-preprocess_baseline-works",
+    "href": "02-preprocessing.html#how-preprocess_baseline-works",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "preprocess_baseline() uses the built-in variable catalogue to find the raw UKB column, creates a standardized output column, and applies a variable-specific processor when one is available.\nThe variables with automatic recoding are:\n\n\n\n\n\n\n\n\nVariable\nRaw UKB coding\nProcessed output\n\n\n\n\nsex\nField 31; 0=Female, 1=Male\nFactor: Female, Male\n\n\nage\nField 21022; integer years\nNumeric age\n\n\nethnicity\nField 21000; multiple ethnic background categories\nFactor: White, Others\n\n\nbmi\nField 21001; kg/m2\nNumeric BMI\n\n\nheight\nField 50; cm\nNumeric height\n\n\nweight\nField 21002; kg\nNumeric weight\n\n\nsmoking\nField 20116; 0=Never, 1=Previous, 2=Current\nFactor: Never, Previous, Current\n\n\ndrinking\nField 20117; 0=Never, 1=Previous, 2=Current\nFactor: Never, Previous, Current\n\n\nsleep_duration\nField 1160; hours/day\nNumeric sleep duration; values outside 1–24 set to NA\n\n\neducation\nField 6138; qualifications\nFactor: Low, Medium, High\n\n\nincome\nField 738; household income category\nInteger category\n\n\n\nFor mapped variables without a dedicated processor, including most biomarkers, air-pollution variables, diet variables, blood-pressure raw readings, and custom variables, the function does a conservative default operation:\n\ncopy the raw UKB column to the standardized variable name;\nif the raw column is numeric, convert invalid_codes to NA;\nleave the variable type otherwise unchanged.\n\nThis means that if a variable is not supported by a dedicated processor, it is still useful for field extraction, column-name standardization, and basic missing-value handling, but study-specific recoding should be added by the user or by a downstream helper function.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#basic-usage",
+    "href": "02-preprocessing.html#basic-usage",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "preprocess_baseline() selects, renames, and recodes the requested variables:\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\nukb_data &lt;- fread(\"population.csv\")\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"sex\", \"age\", \"ethnicity\", \"bmi\",\n                \"smoking\", \"education\"),\n  missing_action = \"keep\")\n  \nhead(processed)\nSet missing_action = \"drop\" to remove any row that has NA in the selected variables.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#blood-pressure",
+    "href": "02-preprocessing.html#blood-pressure",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "UKB records automated and manual BP readings. The helper calculate_blood_pressure() averages available readings per participant:\nprocessed &lt;- calculate_blood_pressure(processed, type = \"sbp\")\nprocessed &lt;- calculate_blood_pressure(processed, type = \"dbp\")\nThis will create columns sbp and dbp from whichever readings are present (automated preferred, manual as fallback).",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#medication-use",
+    "href": "02-preprocessing.html#medication-use",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "Extract binary indicators for medication use at baseline:\nprocessed &lt;- extract_medications(\n  processed,\n  c(\"cholesterol\", \"blood_pressure\", \"insulin\")\n)\nThe resulting columns are named anti_cho, antihypertensive, and insulin (1 = taking medication, 0 = not).",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#air-pollution-exposure",
+    "href": "02-preprocessing.html#air-pollution-exposure",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "Calculate averaged air pollution exposures from the UKB environmental data:\nprocessed &lt;- calculate_air_pollution(\n  processed,\n  c(\"NO2\", \"PM2.5\", \"PM10\", \"NOx\")\n)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#custom-variable-mapping",
+    "href": "02-preprocessing.html#custom-variable-mapping",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "If you need a UKB field that is not in the built-in catalogue, pass a custom_mapping list:\ncustom &lt;- list(\n  my_biomarker = list(\n    ukb_col = \"p30000_i0\",\n    description = \"Custom biomarker\"\n  )\n)\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"sex\", \"age\", \"my_biomarker\"),\n  custom_mapping = custom\n)\nThe custom entry will be treated like any built-in variable – the column is renamed and included in the output.\nFor a custom variable, preprocess_baseline() will not guess the scientific recoding rule. A recommended pattern is to let UKBAnalytica standardize the column names first, and then apply a study-specific derivation function.\nderive_air_pollution_score &lt;- function(dt) {\n  if (!data.table::is.data.table(dt)) {\n    dt &lt;- data.table::as.data.table(dt)\n  }\n\n  dt[, air_pollution_score :=\n       as.numeric(scale(pm25)) + as.numeric(scale(no2))]\n  dt\n}\n\ncustom &lt;- list(\n  pm25 = list(\n    ukb_col = \"p24006\",\n    description = \"PM2.5 air pollution; annual average\"\n  ),\n  no2 = list(\n    ukb_col = \"p24003\",\n    description = \"NO2 air pollution; 2010 estimate\"\n  )\n)\n\nprocessed &lt;- preprocess_baseline(\n  ukb_data,\n  variables = c(\"age\", \"sex\", \"pm25\", \"no2\"),\n  custom_mapping = custom,\n  missing_action = \"keep\"\n)\n\nprocessed &lt;- derive_air_pollution_score(processed)\nThis approach keeps the package responsible for UKB column matching, standard names, and basic missing-value handling, while keeping the research-specific definition explicit in the analysis script.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "02-preprocessing.html#complete-preprocessing-example",
+    "href": "02-preprocessing.html#complete-preprocessing-example",
+    "title": "Variable Preprocessing",
+    "section": "",
+    "text": "A typical preprocessing pipeline for a cardiovascular study might look like this:\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\ndt &lt;- fread(\"population.csv\")\n\n# Step 1: demographics + lifestyle + biomarkers\ndt &lt;- preprocess_baseline(\n  dt,\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\", \"bmi\",\n    \"smoking\", \"drinking\",\n    \"sleep_duration\", \"exercise_intensity\",\n    \"education\", \"income\",\n    \"triglycerides\", \"ldl\", \"hdl\", \"hba1c\"\n  )\n)\n\n# Step 2: blood pressure\ndt &lt;- calculate_blood_pressure(dt, \"sbp\")\ndt &lt;- calculate_blood_pressure(dt, \"dbp\")\n\n# Step 3: medications\ndt &lt;- extract_medications(\n  dt, c(\"cholesterol\", \"blood_pressure\", \"insulin\")\n)\n\n# Step 4: air pollution\ndt &lt;- calculate_air_pollution(dt, c(\"NO2\", \"PM2.5\"))\n\nstr(dt)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "Variable Preprocessing"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "\nUKBAnalytica\n",
+    "section": "",
+    "text": "UKBAnalytica is an R package for analyzing with the UK Biobank Research Analysis Platform (RAP) data inside approved RAP projects. It focuses on standardized phenotyping, survival-ready datasets, scalable preprocessing, and downstream analysis.\nThe package does not ship UK Biobank participant-level source records. Examples use field IDs, simulated toy data, or user-provided tables that remain within RAP-controlled storage.\nGet started View GitHub",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#what-the-package-covers",
+    "href": "index.html#what-the-package-covers",
+    "title": "\nUKBAnalytica\n",
+    "section": "What the package covers",
+    "text": "What the package covers\n\n\nRAP-native extraction\nPlan and extract UK Biobank fields within the approved RAP environment.\n\n\nBaseline preprocessing\nStandardize common baseline variables, recode UKB missing-value conventions, and derive reusable covariates.\n\n\nMulti-source phenotyping\nDefine disease endpoints using ICD-10, ICD-9, self-report, death registry, OPCS4, cancer registry, first-occurrence, and algorithm-defined outcomes.\n\n\nSurvival-ready cohorts\nSeparate prevalent history from incident outcomes and compute follow-up time for downstream Cox and survival analyses.\n\n\nDownstream analysis\nRun baseline tables, regression workflows, imputation, subgroup analysis, propensity score methods, mediation, and sensitivity analyses.\n\n\nML and omics modules\nSupport machine-learning workflows, SHAP interpretation, and bioinformatics analyses like proteomics enrichment, and STRING-based PPI analysis.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#workflow-overview",
+    "href": "index.html#workflow-overview",
+    "title": "\nUKBAnalytica\n",
+    "section": "Workflow overview",
+    "text": "Workflow overview",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "\nUKBAnalytica\n",
+    "section": "Installation",
+    "text": "Installation\n# install.packages(\"devtools\")\ndevtools::install_github(\"Hinna0818/UKBAnalytica_v2\")\n\n# use pkg like:\nlibrary(UKBAnalytica)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#minimal-example",
+    "href": "index.html#minimal-example",
+    "title": "\nUKBAnalytica\n",
+    "section": "Minimal example",
+    "text": "Minimal example\nRun analyses that touch real UK Biobank data inside RAP only.\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\n## suggest you have a data.frame on your RAP \nukb_data &lt;- fread(\"population.csv\")\n\n## label diseases using the predefined ID in this pkg\ndiseases &lt;- get_predefined_diseases()[\n  c(\"AA\", \"Hypertension\", \"Diabetes\")\n]\n\n## build survival dataset for downstream analyses\nanalysis_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = diseases,\n  prevalent_sources = c(\"ICD10\", \"ICD9\", \"Self-report\", \"Death\"),\n  outcome_sources = c(\"ICD10\", \"ICD9\", \"Death\"),\n  primary_disease = \"AA\",\n  show_flow = TRUE,\n  dt_threads = 8\n)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#privacy-boundary",
+    "href": "index.html#privacy-boundary",
+    "title": "\nUKBAnalytica\n",
+    "section": "Privacy boundary",
+    "text": "Privacy boundary\nUKBAnalytica documentation and skills are designed for RAP-based analysis. Participant-level UK Biobank data should remain inside approved RAP project storage. For AI-assisted scripting, users should describe the dataframe schema and intended analysis only; synthetic toy data can be used for interface tests, while real analyses are run by the user inside RAP. Only aggregate outputs or non-identifying rendered figures should be shared for interpretation.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#author-information",
+    "href": "index.html#author-information",
+    "title": "\nUKBAnalytica\n",
+    "section": "Author information",
+    "text": "Author information\nUKBAnalytica is developed and maintained by Nan He (Hinna) from the Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University.\nFor questions, suggestions, or bug reports, please contact the maintainer via GitHub issues or email: hinna01@163.com.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "index.html#citation",
+    "href": "index.html#citation",
+    "title": "\nUKBAnalytica\n",
+    "section": "Citation",
+    "text": "Citation\nIf you use UKBAnalytica in your study, please cite:\nDOI pending",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "What the package covers"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html",
+    "href": "01-rap-download.html",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "UKBAnalytica_v2 provides R-native helpers for extracting phenotype data inside the UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the DNAnexus dx CLI from R, using dx extract_dataset for small synchronous extracts and the RAP table-exporter app for large cloud-side extracts.\nThe older Python scripts are still shipped in inst/python/ as legacy/helper entry points for users who already rely on those command-line workflows.\n\n\ninst/\n  python/\n    ukb_data_loader.py          # Demographics & metabolites (Spark)\n    protein_loader.py           # Proteomics (dx commands)\n    field_ids_demographic.txt   # Example demographic field IDs\n  extdata/\n    metabolites_non_ratio.txt   # Non-ratio metabolite reference (170 fields)\n\n\n\nRun these functions inside a RAP R session, or in a local environment where the DNAnexus dx CLI is installed and authenticated. For most users, the intended workflow is RAP JupyterLab -&gt; Terminal -&gt; R.\n\n\n\nLog in to the UK Biobank RAP.\nOpen the project that contains your approved UKB .dataset file.\nStart a JupyterLab or R-capable workstation.\nUse a small instance such as mem1_ssd1_v2_x4 for field checks and dry-runs. Use rap_submit_extract() for large jobs instead of pulling many fields into the active R session.\nIn JupyterLab, open Terminal.\nStart R:\n\nR\nIf the package is not installed yet:\n#install.packages(\"remotes\")\nremotes::install_github(\"Hinna0818/UKBAnalytica_v2\")\nlibrary(UKBAnalytica)\nRAP project files are usually mounted under /mnt/project. Files written by an interactive session may also appear in the current working directory. Check both locations when looking for outputs:\ngetwd()\nlist.files()\nlist.files(\"/mnt/project\")\n\n\n\nThe package expects a .dataset file in the current RAP project root. Detect it with:\ndataset &lt;- rap_find_dataset()\ndataset\nA successful result looks like:\n\"app12345_20260401.dataset\" (random id)\nIf no dataset is found, confirm that you opened the correct RAP project and that the .dataset file is visible in the project root.\n\n\n\nUse rap_list_fields() to search fields that are approved for your project:\nrap_list_fields(pattern = \"^participant\\\\.p31|^participant\\\\.p53|^participant\\\\.p21022|^participant\\\\.p21001\")\n\nrap_list_fields(pattern = \"blood pressure|smoking|alcohol\")\nCommon demographic and baseline field IDs:\n\n\n\nField ID\nMeaning\n\n\n\n\n31\nSex\n\n\n53\nDate of attending assessment centre\n\n\n21022\nAge at recruitment\n\n\n21001\nBody mass index\n\n\n21000\nEthnic background\n\n\n20116\nSmoking status\n\n\n20117\nAlcohol drinker status\n\n\n738\nHousehold income\n\n\n6138\nQualifications\n\n\n4080\nAutomated systolic blood pressure\n\n\n4079\nAutomated diastolic blood pressure\n\n\n93\nManual systolic blood pressure\n\n\n94\nManual diastolic blood pressure\n\n\n\nYou can also use the predefined variable names used by preprocess_baseline():\nget_variable_info(\"demographics\")\nget_variable_info(\"anthropometrics\")\nget_variable_info(\"lifestyle\")\nget_variable_info(\"socioeconomic\")\nget_variable_info(\"blood_pressure\")\n\n\n\nThe simplest current workflow is:\nmetadata setup -&gt; search/info -&gt; extract -&gt; decode\nUse ukb_metadata_setup() to combine the RAP-approved field list with any optional UKB data dictionary or coding/encoding table you already have.\nIf you only need the RAP-approved field list:\nfields &lt;- rap_list_fields(\n  pattern = \"blood pressure|^participant\\\\.p31|^participant\\\\.p21022\"\n)\n\nmeta &lt;- ukb_metadata_setup(\n  source = \"files\",\n  fields_df = fields\n)\nIf you also have UKB metadata files, add them. data_dict can be a RAP data_dictionary.csv generated by dx extract_dataset -ddd, an older Data_Dictionary_Showcase.tsv, or an equivalent field metadata table. codings can be an older Codings.tsv or an equivalent coding/encoding table.\nmeta &lt;- ukb_metadata_setup(\n  source = \"files\",\n  fields_df = fields,\n  data_dict = \"Data_Dictionary_Showcase.tsv\",\n  codings = \"Codings.tsv\"\n)\nInspect one official field definition or search by keyword:\nukb_field_info(4080, metadata = meta)\n\nbp_fields &lt;- ukb_search_fields(\"blood pressure\", metadata = meta)\nbp_fields[, c(\"field_id\", \"title\", \"rap_field_names\", \"n_rap_columns\")]\nUKBAnalytica also includes curated extraction-oriented variable sets. These are useful when you want a coherent group of field IDs without manually typing every field:\nunique(get_variable_sets()$set)\n\nclinical_core &lt;- get_variable_set(\"clinical_core\")\nclinical_core[, c(\"variable\", \"field_id\", \"ukb_col\", \"category\")]\n\nair_ids &lt;- get_variable_set(\"air_pollution\", output = \"field_id\")\n\n\n\nAlways dry-run large jobs before submission:\nplan &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\n\nplan$fields\nplan$matched\nplan$command\nUse variables for exact columns defined by UKBAnalytica. Use field_id when you want all instances and arrays for a UKB field:\nplan &lt;- rap_submit_extract(\n  field_id = c(31, 53, 21022, 21001, 21000, 20116, 20117, 738, 6138, 4080, 4079),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\nYou can also extract directly from field IDs or a search result with the new metadata-aware wrapper:\nbaseline &lt;- ukb_extract_fields(\n  field_id = c(31, 21022, 21001, 4080, 4079),\n  metadata = meta,\n  mode = \"sync\",\n  strip_entity_prefix = FALSE\n)\n\nbaseline_decoded &lt;- ukb_decode(baseline, metadata = meta)\nThe same wrapper can extract a curated variable set:\nair_pollution &lt;- ukb_extract_fields(\n  field_id = get_variable_set(\"air_pollution\", output = \"field_id\"),\n  metadata = meta,\n  mode = \"sync\",\n  strip_entity_prefix = FALSE\n)\n\n\n\nFor a few fields, rap_extract_pheno() can extract data with dx extract_dataset and read the CSV directly into R:\nbaseline_small &lt;- rap_extract_pheno(\n  variables = c(\"sex\", \"age\", \"bmi\", \"smoking\", \"drinking\"),\n  strip_entity_prefix = TRUE\n)\n\ndim(baseline_small)\nhead(baseline_small)\nWrite the result to the current RAP working directory:\ndata.table::fwrite(baseline_small, \"baseline_small.csv\")\nIf you want a stable local path in the active RAP session:\nbaseline_small &lt;- rap_extract_pheno(\n  variables = c(\"sex\", \"age\", \"bmi\", \"smoking\", \"drinking\"),\n  output = \"baseline_small.csv\",\n  strip_entity_prefix = TRUE\n)\nFor large extractions, do not use synchronous mode. Submit a table-exporter job instead.\n\n\n\nUse rap_submit_extract() for regular baseline datasets:\njob &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"sleep_duration\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\",\n    \"triglycerides\", \"ldl\", \"hdl\", \"hba1c\", \"glucose\"\n  ),\n  file = \"baseline_demographics\",\n  priority = \"low\"\n)\n\njob$job_id\njob$output\nThis submits a RAP table-exporter job and creates baseline_demographics.csv in the RAP project when the job finishes.\n\n\n\nFrom the same JupyterLab Terminal, use the returned job ID:\ndx describe job-xxxx\nList recent jobs:\ndx find jobs --brief\nAfter completion, check that the output file exists:\ndx ls\ndx ls /mnt/project\nDepending on the RAP session and project mount, the completed output can be visible in the project file browser, the project root, or /mnt/project.\n\n\n\nIf the file is in the current working directory:\nbaseline &lt;- data.table::fread(\"baseline_demographics.csv\")\nIf the file is visible under /mnt/project:\nbaseline &lt;- data.table::fread(\"/mnt/project/baseline_demographics.csv\")\nThen continue with UKBAnalytica preprocessing:\nbaseline &lt;- preprocess_baseline(\n  baseline,\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"smoking\", \"drinking\",\n    \"education\", \"income\"\n  )\n)\n\nbaseline &lt;- calculate_blood_pressure(baseline, type = \"sbp\")\nbaseline &lt;- calculate_blood_pressure(baseline, type = \"dbp\")\n\n\n\nlibrary(UKBAnalytica)\n\nrap_find_dataset()\n\nplan &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\n\nplan$fields\n\njob &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  priority = \"low\"\n)\n\njob$job_id\n\n\n\n\nThis is some Python scripts for data extracting, it is useful and it will return a .csv file containing the query data. For the consistency of this R package, the Python helpers are supplementary.\n\n\nExtract any combination of UKB fields by specifying their field IDs. The loader uses Spark via dxdata under the hood.\n# Pass IDs directly\npython ukb_data_loader.py demographic \\\n  --ids 31,53,21022,21001 \\\n  -o population.csv\n\n# Or read IDs from a file (recommended for many fields)\npython ukb_data_loader.py demographic \\\n  --id-file field_ids_demographic.txt \\\n  -o population.csv\nThe ID file supports comments (#), comma-separated and space-separated formats:\n# Demographics\n31      # Sex\n53      # Date of assessment\n21022   # Age at recruitment\n\n# Comma separated\n20116, 20117, 1289\n\n\n\nExtract NMR metabolomics data. You can retrieve all 251 metabolite fields or restrict to the curated non-ratio subset of 170 fields.\n# All metabolite fields\npython ukb_data_loader.py metabolites -o metabolites_all.csv\n\n# Non-ratio subset only\npython ukb_data_loader.py metabolites \\\n  --non-ratio \\\n  -o metabolites_non_ratio.csv\n\n\n\nExtract Olink protein expression data via dx commands. The loader handles batching, merging, and progress tracking automatically.\n# Default settings\npython protein_loader.py -o ./protein_data\n\n# Custom batch size and delay\npython protein_loader.py \\\n  -o ./protein_data \\\n  --batch-size 100 \\\n  --delay 3\n\n# Skip merging batch files\npython protein_loader.py -o ./protein_data --no-merge\n\n\n\n\nThe table below lists commonly used field IDs for reference:\n\n\n\n\n\n\n\n\nCategory\nField IDs\nDescription\n\n\n\n\nBasic demographics\n31, 53, 21022, 21001\nSex, assessment date, age, BMI\n\n\nLifestyle\n20116, 20117, 1160\nSmoking, alcohol, sleep\n\n\nBlood pressure\n93, 94, 4079, 4080\nSystolic/diastolic BP\n\n\nBiomarkers\n30870, 30780, 30760, 30750\nTriglycerides, LDL, HDL, glucose\n\n\nHospital records\n41270, 41280, 41271, 41281\nICD-10/9 diagnoses + dates\n\n\nDeath registry\n40000, 40001, 40002\nDeath date, causes\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nData type\nFile\nApprox. size\nRows\nColumns\n\n\n\n\nDemographics\npopulation.csv\n10–500 MB\n~500 K\nvariable\n\n\nMetabolites (all)\nmetabolites.csv\n~300 MB\n~120 K\n251\n\n\nMetabolites (non-ratio)\nmetabolites_non_ratio.csv\n~200 MB\n~120 K\n170\n\n\nProteomics\nprotein_all_merged.csv\n~800 MB\n~50 K\n~3000\n\n\n\n\n\n\n\ndx is not found: start the workflow inside a RAP JupyterLab Terminal or use an environment where DNAnexus dx-toolkit is installed and authenticated.\nNo .dataset file is found: confirm that you opened the correct RAP project and that the dataset file is visible in the project root.\nCannot find the exported CSV: check the project file browser, dx ls, list.files(), and list.files(\"/mnt/project\"). Table-exporter outputs are written to the RAP project rather than directly into a local R object.\nSpark initialisation fails: make sure you are running inside a RAP JupyterLab session.\nField not found: some fields require instance/array suffixes (e.g., _i0, _a0).\nMemory issues: reduce --batch-size for protein extraction outputs.\nTimeout: increase --delay.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#file-structure",
+    "href": "01-rap-download.html#file-structure",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "inst/\n  python/\n    ukb_data_loader.py          # Demographics & metabolites (Spark)\n    protein_loader.py           # Proteomics (dx commands)\n    field_ids_demographic.txt   # Example demographic field IDs\n  extdata/\n    metabolites_non_ratio.txt   # Non-ratio metabolite reference (170 fields)",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#r-native-phenotype-extraction",
+    "href": "01-rap-download.html#r-native-phenotype-extraction",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "Run these functions inside a RAP R session, or in a local environment where the DNAnexus dx CLI is installed and authenticated. For most users, the intended workflow is RAP JupyterLab -&gt; Terminal -&gt; R.\n\n\n\nLog in to the UK Biobank RAP.\nOpen the project that contains your approved UKB .dataset file.\nStart a JupyterLab or R-capable workstation.\nUse a small instance such as mem1_ssd1_v2_x4 for field checks and dry-runs. Use rap_submit_extract() for large jobs instead of pulling many fields into the active R session.\nIn JupyterLab, open Terminal.\nStart R:\n\nR\nIf the package is not installed yet:\n#install.packages(\"remotes\")\nremotes::install_github(\"Hinna0818/UKBAnalytica_v2\")\nlibrary(UKBAnalytica)\nRAP project files are usually mounted under /mnt/project. Files written by an interactive session may also appear in the current working directory. Check both locations when looking for outputs:\ngetwd()\nlist.files()\nlist.files(\"/mnt/project\")\n\n\n\nThe package expects a .dataset file in the current RAP project root. Detect it with:\ndataset &lt;- rap_find_dataset()\ndataset\nA successful result looks like:\n\"app12345_20260401.dataset\" (random id)\nIf no dataset is found, confirm that you opened the correct RAP project and that the .dataset file is visible in the project root.\n\n\n\nUse rap_list_fields() to search fields that are approved for your project:\nrap_list_fields(pattern = \"^participant\\\\.p31|^participant\\\\.p53|^participant\\\\.p21022|^participant\\\\.p21001\")\n\nrap_list_fields(pattern = \"blood pressure|smoking|alcohol\")\nCommon demographic and baseline field IDs:\n\n\n\nField ID\nMeaning\n\n\n\n\n31\nSex\n\n\n53\nDate of attending assessment centre\n\n\n21022\nAge at recruitment\n\n\n21001\nBody mass index\n\n\n21000\nEthnic background\n\n\n20116\nSmoking status\n\n\n20117\nAlcohol drinker status\n\n\n738\nHousehold income\n\n\n6138\nQualifications\n\n\n4080\nAutomated systolic blood pressure\n\n\n4079\nAutomated diastolic blood pressure\n\n\n93\nManual systolic blood pressure\n\n\n94\nManual diastolic blood pressure\n\n\n\nYou can also use the predefined variable names used by preprocess_baseline():\nget_variable_info(\"demographics\")\nget_variable_info(\"anthropometrics\")\nget_variable_info(\"lifestyle\")\nget_variable_info(\"socioeconomic\")\nget_variable_info(\"blood_pressure\")\n\n\n\nThe simplest current workflow is:\nmetadata setup -&gt; search/info -&gt; extract -&gt; decode\nUse ukb_metadata_setup() to combine the RAP-approved field list with any optional UKB data dictionary or coding/encoding table you already have.\nIf you only need the RAP-approved field list:\nfields &lt;- rap_list_fields(\n  pattern = \"blood pressure|^participant\\\\.p31|^participant\\\\.p21022\"\n)\n\nmeta &lt;- ukb_metadata_setup(\n  source = \"files\",\n  fields_df = fields\n)\nIf you also have UKB metadata files, add them. data_dict can be a RAP data_dictionary.csv generated by dx extract_dataset -ddd, an older Data_Dictionary_Showcase.tsv, or an equivalent field metadata table. codings can be an older Codings.tsv or an equivalent coding/encoding table.\nmeta &lt;- ukb_metadata_setup(\n  source = \"files\",\n  fields_df = fields,\n  data_dict = \"Data_Dictionary_Showcase.tsv\",\n  codings = \"Codings.tsv\"\n)\nInspect one official field definition or search by keyword:\nukb_field_info(4080, metadata = meta)\n\nbp_fields &lt;- ukb_search_fields(\"blood pressure\", metadata = meta)\nbp_fields[, c(\"field_id\", \"title\", \"rap_field_names\", \"n_rap_columns\")]\nUKBAnalytica also includes curated extraction-oriented variable sets. These are useful when you want a coherent group of field IDs without manually typing every field:\nunique(get_variable_sets()$set)\n\nclinical_core &lt;- get_variable_set(\"clinical_core\")\nclinical_core[, c(\"variable\", \"field_id\", \"ukb_col\", \"category\")]\n\nair_ids &lt;- get_variable_set(\"air_pollution\", output = \"field_id\")\n\n\n\nAlways dry-run large jobs before submission:\nplan &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\n\nplan$fields\nplan$matched\nplan$command\nUse variables for exact columns defined by UKBAnalytica. Use field_id when you want all instances and arrays for a UKB field:\nplan &lt;- rap_submit_extract(\n  field_id = c(31, 53, 21022, 21001, 21000, 20116, 20117, 738, 6138, 4080, 4079),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\nYou can also extract directly from field IDs or a search result with the new metadata-aware wrapper:\nbaseline &lt;- ukb_extract_fields(\n  field_id = c(31, 21022, 21001, 4080, 4079),\n  metadata = meta,\n  mode = \"sync\",\n  strip_entity_prefix = FALSE\n)\n\nbaseline_decoded &lt;- ukb_decode(baseline, metadata = meta)\nThe same wrapper can extract a curated variable set:\nair_pollution &lt;- ukb_extract_fields(\n  field_id = get_variable_set(\"air_pollution\", output = \"field_id\"),\n  metadata = meta,\n  mode = \"sync\",\n  strip_entity_prefix = FALSE\n)\n\n\n\nFor a few fields, rap_extract_pheno() can extract data with dx extract_dataset and read the CSV directly into R:\nbaseline_small &lt;- rap_extract_pheno(\n  variables = c(\"sex\", \"age\", \"bmi\", \"smoking\", \"drinking\"),\n  strip_entity_prefix = TRUE\n)\n\ndim(baseline_small)\nhead(baseline_small)\nWrite the result to the current RAP working directory:\ndata.table::fwrite(baseline_small, \"baseline_small.csv\")\nIf you want a stable local path in the active RAP session:\nbaseline_small &lt;- rap_extract_pheno(\n  variables = c(\"sex\", \"age\", \"bmi\", \"smoking\", \"drinking\"),\n  output = \"baseline_small.csv\",\n  strip_entity_prefix = TRUE\n)\nFor large extractions, do not use synchronous mode. Submit a table-exporter job instead.\n\n\n\nUse rap_submit_extract() for regular baseline datasets:\njob &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"sleep_duration\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\",\n    \"triglycerides\", \"ldl\", \"hdl\", \"hba1c\", \"glucose\"\n  ),\n  file = \"baseline_demographics\",\n  priority = \"low\"\n)\n\njob$job_id\njob$output\nThis submits a RAP table-exporter job and creates baseline_demographics.csv in the RAP project when the job finishes.\n\n\n\nFrom the same JupyterLab Terminal, use the returned job ID:\ndx describe job-xxxx\nList recent jobs:\ndx find jobs --brief\nAfter completion, check that the output file exists:\ndx ls\ndx ls /mnt/project\nDepending on the RAP session and project mount, the completed output can be visible in the project file browser, the project root, or /mnt/project.\n\n\n\nIf the file is in the current working directory:\nbaseline &lt;- data.table::fread(\"baseline_demographics.csv\")\nIf the file is visible under /mnt/project:\nbaseline &lt;- data.table::fread(\"/mnt/project/baseline_demographics.csv\")\nThen continue with UKBAnalytica preprocessing:\nbaseline &lt;- preprocess_baseline(\n  baseline,\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"smoking\", \"drinking\",\n    \"education\", \"income\"\n  )\n)\n\nbaseline &lt;- calculate_blood_pressure(baseline, type = \"sbp\")\nbaseline &lt;- calculate_blood_pressure(baseline, type = \"dbp\")\n\n\n\nlibrary(UKBAnalytica)\n\nrap_find_dataset()\n\nplan &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  dry_run = TRUE\n)\n\nplan$fields\n\njob &lt;- rap_submit_extract(\n  variables = c(\n    \"sex\", \"age\", \"ethnicity\",\n    \"bmi\", \"height\", \"weight\",\n    \"smoking\", \"drinking\",\n    \"education\", \"income\",\n    \"sbp_auto_1\", \"sbp_auto_2\",\n    \"dbp_auto_1\", \"dbp_auto_2\"\n  ),\n  file = \"baseline_demographics\",\n  priority = \"low\"\n)\n\njob$job_id",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#legacy-python-helpers",
+    "href": "01-rap-download.html#legacy-python-helpers",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "This is some Python scripts for data extracting, it is useful and it will return a .csv file containing the query data. For the consistency of this R package, the Python helpers are supplementary.\n\n\nExtract any combination of UKB fields by specifying their field IDs. The loader uses Spark via dxdata under the hood.\n# Pass IDs directly\npython ukb_data_loader.py demographic \\\n  --ids 31,53,21022,21001 \\\n  -o population.csv\n\n# Or read IDs from a file (recommended for many fields)\npython ukb_data_loader.py demographic \\\n  --id-file field_ids_demographic.txt \\\n  -o population.csv\nThe ID file supports comments (#), comma-separated and space-separated formats:\n# Demographics\n31      # Sex\n53      # Date of assessment\n21022   # Age at recruitment\n\n# Comma separated\n20116, 20117, 1289\n\n\n\nExtract NMR metabolomics data. You can retrieve all 251 metabolite fields or restrict to the curated non-ratio subset of 170 fields.\n# All metabolite fields\npython ukb_data_loader.py metabolites -o metabolites_all.csv\n\n# Non-ratio subset only\npython ukb_data_loader.py metabolites \\\n  --non-ratio \\\n  -o metabolites_non_ratio.csv\n\n\n\nExtract Olink protein expression data via dx commands. The loader handles batching, merging, and progress tracking automatically.\n# Default settings\npython protein_loader.py -o ./protein_data\n\n# Custom batch size and delay\npython protein_loader.py \\\n  -o ./protein_data \\\n  --batch-size 100 \\\n  --delay 3\n\n# Skip merging batch files\npython protein_loader.py -o ./protein_data --no-merge",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#common-ukb-field-ids",
+    "href": "01-rap-download.html#common-ukb-field-ids",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "The table below lists commonly used field IDs for reference:\n\n\n\n\n\n\n\n\nCategory\nField IDs\nDescription\n\n\n\n\nBasic demographics\n31, 53, 21022, 21001\nSex, assessment date, age, BMI\n\n\nLifestyle\n20116, 20117, 1160\nSmoking, alcohol, sleep\n\n\nBlood pressure\n93, 94, 4079, 4080\nSystolic/diastolic BP\n\n\nBiomarkers\n30870, 30780, 30760, 30750\nTriglycerides, LDL, HDL, glucose\n\n\nHospital records\n41270, 41280, 41271, 41281\nICD-10/9 diagnoses + dates\n\n\nDeath registry\n40000, 40001, 40002\nDeath date, causes",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#typical-output-sizes",
+    "href": "01-rap-download.html#typical-output-sizes",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "Data type\nFile\nApprox. size\nRows\nColumns\n\n\n\n\nDemographics\npopulation.csv\n10–500 MB\n~500 K\nvariable\n\n\nMetabolites (all)\nmetabolites.csv\n~300 MB\n~120 K\n251\n\n\nMetabolites (non-ratio)\nmetabolites_non_ratio.csv\n~200 MB\n~120 K\n170\n\n\nProteomics\nprotein_all_merged.csv\n~800 MB\n~50 K\n~3000",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "01-rap-download.html#troubleshooting",
+    "href": "01-rap-download.html#troubleshooting",
+    "title": "RAP-internal Data Extraction",
+    "section": "",
+    "text": "dx is not found: start the workflow inside a RAP JupyterLab Terminal or use an environment where DNAnexus dx-toolkit is installed and authenticated.\nNo .dataset file is found: confirm that you opened the correct RAP project and that the dataset file is visible in the project root.\nCannot find the exported CSV: check the project file browser, dx ls, list.files(), and list.files(\"/mnt/project\"). Table-exporter outputs are written to the RAP project rather than directly into a local R object.\nSpark initialisation fails: make sure you are running inside a RAP JupyterLab session.\nField not found: some fields require instance/array suffixes (e.g., _i0, _a0).\nMemory issues: reduce --batch-size for protein extraction outputs.\nTimeout: increase --delay.",
+    "crumbs": [
+      "Overview",
+      "Start",
+      "RAP-internal Data Extraction"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html",
+    "href": "03-disease-definitions.html",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "UKBAnalytica identifies disease cases from up to eight data sources:\n\n\n\n\n\n\n\n\nSource\nCode field\nDate field\n\n\n\n\nICD-10 (hospital)\np41270\np41280_a*\n\n\nICD-9 (hospital)\np41271\np41281_a*\n\n\nOPCS-4 procedures (hospital)\np41272\np41282_a*\n\n\nSelf-report\np20002_i*_a*\np20008_i*_a*\n\n\nDeath registry\np40001, p40002\np40000\n\n\nCancer registry\np40006_i*, optional p40011_i*, p40012_i*\np40005_i*\n\n\nFirst Occurrence\np{source_field} or p{source_field}_i0\np{date_field} or p{date_field}_i0\n\n\nAlgorithm (Category 42, optional)\np{algo_source_field} or p{algo_source_field}_i0\np{algo_date_field} or p{algo_date_field}_i0\n\n\n\n\n\nThe package ships a curated library of definitions for common cardiovascular and metabolic conditions. Retrieve them with get_predefined_diseases():\nlibrary(UKBAnalytica)\n\ndiseases &lt;- get_predefined_diseases()\n\n&gt; names(diseases) |&gt; head()\n[1] \"AA\"    \"TAA\"   \"AAA\"   \"CVD\"   \"MI\"    \"STEMI\"\nSelect a subset by name:\nmy_diseases &lt;- get_predefined_diseases()[\n  c(\"AA\", \"Arrhythmia\", \"Atrial_Fibrillation\")\n]\nEach definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS-4 procedure codes, self-report codes, death-cause codes, optional First Occurrence fields, optional cancer registry filters, and optional algorithm field IDs.\n\n\n\ndiseases &lt;- get_predefined_diseases()\n\n&gt; str(diseases[[\"COPD\"]])\nList of 13\n $ name                          : chr \"Chronic Obstructive Pulmonary Disease\"\n $ icd10_pattern                 : chr \"^(J40|J41|J42|J43|J44)\"\n $ icd9_pattern                  : chr \"^(491|492|4932|496)\"\n $ sr_codes                      : num [1:3] 1112 1113 1472\n $ death_icd10                   : chr \"^(J40|J41|J42|J43|J44)\"\n $ opcs4_pattern                 : NULL\n $ first_occurrence_fields       : int [1:5] 131484 131486 131488 131490 131492\n $ first_occurrence_source_fields: NULL\n $ cancer_icd10_pattern          : NULL\n $ cancer_histology              : NULL\n $ cancer_behaviour              : NULL\n $ algo_date_field               : num 42016\n $ algo_source_field             : num 42017\nA definition typically contains:\n\nicd10_pattern – regular expression for ICD-10 codes.\nicd9_pattern – regular expression for ICD-9 codes.\nopcs4_pattern – optional regular expression for OPCS4 operative procedure codes.\nsr_codes – integer vector of self-report coding IDs.\ndeath_icd10 – optional regular expression for death-cause ICD-10 codes (if omitted, icd10_pattern is used).\nfirst_occurrence_fields – optional UKB Category 1712 date field IDs for 3-character ICD-10 First Occurrence outcomes.\nfirst_occurrence_source_fields – optional source field IDs. If omitted, the package uses first_occurrence_fields + 1.\ncancer_icd10_pattern – optional regular expression for cancer registry ICD-10 field p40006_i*.\ncancer_histology – optional ICD-O-3 histology code filter from p40011_i*.\ncancer_behaviour – optional tumour behaviour code filter from p40012_i*; use 3L for malignant tumours.\nalgo_date_field – integer UKB field ID for algorithm-defined diagnosis date (optional).\nalgo_source_field – integer UKB field ID for algorithm-defined diagnosis source (optional).\n\n\n\n\nUse create_disease_definition() to define a new disease. Surgical or procedure-defined phenotypes can add opcs4_pattern:\narrhythmia_def &lt;- create_disease_definition(\n  name = \"Cardiac Arrhythmia\",\n  icd10_pattern = \"^(I44|I45|I46|I47|I48|I49)\",\n  opcs4_pattern = \"^(K576|K59|K60|K61|K62|K641|K72|K73|K74)\"\n)\nFor diseases with UKB algorithm-defined outcomes (Category 42), you can also add algorithm date/source fields:\ncopd_def &lt;- create_disease_definition(\n  name = \"COPD\",\n  icd10_pattern = \"^(J41|J42|J43|J44)\",\n  icd9_pattern = \"^(490|491|492|496)\",\n  sr_codes = c(1112),\n  death_icd10 = \"^(J41|J42|J43|J44)\",\n  algo_date_field = 42016,\n  algo_source_field = 42017\n)\nFor diseases with UKB First Occurrence fields, add the date field IDs directly. The corresponding source fields are inferred automatically because UKB stores them as the next field ID:\nmi_def &lt;- create_disease_definition(\n  name = \"Myocardial Infarction\",\n  icd10_pattern = \"^(I21|I22)\",\n  first_occurrence_fields = c(131298, 131300)\n)\nFirst Occurrence fields are 3-character ICD-10 outcomes. For example, 131298 is “Date I21 first reported”; 131299 is its source field. This means they are excellent for broad ICD-10 outcomes, but they should not be used to distinguish 4-character subtypes such as I714 versus I713.\nFor cancer endpoints, use the cancer registry source. UKB stores cancer type as ICD-10 in field 40006, diagnosis date in 40005, tumour histology in 40011, and tumour behaviour in 40012:\nlung_cancer_def &lt;- create_disease_definition(\n  name = \"Lung Cancer\",\n  icd10_pattern = \"^C34\",\n  death_icd10 = \"^C34\",\n  cancer_icd10_pattern = \"^C34\",\n  cancer_behaviour = 3L\n)\nDeprecated aliases icd10, icd9, and self_report are still accepted for backward compatibility.\nIf opcs4_pattern is not supplied, operative procedure data are ignored even if OPCS4 is included in sources.\nWhen parsing algorithm and First Occurrence fields, both column naming styles are supported: p{field}_i0 and p{field}.\n\n\n\nThe predefined library now includes broad and subtype-specific arrhythmia endpoints such as Arrhythmia, Atrial_Fibrillation, Ventricular_Arrhythmia, AV_Block, Intraventricular_Block, and SVT.\nrhythm_defs &lt;- get_predefined_diseases()[\n  c(\"Arrhythmia\", \"Atrial_Fibrillation\", \"Ventricular_Arrhythmia\")\n]\n\narrhythmia_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = rhythm_defs,\n  prevalent_sources = c(\"ICD10\", \"OPCS4\"),\n  outcome_sources = c(\"ICD10\", \"OPCS4\"),\n  primary_disease = \"Arrhythmia\"\n)\nYou can combine it with predefined diseases:\nall_diseases &lt;- c(\n  get_predefined_diseases()[c(\"Hypertension\", \"Arrhythmia\")],\n  list(CustomArrhythmia = arrhythmia_def)\n)\n\n\n\nCreate composite endpoints by merging multiple definitions:\nmace &lt;- combine_disease_definitions(\n  get_predefined_diseases()[c(\"MI\", \"Stroke\", \"HF\")]\n)\nThis merges ICD-10, ICD-9, OPCS4, cancer registry, First Occurrence, self-report, and death codes from all input definitions into a single combined definition.\n\n\n\nTo check how many cases each source contributes, use compare_data_sources():\nlibrary(data.table)\nukb_data &lt;- fread(\"population.csv\")\ndiseases &lt;- get_predefined_diseases()[c(\"AA\", \"Hypertension\")]\n\ncomparison &lt;- compare_data_sources(ukb_data, diseases)\ncomparison\nThis returns a summary table showing case counts per source per disease, which is useful for justifying source selection in your manuscript.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#predefined-diseases",
+    "href": "03-disease-definitions.html#predefined-diseases",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "The package ships a curated library of definitions for common cardiovascular and metabolic conditions. Retrieve them with get_predefined_diseases():\nlibrary(UKBAnalytica)\n\ndiseases &lt;- get_predefined_diseases()\n\n&gt; names(diseases) |&gt; head()\n[1] \"AA\"    \"TAA\"   \"AAA\"   \"CVD\"   \"MI\"    \"STEMI\"\nSelect a subset by name:\nmy_diseases &lt;- get_predefined_diseases()[\n  c(\"AA\", \"Arrhythmia\", \"Atrial_Fibrillation\")\n]\nEach definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS-4 procedure codes, self-report codes, death-cause codes, optional First Occurrence fields, optional cancer registry filters, and optional algorithm field IDs.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#inspecting-a-definition",
+    "href": "03-disease-definitions.html#inspecting-a-definition",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "diseases &lt;- get_predefined_diseases()\n\n&gt; str(diseases[[\"COPD\"]])\nList of 13\n $ name                          : chr \"Chronic Obstructive Pulmonary Disease\"\n $ icd10_pattern                 : chr \"^(J40|J41|J42|J43|J44)\"\n $ icd9_pattern                  : chr \"^(491|492|4932|496)\"\n $ sr_codes                      : num [1:3] 1112 1113 1472\n $ death_icd10                   : chr \"^(J40|J41|J42|J43|J44)\"\n $ opcs4_pattern                 : NULL\n $ first_occurrence_fields       : int [1:5] 131484 131486 131488 131490 131492\n $ first_occurrence_source_fields: NULL\n $ cancer_icd10_pattern          : NULL\n $ cancer_histology              : NULL\n $ cancer_behaviour              : NULL\n $ algo_date_field               : num 42016\n $ algo_source_field             : num 42017\nA definition typically contains:\n\nicd10_pattern – regular expression for ICD-10 codes.\nicd9_pattern – regular expression for ICD-9 codes.\nopcs4_pattern – optional regular expression for OPCS4 operative procedure codes.\nsr_codes – integer vector of self-report coding IDs.\ndeath_icd10 – optional regular expression for death-cause ICD-10 codes (if omitted, icd10_pattern is used).\nfirst_occurrence_fields – optional UKB Category 1712 date field IDs for 3-character ICD-10 First Occurrence outcomes.\nfirst_occurrence_source_fields – optional source field IDs. If omitted, the package uses first_occurrence_fields + 1.\ncancer_icd10_pattern – optional regular expression for cancer registry ICD-10 field p40006_i*.\ncancer_histology – optional ICD-O-3 histology code filter from p40011_i*.\ncancer_behaviour – optional tumour behaviour code filter from p40012_i*; use 3L for malignant tumours.\nalgo_date_field – integer UKB field ID for algorithm-defined diagnosis date (optional).\nalgo_source_field – integer UKB field ID for algorithm-defined diagnosis source (optional).",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#creating-custom-definitions",
+    "href": "03-disease-definitions.html#creating-custom-definitions",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "Use create_disease_definition() to define a new disease. Surgical or procedure-defined phenotypes can add opcs4_pattern:\narrhythmia_def &lt;- create_disease_definition(\n  name = \"Cardiac Arrhythmia\",\n  icd10_pattern = \"^(I44|I45|I46|I47|I48|I49)\",\n  opcs4_pattern = \"^(K576|K59|K60|K61|K62|K641|K72|K73|K74)\"\n)\nFor diseases with UKB algorithm-defined outcomes (Category 42), you can also add algorithm date/source fields:\ncopd_def &lt;- create_disease_definition(\n  name = \"COPD\",\n  icd10_pattern = \"^(J41|J42|J43|J44)\",\n  icd9_pattern = \"^(490|491|492|496)\",\n  sr_codes = c(1112),\n  death_icd10 = \"^(J41|J42|J43|J44)\",\n  algo_date_field = 42016,\n  algo_source_field = 42017\n)\nFor diseases with UKB First Occurrence fields, add the date field IDs directly. The corresponding source fields are inferred automatically because UKB stores them as the next field ID:\nmi_def &lt;- create_disease_definition(\n  name = \"Myocardial Infarction\",\n  icd10_pattern = \"^(I21|I22)\",\n  first_occurrence_fields = c(131298, 131300)\n)\nFirst Occurrence fields are 3-character ICD-10 outcomes. For example, 131298 is “Date I21 first reported”; 131299 is its source field. This means they are excellent for broad ICD-10 outcomes, but they should not be used to distinguish 4-character subtypes such as I714 versus I713.\nFor cancer endpoints, use the cancer registry source. UKB stores cancer type as ICD-10 in field 40006, diagnosis date in 40005, tumour histology in 40011, and tumour behaviour in 40012:\nlung_cancer_def &lt;- create_disease_definition(\n  name = \"Lung Cancer\",\n  icd10_pattern = \"^C34\",\n  death_icd10 = \"^C34\",\n  cancer_icd10_pattern = \"^C34\",\n  cancer_behaviour = 3L\n)\nDeprecated aliases icd10, icd9, and self_report are still accepted for backward compatibility.\nIf opcs4_pattern is not supplied, operative procedure data are ignored even if OPCS4 is included in sources.\nWhen parsing algorithm and First Occurrence fields, both column naming styles are supported: p{field}_i0 and p{field}.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#arrhythmia-example-with-icd-10-opcs4",
+    "href": "03-disease-definitions.html#arrhythmia-example-with-icd-10-opcs4",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "The predefined library now includes broad and subtype-specific arrhythmia endpoints such as Arrhythmia, Atrial_Fibrillation, Ventricular_Arrhythmia, AV_Block, Intraventricular_Block, and SVT.\nrhythm_defs &lt;- get_predefined_diseases()[\n  c(\"Arrhythmia\", \"Atrial_Fibrillation\", \"Ventricular_Arrhythmia\")\n]\n\narrhythmia_dt &lt;- build_survival_dataset(\n  dt = ukb_data,\n  disease_definitions = rhythm_defs,\n  prevalent_sources = c(\"ICD10\", \"OPCS4\"),\n  outcome_sources = c(\"ICD10\", \"OPCS4\"),\n  primary_disease = \"Arrhythmia\"\n)\nYou can combine it with predefined diseases:\nall_diseases &lt;- c(\n  get_predefined_diseases()[c(\"Hypertension\", \"Arrhythmia\")],\n  list(CustomArrhythmia = arrhythmia_def)\n)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#composite-endpoints",
+    "href": "03-disease-definitions.html#composite-endpoints",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "Create composite endpoints by merging multiple definitions:\nmace &lt;- combine_disease_definitions(\n  get_predefined_diseases()[c(\"MI\", \"Stroke\", \"HF\")]\n)\nThis merges ICD-10, ICD-9, OPCS4, cancer registry, First Occurrence, self-report, and death codes from all input definitions into a single combined definition.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "03-disease-definitions.html#comparing-data-sources",
+    "href": "03-disease-definitions.html#comparing-data-sources",
+    "title": "Disease Definitions",
+    "section": "",
+    "text": "To check how many cases each source contributes, use compare_data_sources():\nlibrary(data.table)\nukb_data &lt;- fread(\"population.csv\")\ndiseases &lt;- get_predefined_diseases()[c(\"AA\", \"Hypertension\")]\n\ncomparison &lt;- compare_data_sources(ukb_data, diseases)\ncomparison\nThis returns a summary table showing case counts per source per disease, which is useful for justifying source selection in your manuscript.",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Disease Definitions"
+    ]
+  },
+  {
+    "objectID": "05-baseline-table.html",
+    "href": "05-baseline-table.html",
+    "title": "Baseline Table",
+    "section": "",
+    "text": "A Table 1 summarising baseline characteristics stratified by case/control status is standard in epidemiological papers. UKBAnalytica wraps the tableone package for this purpose.\n\n\nlibrary(UKBAnalytica)\nlibrary(data.table)\n\n# Assume `analysis_dt` was produced by build_survival_dataset()\ntable1 &lt;- create_baseline_table(\n  data = analysis_dt,\n  case_col = \"outcome_status\",\n  factor_cols = c(\n    \"sex\", \"smoking\", \"drinking\",\n    \"ethnicity\", \"education\"\n  ),\n  continuous_cols = c(\n    \"age\", \"bmi\", \"sbp\", \"dbp\",\n    \"ldl\", \"hdl\", \"hba1c\"\n  ),\n  test = TRUE\n)\n\nprint(table1, smd = TRUE)\n\n\n\nThe tableone print method returns a character matrix that can be written directly to CSV:\ntab_mat &lt;- print(\n  table1,\n  quote  = TRUE,\n  noSpaces = TRUE\n)\nwrite.csv(tab_mat, file = \"baseline_table1.csv\")\n\n\n\nIf you do not have UKB data at hand, you can test the function with the pbc dataset bundled in the survival package:\ndata(pbc, package = \"survival\")\n\ntable1 &lt;- create_baseline_table(\n  data       = pbc,\n  case_col   = \"trt\",\n  factor_cols = c(\"status\", \"edema\", \"stage\"),\n  continuous_cols = c(\"age\", \"bili\", \"albumin\"),\n  test       = TRUE\n)\n\nprint(table1)\n\n\n\n\n\n\nArgument\nDescription\n\n\n\n\ndata\nA data.frame or data.table with the cohort\n\n\ncase_col\nColumn name for the stratification variable\n\n\nfactor_cols\nVariables to treat as categorical\n\n\ncontinuous_cols\nVariables to treat as continuous\n\n\ntest\nWhether to run statistical tests (default FALSE)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Baseline Table"
+    ]
+  },
+  {
+    "objectID": "05-baseline-table.html#basic-usage",
+    "href": "05-baseline-table.html#basic-usage",
+    "title": "Baseline Table",
+    "section": "",
+    "text": "library(UKBAnalytica)\nlibrary(data.table)\n\n# Assume `analysis_dt` was produced by build_survival_dataset()\ntable1 &lt;- create_baseline_table(\n  data = analysis_dt,\n  case_col = \"outcome_status\",\n  factor_cols = c(\n    \"sex\", \"smoking\", \"drinking\",\n    \"ethnicity\", \"education\"\n  ),\n  continuous_cols = c(\n    \"age\", \"bmi\", \"sbp\", \"dbp\",\n    \"ldl\", \"hdl\", \"hba1c\"\n  ),\n  test = TRUE\n)\n\nprint(table1, smd = TRUE)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Baseline Table"
+    ]
+  },
+  {
+    "objectID": "05-baseline-table.html#exporting-to-csv",
+    "href": "05-baseline-table.html#exporting-to-csv",
+    "title": "Baseline Table",
+    "section": "",
+    "text": "The tableone print method returns a character matrix that can be written directly to CSV:\ntab_mat &lt;- print(\n  table1,\n  quote  = TRUE,\n  noSpaces = TRUE\n)\nwrite.csv(tab_mat, file = \"baseline_table1.csv\")",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Baseline Table"
+    ]
+  },
+  {
+    "objectID": "05-baseline-table.html#using-with-the-survival-package-example-data",
+    "href": "05-baseline-table.html#using-with-the-survival-package-example-data",
+    "title": "Baseline Table",
+    "section": "",
+    "text": "If you do not have UKB data at hand, you can test the function with the pbc dataset bundled in the survival package:\ndata(pbc, package = \"survival\")\n\ntable1 &lt;- create_baseline_table(\n  data       = pbc,\n  case_col   = \"trt\",\n  factor_cols = c(\"status\", \"edema\", \"stage\"),\n  continuous_cols = c(\"age\", \"bili\", \"albumin\"),\n  test       = TRUE\n)\n\nprint(table1)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Baseline Table"
+    ]
+  },
+  {
+    "objectID": "05-baseline-table.html#parameters",
+    "href": "05-baseline-table.html#parameters",
+    "title": "Baseline Table",
+    "section": "",
+    "text": "Argument\nDescription\n\n\n\n\ndata\nA data.frame or data.table with the cohort\n\n\ncase_col\nColumn name for the stratification variable\n\n\nfactor_cols\nVariables to treat as categorical\n\n\ncontinuous_cols\nVariables to treat as continuous\n\n\ntest\nWhether to run statistical tests (default FALSE)",
+    "crumbs": [
+      "Overview",
+      "Cohort construction",
+      "Baseline Table"
+    ]
+  },
+  {
+    "objectID": "07-main-analysis.html",
+    "href": "07-main-analysis.html",
+    "title": "Main analysis",
+    "section": "",
+    "text": "This chapter shows the core statistical-analysis functions in UKBAnalytica. The main workflow is intentionally simple: first inspect correlations among candidate variables, then run one of three regression families according to the outcome type.\n\n\nBefore regression modeling, run_correlation() can be used to inspect correlations among candidate exposures or covariates. This is useful for identifying highly correlated variables before building adjusted models.\n\nlibrary(UKBAnalytica)\n\ncorr_mat &lt;- run_correlation(\n  df = analysis_data,\n  vars = c(\"age\", \"bmi\", \"sbp\", \"dbp\", \"glucose\", \"hba1c\"),\n  method = \"pearson\",\n  threshold = 0.70\n)\n\ncorr_mat\n\nUse plot_correlation() when a visual summary is needed.\n\nplot_correlation(\n  corr_mat,\n  show_values = TRUE,\n  upper_triangle = TRUE,\n  title = \"Correlation matrix\"\n)\n\nCommon choices are method = \"pearson\" for approximately continuous variables and method = \"spearman\" for rank-based or skewed variables.\n\n\n\nThe three main regression functions share the same design: each variable in main_var is tested separately, and covariates defines the adjustment set. This makes it straightforward to screen multiple exposures while keeping model specification consistent.\n\n\n\nOutcome type\nFunction\nEffect estimate\n\n\n\n\nContinuous outcome\nrunmulti_lm()\nbeta\n\n\nBinary outcome\nrunmulti_logit()\nodds ratio (OR)\n\n\nTime-to-event outcome\nrunmulti_cox()\nhazard ratio (HR)\n\n\n\nFor high-dimensional analyses, such as biomarker or protein screening, adjust the returned p-values with p.adjust().\n\nresults$p_bh &lt;- p.adjust(results$pvalue, method = \"BH\")\nresults$p_bonferroni &lt;- p.adjust(results$pvalue, method = \"bonferroni\")\n\n\n\nUse runmulti_lm() for continuous outcomes.\n\nlm_res &lt;- runmulti_lm(\n  data = analysis_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  outcome = \"sbp\",\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nlm_res\n\nThe output includes variable, beta, lower95, upper95, and pvalue. Here, beta represents the adjusted mean difference in the continuous outcome per unit increase or category contrast of the tested variable.\n\n\n\nUse runmulti_logit() for binary outcomes coded as 0/1.\n\nlogit_res &lt;- runmulti_logit(\n  data = analysis_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  outcome = \"diabetes_status\",\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nlogit_res\n\nThe output includes variable, OR, lower95, upper95, and pvalue. The outcome must be binary, with 1 indicating the event or case group.\n\n\n\nUse runmulti_cox() for incident outcomes with follow-up time.\n\ncox_res &lt;- runmulti_cox(\n  data = survival_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\ncox_res\n\nThe output includes variable, coef, HR, lower95, upper95, pvalue, n, and n_event. The endpoint argument should contain the follow-up time column followed by the event indicator column, where 1 indicates an incident event and 0 indicates censoring.\n\n\n\n\n\nexposures &lt;- c(\"bmi\", \"smoking_status\", \"hba1c\")\nadjustment &lt;- c(\"age\", \"sex\", \"ethnic\")\n\ncorr_mat &lt;- run_correlation(\n  analysis_data,\n  vars = c(exposures, adjustment),\n  method = \"spearman\",\n  threshold = 0.70\n)\n\ncox_res &lt;- runmulti_cox(\n  data = survival_data,\n  main_var = exposures,\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = adjustment\n)\n\ncox_res$p_bh &lt;- p.adjust(cox_res$pvalue, method = \"BH\")\ncox_res\n\nThis structure covers the main statistical layer of UKBAnalytica: correlation pre-analysis followed by linear, logistic, or Cox regression according to the outcome definition.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Main analysis"
+    ]
+  },
+  {
+    "objectID": "07-main-analysis.html#correlation",
+    "href": "07-main-analysis.html#correlation",
+    "title": "Main analysis",
+    "section": "",
+    "text": "Before regression modeling, run_correlation() can be used to inspect correlations among candidate exposures or covariates. This is useful for identifying highly correlated variables before building adjusted models.\n\nlibrary(UKBAnalytica)\n\ncorr_mat &lt;- run_correlation(\n  df = analysis_data,\n  vars = c(\"age\", \"bmi\", \"sbp\", \"dbp\", \"glucose\", \"hba1c\"),\n  method = \"pearson\",\n  threshold = 0.70\n)\n\ncorr_mat\n\nUse plot_correlation() when a visual summary is needed.\n\nplot_correlation(\n  corr_mat,\n  show_values = TRUE,\n  upper_triangle = TRUE,\n  title = \"Correlation matrix\"\n)\n\nCommon choices are method = \"pearson\" for approximately continuous variables and method = \"spearman\" for rank-based or skewed variables.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Main analysis"
+    ]
+  },
+  {
+    "objectID": "07-main-analysis.html#regression",
+    "href": "07-main-analysis.html#regression",
+    "title": "Main analysis",
+    "section": "",
+    "text": "The three main regression functions share the same design: each variable in main_var is tested separately, and covariates defines the adjustment set. This makes it straightforward to screen multiple exposures while keeping model specification consistent.\n\n\n\nOutcome type\nFunction\nEffect estimate\n\n\n\n\nContinuous outcome\nrunmulti_lm()\nbeta\n\n\nBinary outcome\nrunmulti_logit()\nodds ratio (OR)\n\n\nTime-to-event outcome\nrunmulti_cox()\nhazard ratio (HR)\n\n\n\nFor high-dimensional analyses, such as biomarker or protein screening, adjust the returned p-values with p.adjust().\n\nresults$p_bh &lt;- p.adjust(results$pvalue, method = \"BH\")\nresults$p_bonferroni &lt;- p.adjust(results$pvalue, method = \"bonferroni\")\n\n\n\nUse runmulti_lm() for continuous outcomes.\n\nlm_res &lt;- runmulti_lm(\n  data = analysis_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  outcome = \"sbp\",\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nlm_res\n\nThe output includes variable, beta, lower95, upper95, and pvalue. Here, beta represents the adjusted mean difference in the continuous outcome per unit increase or category contrast of the tested variable.\n\n\n\nUse runmulti_logit() for binary outcomes coded as 0/1.\n\nlogit_res &lt;- runmulti_logit(\n  data = analysis_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  outcome = \"diabetes_status\",\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\nlogit_res\n\nThe output includes variable, OR, lower95, upper95, and pvalue. The outcome must be binary, with 1 indicating the event or case group.\n\n\n\nUse runmulti_cox() for incident outcomes with follow-up time.\n\ncox_res &lt;- runmulti_cox(\n  data = survival_data,\n  main_var = c(\"bmi\", \"smoking_status\", \"hba1c\"),\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = c(\"age\", \"sex\", \"ethnic\")\n)\n\ncox_res\n\nThe output includes variable, coef, HR, lower95, upper95, pvalue, n, and n_event. The endpoint argument should contain the follow-up time column followed by the event indicator column, where 1 indicates an incident event and 0 indicates censoring.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Main analysis"
+    ]
+  },
+  {
+    "objectID": "07-main-analysis.html#minimal-workflow",
+    "href": "07-main-analysis.html#minimal-workflow",
+    "title": "Main analysis",
+    "section": "",
+    "text": "exposures &lt;- c(\"bmi\", \"smoking_status\", \"hba1c\")\nadjustment &lt;- c(\"age\", \"sex\", \"ethnic\")\n\ncorr_mat &lt;- run_correlation(\n  analysis_data,\n  vars = c(exposures, adjustment),\n  method = \"spearman\",\n  threshold = 0.70\n)\n\ncox_res &lt;- runmulti_cox(\n  data = survival_data,\n  main_var = exposures,\n  endpoint = c(\"follow_up_time\", \"incident_status\"),\n  covariates = adjustment\n)\n\ncox_res$p_bh &lt;- p.adjust(cox_res$pvalue, method = \"BH\")\ncox_res\n\nThis structure covers the main statistical layer of UKBAnalytica: correlation pre-analysis followed by linear, logistic, or Cox regression according to the outcome definition.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Main analysis"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html",
+    "href": "09-machine-learning.html",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "This chapter describes the recommended non-survival machine learning workflow in UKBAnalytica. The main user-facing function is ukb_ml_workflow(). It is designed to keep the API simple while enforcing a standard analysis structure:\n\nFreeze the test set before model development.\nUse only training and validation data for feature selection, tuning, and threshold learning.\nRefit the final model on the training-development data.\nEvaluate once on the frozen test set.\n\nThis chapter covers binary classification, multiclass classification, continuous outcomes, and time-to-event prediction. For survival ML, use ukb_ml_survival_workflow(); the legacy ukb_ml_survival() interface remains available only for backward compatibility.\n\n\nFor most projects, users only need one function:\n\nlibrary(UKBAnalytica)\n\nml &lt;- ukb_ml_workflow(\n  outcome ~ age + sex + bmi + smoking + sbp,\n  data = analysis_dt,\n  model = \"logistic\",\n  seed = 42\n)\n\nml$final_test_metrics\nhead(ml$final_test_predictions)\n\nThis minimal call is useful for a quick baseline model. For a manuscript-ready binary classification workflow, use an explicit train/validation/test split and learn the classification threshold on validation data:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,\n  data = analysis_dt,\n  model = \"rf\",\n  split_params = list(\n    split = \"train_valid_test\",\n    train_ratio = 0.70,\n    validation_ratio = 0.10,\n    test_ratio = 0.20\n  ),\n  feature_select = \"filter\",\n  feature_params = list(max_features = 50),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"auc\",\n    param_grid = data.frame(\n      num.trees = c(300, 500),\n      mtry = c(3, 5),\n      min.node.size = c(5, 10)\n    )\n  ),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$final_test_metrics\nhead(ml$final_test_predictions)\n\nThe test set is not used during feature selection, tuning, or threshold learning. It is used only by ukb_ml_evaluate_test() inside the final step.\n\n\n\nStart from an analysis-ready table. For incident disease prediction, this is usually the wide table returned by build_survival_dataset(). Keep one row per participant and include only variables available at prediction time.\n\nlibrary(data.table)\nlibrary(UKBAnalytica)\n\nml_dt &lt;- as.data.table(analysis_dt)[\n  ,\n  .(\n    eid,\n    outcome_status,\n    age,\n    sex,\n    bmi,\n    smoking,\n    sbp,\n    dbp,\n    diabetes_history,\n    hypertension_history\n  )\n]\n\nml_dt &lt;- ukb_clean_missing(ml_dt)\nukb_snapshot(ml_dt, label = \"ml_input\")\n\nKeep the outcome and predictors conceptually separated:\n\n\n\n\n\n\n\n\nRole\nExample\nRule\n\n\n\n\nOutcome\noutcome_status, diabetes, biomarker_value\nThe target to predict\n\n\nPredictors\nage, sex, bmi, biomarkers\nMust be known before the prediction time\n\n\nID\neid\nUsed to check overlap; do not use as a predictor\n\n\nLeakage variables\nfollow-up time, diagnosis date after baseline\nDo not include as predictors\n\n\n\nIf you use outcome_status from build_survival_dataset(), make sure the predictor set does not include follow-up information or post-baseline diagnosis variables.\n\n\n\nukb_ml_workflow() supports the following non-survival models:\n\n\n\n\n\n\n\n\nmodel\nOutcome type\nBest use\n\n\n\n\n\"logistic\"\nBinary\nBaseline, interpretable classifier\n\n\n\"linear\"\nContinuous\nBaseline regression\n\n\n\"rf\"\nBinary, multiclass, continuous\nRobust nonlinear tabular model\n\n\n\"xgboost\"\nBinary, multiclass, continuous\nGradient boosting for stronger prediction\n\n\n\"glmnet\"\nBinary, multiclass, continuous\nRegularized model and sparse features\n\n\n\"svm\"\nBinary, multiclass, continuous\nNonlinear boundaries in smaller datasets\n\n\n\"nnet\"\nBinary, multiclass, continuous\nSimple neural network or multinomial model\n\n\n\"rpart\"\nBinary, multiclass, continuous\nLightweight decision tree baseline\n\n\n\"naive_bayes\"\nBinary, multiclass\nFast probabilistic classifier\n\n\n\nOutcome type is inferred automatically in common cases:\n\n\n\nOutcome values\nInferred outcome_type\n\n\n\n\nTwo-level factor or character\n\"binary\"\n\n\nNumeric 0/1\n\"binary\"\n\n\nFactor or character with 3+ levels\n\"multiclass\"\n\n\nNumeric with many values\n\"continuous\"\n\n\n\nIf the outcome is ambiguous, set outcome_type explicitly.\n\n\n\nBinary classification is the most common use case. Use a factor with the negative class first and the positive class second when you want full control.\n\nml_dt$outcome_status &lt;- factor(\n  ml_dt$outcome_status,\n  levels = c(0, 1),\n  labels = c(\"control\", \"case\")\n)\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,\n  data = ml_dt,\n  model = \"logistic\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(resampling = \"validation\", metric = \"auc\"),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$final_test_metrics[c(\"auc\", \"accuracy\", \"sensitivity\", \"specificity\", \"f1\")]\nml$threshold_result\n\nFor binary outcomes, final_test_predictions contains:\n\n\n\nColumn\nMeaning\n\n\n\n\ntruth\nObserved class in the test set\n\n\nprob\nPredicted probability for the positive class\n\n\npred_class\nClass after applying the fixed threshold\n\n\n\n\n\n\nUse model = \"linear\" for a baseline model or model = \"rf\"/\"xgboost\" for nonlinear prediction.\n\nml_reg &lt;- ukb_ml_workflow(\n  biomarker_value ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"linear\",\n  outcome_type = \"continuous\",\n  split_params = list(split = \"train_test\", train_ratio = 0.75),\n  threshold_method = \"none\",\n  seed = 42\n)\n\nml_reg$final_test_metrics[c(\"rmse\", \"mae\", \"rsquared\")]\nhead(ml_reg$final_test_predictions)\n\nContinuous predictions are reported in the prediction column.\n\n\n\nFor multiclass classification, set threshold_method = \"none\" because a single binary threshold is not meaningful.\n\nml_multi &lt;- ukb_ml_workflow(\n  disease_subtype ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"nnet\",\n  outcome_type = \"multiclass\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"macro_f1\",\n    param_grid = data.frame(decay = c(0, 0.01, 0.05))\n  ),\n  threshold_method = \"none\",\n  seed = 42\n)\n\nml_multi$final_test_metrics[c(\"accuracy\", \"macro_f1\", \"logloss\")]\nhead(ml_multi$final_test_predictions)\n\nMulticlass predictions include pred_class plus one probability column per class.\n\n\n\nIf another workflow has already created train_df, valid_df, and test_df, register them with ukb_ml_as_split(). This function checks duplicated or overlapping IDs when id_col is supplied.\n\nsplit_obj &lt;- ukb_ml_as_split(\n  train_data = train_df,\n  validation_data = valid_df,\n  test_data = test_df,\n  id_col = \"eid\",\n  outcome = \"outcome_status\",\n  outcome_type = \"binary\"\n)\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  split = split_obj,\n  model = \"rf\",\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nThis is useful when the cohort split must be fixed across multiple packages, teams, or external validation analyses.\n\n\n\nFeature selection is optional and is always performed without touching the test set.\n\n\n\n\n\n\n\n\nfeature_select\nMeaning\nNotes\n\n\n\n\n\"none\"\nUse all formula predictors\nRecommended for small predictor sets\n\n\n\"filter\"\nRank features by simple univariate signal\nFast baseline for many predictors\n\n\n\"glmnet\"\nSelect nonzero regularized coefficients\nGood for sparse linear signals\n\n\n\"boruta\"\nBoruta all-relevant feature selection\nRequires Boruta; can be slower\n\n\n\nExample:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ .,\n  data = ml_dt[, setdiff(names(ml_dt), \"eid\"), with = FALSE],\n  model = \"rf\",\n  feature_select = \"glmnet\",\n  feature_params = list(max_features = 100),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$feature_result$selected_features\n\nUse feature_select = \"none\" when you already have a clinically defined predictor set and do not want data-driven feature selection.\n\n\n\nukb_ml_tune() is called internally when tune = TRUE. The easiest standard setup is validation tuning:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"xgboost\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"auc\",\n    param_grid = data.frame(\n      nrounds = c(50, 100),\n      max_depth = c(2, 4),\n      eta = c(0.05, 0.10)\n    )\n  ),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nIf you do not create a validation set, use cross-validation inside the training set:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"rf\",\n  split_params = list(split = \"train_test\"),\n  tune = TRUE,\n  tune_params = list(resampling = \"cv\", folds = 5, metric = \"auc\"),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nDo not use test-set metrics to choose hyperparameters.\n\n\n\nukb_ml_workflow() returns a list-like ukb_ml_workflow object:\n\n\n\n\n\n\n\nElement\nContent\n\n\n\n\nsplit\nFrozen ukb_ml_split object\n\n\nfeature_result\nSelected features and feature-selection metadata\n\n\ntune_result\nCandidate grid, best parameters, best development-set score\n\n\nthreshold_result\nBinary threshold learned from validation, CV OOF, or train data\n\n\nfinal_model\nRefit final model\n\n\nfinal_test_metrics\nTest-set metrics computed once\n\n\nfinal_test_predictions\nRow-level test-set predictions\n\n\n\nCommon inspection commands:\n\nprint(ml)\n\nml$feature_result$selected_features\nml$tune_result$best_params\nml$threshold_result\nml$final_test_metrics\n\ntest_pred &lt;- ml$final_test_predictions\n\nPredict on a new RAP-side dataset with the final model:\n\nnew_prob &lt;- predict(ml$final_model, newdata = new_participants, type = \"prob\")\nnew_class &lt;- predict(ml$final_model, newdata = new_participants, type = \"class\")\n\nFor continuous outcomes, use type = \"response\".\n\n\n\nUse ukb_shap() directly on the workflow object. If data is not supplied, the frozen test set stored in ml$split$test is used, so the interpretation is aligned with the final reported performance.\n\nshap &lt;- ukb_shap(\n  ml,\n  sample_n = 500,\n  nsim = 100,\n  seed = 42\n)\n\nukb_shap_summary(shap)\nplot_shap_summary(shap)\n\nYou can also explain a final model on a specific external dataset:\n\nexternal_shap &lt;- ukb_shap(\n  ml$final_model,\n  data = external_validation_df,\n  sample_n = 500,\n  seed = 42\n)\n\nFor multiclass models, choose the class probability to explain:\n\nshap_case &lt;- ukb_shap(ml_multi, class_level = \"case\", sample_n = 500)\n\n\n\n\nMost users should use ukb_ml_workflow(). The lower-level functions are useful when you need to save intermediate objects or compare multiple models on the same frozen split.\n\nsplit_obj &lt;- ukb_ml_split_data(\n  ml_dt,\n  outcome = \"outcome_status\",\n  split = \"train_valid_test\",\n  seed = 42\n)\n\nfeatures &lt;- ukb_ml_feature_select(\n  split_obj,\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  method = \"filter\",\n  max_features = 50,\n  seed = 42\n)\n\ntuned &lt;- ukb_ml_tune(\n  split_obj,\n  formula = features$formula,\n  model = \"rf\",\n  resampling = \"validation\",\n  metric = \"auc\",\n  seed = 42\n)\n\nfinal &lt;- ukb_ml_fit_final(\n  split_obj,\n  formula = features$formula,\n  model = \"rf\",\n  best_params = tuned$best_params,\n  feature_spec = features,\n  seed = 42\n)\n\ntest_eval &lt;- ukb_ml_evaluate_test(final, split_obj)\ntest_eval$metrics\n\n\n\n\nukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc(), and ukb_ml_compare() remain available for backward compatibility, but they now emit a deprecation warning. For new analyses intended for reporting, use ukb_ml_workflow() because it makes the frozen-test design explicit.\nukb_shap() is not deprecated. It now works with both new workflow objects and legacy ukb_ml objects.\n\nml_rf &lt;- ukb_ml_model(\n  outcome_status ~ age + sex + bmi + smoking,\n  data = ml_dt,\n  model = \"rf\",\n  task = \"classification\",\n  split_ratio = 0.8,\n  seed = 42\n)\n\nukb_ml_metrics(ml_rf, ci = TRUE)\nukb_ml_roc(ml_rf)\n\n\n\n\nFor time-to-event prediction, use ukb_ml_survival_workflow(). It follows the same structure as ukb_ml_workflow():\n\nFreeze the survival test set.\nSelect features and tune hyperparameters using only training/validation data.\nRefit the final model on training plus validation data.\nEvaluate once on the frozen test set.\n\nThe simplest baseline uses a Cox model and requires only the survival backend:\n\nsurv_ml &lt;- ukb_ml_survival_workflow(\n  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,\n  data = analysis_dt,\n  model = \"cox\",\n  split_params = list(\n    split = \"train_valid_test\",\n    train_ratio = 0.70,\n    validation_ratio = 0.10,\n    test_ratio = 0.20\n  ),\n  feature_select = \"filter\",\n  feature_params = list(max_features = 50),\n  tune = TRUE,\n  tune_params = list(resampling = \"validation\"),\n  evaluation_times = c(1, 3, 5, 10),\n  seed = 42\n)\n\nsurv_ml$final_test_metrics\nhead(surv_ml$final_test_predictions)\n\nSupported survival models:\n\n\n\nmodel\nBackend\nBest use\n\n\n\n\n\"cox\"\nsurvival\nInterpretable baseline survival model\n\n\n\"coxnet\"\nglmnet\nRegularized high-dimensional Cox model\n\n\n\"rsf\"\nrandomForestSRC\nNonlinear random survival forest\n\n\n\"gbm_surv\"\ngbm\nGradient-boosted Cox model\n\n\n\nThe final metrics include Harrell’s C-index and naive time-specific Brier scores at evaluation_times. The Brier scores are not IPCW-adjusted; use them as quick model checks, not as the only censoring-aware performance statistic.\nPredict survival probabilities or risk scores from the final model:\n\nsurv_prob &lt;- predict(\n  surv_ml,\n  newdata = external_validation_df,\n  times = c(1, 3, 5),\n  type = \"survival\"\n)\n\nrisk_score &lt;- predict(surv_ml$final_model, newdata = external_validation_df, type = \"risk\")\n\nIf train/validation/test data already exist, register them explicitly:\n\nsurv_split &lt;- ukb_ml_survival_as_split(\n  train_data = train_df,\n  validation_data = valid_df,\n  test_data = test_df,\n  time = \"outcome_surv_time\",\n  event = \"outcome_status\",\n  id_col = \"eid\"\n)\n\nsurv_ml &lt;- ukb_ml_survival_workflow(\n  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,\n  split = surv_split,\n  model = \"cox\",\n  evaluation_times = c(1, 3, 5),\n  seed = 42\n)\n\nLower-level survival workflow helpers mirror the non-survival API: ukb_ml_survival_split_data(), ukb_ml_survival_as_split(), ukb_ml_survival_feature_select(), ukb_ml_survival_tune(), ukb_ml_survival_fit_final(), and ukb_ml_survival_evaluate_test().\nukb_ml_survival() now emits a deprecation warning. Use ukb_ml_survival_workflow() for new analyses.\n\n\n\nBefore reporting ML results, check the following:\n\nThe test set was created before feature selection and tuning.\neid, diagnosis dates, follow-up time, and post-baseline variables are not used as predictors.\nThe outcome type is correct (binary, multiclass, or continuous).\nBinary positive class is the second factor level if you set factor levels manually.\nHyperparameters and thresholds are chosen on train/validation or CV only.\nfinal_test_metrics are reported as final frozen-test performance.\nFor survival ML, outcome_surv_time and outcome_status are used only as the left-hand side of Surv(time, event), not as predictors.\n\n\n\n\nInstall only the model backends you plan to use. UKBAnalytica_v2 checks optional packages only when the selected model or helper needs them. It does not install extra ML dependencies unless you explicitly opt in:\n\noptions(UKBAnalytica.auto_install_ml = TRUE)\n\nThe default is FALSE, which is safer on RAP and HPC systems because users can control the package library and CRAN/Bioconductor mirror themselves.\n\ninstall.packages(c(\n  \"ranger\",      # random forest\n  \"xgboost\",     # gradient boosting\n  \"glmnet\",      # regularized regression and glmnet feature selection\n  \"e1071\",       # SVM and naive Bayes\n  \"nnet\",        # neural network / multinomial regression\n  \"rpart\",       # decision tree\n  \"Boruta\",      # Boruta feature selection\n  \"fastshap\",    # SHAP explanations\n  \"pROC\",        # legacy ROC helpers\n  \"survival\",    # Cox and survival metrics\n  \"gbm\",         # boosted survival model\n  \"randomForestSRC\"  # random survival forest\n))\n\nlogistic and linear models use base R and do not require extra model backend packages. naive_bayes reuses e1071, so no separate package is needed if you already installed it for SVM. For survival ML, model = \"cox\" uses survival, model = \"coxnet\" uses glmnet, model = \"gbm_surv\" uses gbm, and model = \"rsf\" uses randomForestSRC.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#what-users-usually-need",
+    "href": "09-machine-learning.html#what-users-usually-need",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "For most projects, users only need one function:\n\nlibrary(UKBAnalytica)\n\nml &lt;- ukb_ml_workflow(\n  outcome ~ age + sex + bmi + smoking + sbp,\n  data = analysis_dt,\n  model = \"logistic\",\n  seed = 42\n)\n\nml$final_test_metrics\nhead(ml$final_test_predictions)\n\nThis minimal call is useful for a quick baseline model. For a manuscript-ready binary classification workflow, use an explicit train/validation/test split and learn the classification threshold on validation data:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,\n  data = analysis_dt,\n  model = \"rf\",\n  split_params = list(\n    split = \"train_valid_test\",\n    train_ratio = 0.70,\n    validation_ratio = 0.10,\n    test_ratio = 0.20\n  ),\n  feature_select = \"filter\",\n  feature_params = list(max_features = 50),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"auc\",\n    param_grid = data.frame(\n      num.trees = c(300, 500),\n      mtry = c(3, 5),\n      min.node.size = c(5, 10)\n    )\n  ),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$final_test_metrics\nhead(ml$final_test_predictions)\n\nThe test set is not used during feature selection, tuning, or threshold learning. It is used only by ukb_ml_evaluate_test() inside the final step.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#prepare-an-ml-ready-dataset",
+    "href": "09-machine-learning.html#prepare-an-ml-ready-dataset",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Start from an analysis-ready table. For incident disease prediction, this is usually the wide table returned by build_survival_dataset(). Keep one row per participant and include only variables available at prediction time.\n\nlibrary(data.table)\nlibrary(UKBAnalytica)\n\nml_dt &lt;- as.data.table(analysis_dt)[\n  ,\n  .(\n    eid,\n    outcome_status,\n    age,\n    sex,\n    bmi,\n    smoking,\n    sbp,\n    dbp,\n    diabetes_history,\n    hypertension_history\n  )\n]\n\nml_dt &lt;- ukb_clean_missing(ml_dt)\nukb_snapshot(ml_dt, label = \"ml_input\")\n\nKeep the outcome and predictors conceptually separated:\n\n\n\n\n\n\n\n\nRole\nExample\nRule\n\n\n\n\nOutcome\noutcome_status, diabetes, biomarker_value\nThe target to predict\n\n\nPredictors\nage, sex, bmi, biomarkers\nMust be known before the prediction time\n\n\nID\neid\nUsed to check overlap; do not use as a predictor\n\n\nLeakage variables\nfollow-up time, diagnosis date after baseline\nDo not include as predictors\n\n\n\nIf you use outcome_status from build_survival_dataset(), make sure the predictor set does not include follow-up information or post-baseline diagnosis variables.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#model-choices",
+    "href": "09-machine-learning.html#model-choices",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "ukb_ml_workflow() supports the following non-survival models:\n\n\n\n\n\n\n\n\nmodel\nOutcome type\nBest use\n\n\n\n\n\"logistic\"\nBinary\nBaseline, interpretable classifier\n\n\n\"linear\"\nContinuous\nBaseline regression\n\n\n\"rf\"\nBinary, multiclass, continuous\nRobust nonlinear tabular model\n\n\n\"xgboost\"\nBinary, multiclass, continuous\nGradient boosting for stronger prediction\n\n\n\"glmnet\"\nBinary, multiclass, continuous\nRegularized model and sparse features\n\n\n\"svm\"\nBinary, multiclass, continuous\nNonlinear boundaries in smaller datasets\n\n\n\"nnet\"\nBinary, multiclass, continuous\nSimple neural network or multinomial model\n\n\n\"rpart\"\nBinary, multiclass, continuous\nLightweight decision tree baseline\n\n\n\"naive_bayes\"\nBinary, multiclass\nFast probabilistic classifier\n\n\n\nOutcome type is inferred automatically in common cases:\n\n\n\nOutcome values\nInferred outcome_type\n\n\n\n\nTwo-level factor or character\n\"binary\"\n\n\nNumeric 0/1\n\"binary\"\n\n\nFactor or character with 3+ levels\n\"multiclass\"\n\n\nNumeric with many values\n\"continuous\"\n\n\n\nIf the outcome is ambiguous, set outcome_type explicitly.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#binary-classification",
+    "href": "09-machine-learning.html#binary-classification",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Binary classification is the most common use case. Use a factor with the negative class first and the positive class second when you want full control.\n\nml_dt$outcome_status &lt;- factor(\n  ml_dt$outcome_status,\n  levels = c(0, 1),\n  labels = c(\"control\", \"case\")\n)\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp + dbp,\n  data = ml_dt,\n  model = \"logistic\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(resampling = \"validation\", metric = \"auc\"),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$final_test_metrics[c(\"auc\", \"accuracy\", \"sensitivity\", \"specificity\", \"f1\")]\nml$threshold_result\n\nFor binary outcomes, final_test_predictions contains:\n\n\n\nColumn\nMeaning\n\n\n\n\ntruth\nObserved class in the test set\n\n\nprob\nPredicted probability for the positive class\n\n\npred_class\nClass after applying the fixed threshold",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#continuous-outcomes",
+    "href": "09-machine-learning.html#continuous-outcomes",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Use model = \"linear\" for a baseline model or model = \"rf\"/\"xgboost\" for nonlinear prediction.\n\nml_reg &lt;- ukb_ml_workflow(\n  biomarker_value ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"linear\",\n  outcome_type = \"continuous\",\n  split_params = list(split = \"train_test\", train_ratio = 0.75),\n  threshold_method = \"none\",\n  seed = 42\n)\n\nml_reg$final_test_metrics[c(\"rmse\", \"mae\", \"rsquared\")]\nhead(ml_reg$final_test_predictions)\n\nContinuous predictions are reported in the prediction column.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#multiclass-outcomes",
+    "href": "09-machine-learning.html#multiclass-outcomes",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "For multiclass classification, set threshold_method = \"none\" because a single binary threshold is not meaningful.\n\nml_multi &lt;- ukb_ml_workflow(\n  disease_subtype ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"nnet\",\n  outcome_type = \"multiclass\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"macro_f1\",\n    param_grid = data.frame(decay = c(0, 0.01, 0.05))\n  ),\n  threshold_method = \"none\",\n  seed = 42\n)\n\nml_multi$final_test_metrics[c(\"accuracy\", \"macro_f1\", \"logloss\")]\nhead(ml_multi$final_test_predictions)\n\nMulticlass predictions include pred_class plus one probability column per class.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#when-traintest-files-already-exist",
+    "href": "09-machine-learning.html#when-traintest-files-already-exist",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "If another workflow has already created train_df, valid_df, and test_df, register them with ukb_ml_as_split(). This function checks duplicated or overlapping IDs when id_col is supplied.\n\nsplit_obj &lt;- ukb_ml_as_split(\n  train_data = train_df,\n  validation_data = valid_df,\n  test_data = test_df,\n  id_col = \"eid\",\n  outcome = \"outcome_status\",\n  outcome_type = \"binary\"\n)\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  split = split_obj,\n  model = \"rf\",\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nThis is useful when the cohort split must be fixed across multiple packages, teams, or external validation analyses.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#feature-selection",
+    "href": "09-machine-learning.html#feature-selection",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Feature selection is optional and is always performed without touching the test set.\n\n\n\n\n\n\n\n\nfeature_select\nMeaning\nNotes\n\n\n\n\n\"none\"\nUse all formula predictors\nRecommended for small predictor sets\n\n\n\"filter\"\nRank features by simple univariate signal\nFast baseline for many predictors\n\n\n\"glmnet\"\nSelect nonzero regularized coefficients\nGood for sparse linear signals\n\n\n\"boruta\"\nBoruta all-relevant feature selection\nRequires Boruta; can be slower\n\n\n\nExample:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ .,\n  data = ml_dt[, setdiff(names(ml_dt), \"eid\"), with = FALSE],\n  model = \"rf\",\n  feature_select = \"glmnet\",\n  feature_params = list(max_features = 100),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nml$feature_result$selected_features\n\nUse feature_select = \"none\" when you already have a clinically defined predictor set and do not want data-driven feature selection.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#hyperparameter-tuning",
+    "href": "09-machine-learning.html#hyperparameter-tuning",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "ukb_ml_tune() is called internally when tune = TRUE. The easiest standard setup is validation tuning:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"xgboost\",\n  split_params = list(split = \"train_valid_test\"),\n  tune = TRUE,\n  tune_params = list(\n    resampling = \"validation\",\n    metric = \"auc\",\n    param_grid = data.frame(\n      nrounds = c(50, 100),\n      max_depth = c(2, 4),\n      eta = c(0.05, 0.10)\n    )\n  ),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nIf you do not create a validation set, use cross-validation inside the training set:\n\nml &lt;- ukb_ml_workflow(\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  data = ml_dt,\n  model = \"rf\",\n  split_params = list(split = \"train_test\"),\n  tune = TRUE,\n  tune_params = list(resampling = \"cv\", folds = 5, metric = \"auc\"),\n  threshold_method = \"youden\",\n  seed = 42\n)\n\nDo not use test-set metrics to choose hyperparameters.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#output-object",
+    "href": "09-machine-learning.html#output-object",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "ukb_ml_workflow() returns a list-like ukb_ml_workflow object:\n\n\n\n\n\n\n\nElement\nContent\n\n\n\n\nsplit\nFrozen ukb_ml_split object\n\n\nfeature_result\nSelected features and feature-selection metadata\n\n\ntune_result\nCandidate grid, best parameters, best development-set score\n\n\nthreshold_result\nBinary threshold learned from validation, CV OOF, or train data\n\n\nfinal_model\nRefit final model\n\n\nfinal_test_metrics\nTest-set metrics computed once\n\n\nfinal_test_predictions\nRow-level test-set predictions\n\n\n\nCommon inspection commands:\n\nprint(ml)\n\nml$feature_result$selected_features\nml$tune_result$best_params\nml$threshold_result\nml$final_test_metrics\n\ntest_pred &lt;- ml$final_test_predictions\n\nPredict on a new RAP-side dataset with the final model:\n\nnew_prob &lt;- predict(ml$final_model, newdata = new_participants, type = \"prob\")\nnew_class &lt;- predict(ml$final_model, newdata = new_participants, type = \"class\")\n\nFor continuous outcomes, use type = \"response\".",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#shap-interpretation",
+    "href": "09-machine-learning.html#shap-interpretation",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Use ukb_shap() directly on the workflow object. If data is not supplied, the frozen test set stored in ml$split$test is used, so the interpretation is aligned with the final reported performance.\n\nshap &lt;- ukb_shap(\n  ml,\n  sample_n = 500,\n  nsim = 100,\n  seed = 42\n)\n\nukb_shap_summary(shap)\nplot_shap_summary(shap)\n\nYou can also explain a final model on a specific external dataset:\n\nexternal_shap &lt;- ukb_shap(\n  ml$final_model,\n  data = external_validation_df,\n  sample_n = 500,\n  seed = 42\n)\n\nFor multiclass models, choose the class probability to explain:\n\nshap_case &lt;- ukb_shap(ml_multi, class_level = \"case\", sample_n = 500)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#advanced-run-the-workflow-step-by-step",
+    "href": "09-machine-learning.html#advanced-run-the-workflow-step-by-step",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Most users should use ukb_ml_workflow(). The lower-level functions are useful when you need to save intermediate objects or compare multiple models on the same frozen split.\n\nsplit_obj &lt;- ukb_ml_split_data(\n  ml_dt,\n  outcome = \"outcome_status\",\n  split = \"train_valid_test\",\n  seed = 42\n)\n\nfeatures &lt;- ukb_ml_feature_select(\n  split_obj,\n  outcome_status ~ age + sex + bmi + smoking + sbp,\n  method = \"filter\",\n  max_features = 50,\n  seed = 42\n)\n\ntuned &lt;- ukb_ml_tune(\n  split_obj,\n  formula = features$formula,\n  model = \"rf\",\n  resampling = \"validation\",\n  metric = \"auc\",\n  seed = 42\n)\n\nfinal &lt;- ukb_ml_fit_final(\n  split_obj,\n  formula = features$formula,\n  model = \"rf\",\n  best_params = tuned$best_params,\n  feature_spec = features,\n  seed = 42\n)\n\ntest_eval &lt;- ukb_ml_evaluate_test(final, split_obj)\ntest_eval$metrics",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#legacy-quick-model-interface",
+    "href": "09-machine-learning.html#legacy-quick-model-interface",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "ukb_ml_model(), ukb_ml_cv(), ukb_ml_metrics(), ukb_ml_roc(), and ukb_ml_compare() remain available for backward compatibility, but they now emit a deprecation warning. For new analyses intended for reporting, use ukb_ml_workflow() because it makes the frozen-test design explicit.\nukb_shap() is not deprecated. It now works with both new workflow objects and legacy ukb_ml objects.\n\nml_rf &lt;- ukb_ml_model(\n  outcome_status ~ age + sex + bmi + smoking,\n  data = ml_dt,\n  model = \"rf\",\n  task = \"classification\",\n  split_ratio = 0.8,\n  seed = 42\n)\n\nukb_ml_metrics(ml_rf, ci = TRUE)\nukb_ml_roc(ml_rf)",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#survival-machine-learning",
+    "href": "09-machine-learning.html#survival-machine-learning",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "For time-to-event prediction, use ukb_ml_survival_workflow(). It follows the same structure as ukb_ml_workflow():\n\nFreeze the survival test set.\nSelect features and tune hyperparameters using only training/validation data.\nRefit the final model on training plus validation data.\nEvaluate once on the frozen test set.\n\nThe simplest baseline uses a Cox model and requires only the survival backend:\n\nsurv_ml &lt;- ukb_ml_survival_workflow(\n  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,\n  data = analysis_dt,\n  model = \"cox\",\n  split_params = list(\n    split = \"train_valid_test\",\n    train_ratio = 0.70,\n    validation_ratio = 0.10,\n    test_ratio = 0.20\n  ),\n  feature_select = \"filter\",\n  feature_params = list(max_features = 50),\n  tune = TRUE,\n  tune_params = list(resampling = \"validation\"),\n  evaluation_times = c(1, 3, 5, 10),\n  seed = 42\n)\n\nsurv_ml$final_test_metrics\nhead(surv_ml$final_test_predictions)\n\nSupported survival models:\n\n\n\nmodel\nBackend\nBest use\n\n\n\n\n\"cox\"\nsurvival\nInterpretable baseline survival model\n\n\n\"coxnet\"\nglmnet\nRegularized high-dimensional Cox model\n\n\n\"rsf\"\nrandomForestSRC\nNonlinear random survival forest\n\n\n\"gbm_surv\"\ngbm\nGradient-boosted Cox model\n\n\n\nThe final metrics include Harrell’s C-index and naive time-specific Brier scores at evaluation_times. The Brier scores are not IPCW-adjusted; use them as quick model checks, not as the only censoring-aware performance statistic.\nPredict survival probabilities or risk scores from the final model:\n\nsurv_prob &lt;- predict(\n  surv_ml,\n  newdata = external_validation_df,\n  times = c(1, 3, 5),\n  type = \"survival\"\n)\n\nrisk_score &lt;- predict(surv_ml$final_model, newdata = external_validation_df, type = \"risk\")\n\nIf train/validation/test data already exist, register them explicitly:\n\nsurv_split &lt;- ukb_ml_survival_as_split(\n  train_data = train_df,\n  validation_data = valid_df,\n  test_data = test_df,\n  time = \"outcome_surv_time\",\n  event = \"outcome_status\",\n  id_col = \"eid\"\n)\n\nsurv_ml &lt;- ukb_ml_survival_workflow(\n  Surv(outcome_surv_time, outcome_status) ~ age + sex + bmi + smoking,\n  split = surv_split,\n  model = \"cox\",\n  evaluation_times = c(1, 3, 5),\n  seed = 42\n)\n\nLower-level survival workflow helpers mirror the non-survival API: ukb_ml_survival_split_data(), ukb_ml_survival_as_split(), ukb_ml_survival_feature_select(), ukb_ml_survival_tune(), ukb_ml_survival_fit_final(), and ukb_ml_survival_evaluate_test().\nukb_ml_survival() now emits a deprecation warning. Use ukb_ml_survival_workflow() for new analyses.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#practical-checklist",
+    "href": "09-machine-learning.html#practical-checklist",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Before reporting ML results, check the following:\n\nThe test set was created before feature selection and tuning.\neid, diagnosis dates, follow-up time, and post-baseline variables are not used as predictors.\nThe outcome type is correct (binary, multiclass, or continuous).\nBinary positive class is the second factor level if you set factor levels manually.\nHyperparameters and thresholds are chosen on train/validation or CV only.\nfinal_test_metrics are reported as final frozen-test performance.\nFor survival ML, outcome_surv_time and outcome_status are used only as the left-hand side of Surv(time, event), not as predictors.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "09-machine-learning.html#optional-packages",
+    "href": "09-machine-learning.html#optional-packages",
+    "title": "Machine Learning Workflow",
+    "section": "",
+    "text": "Install only the model backends you plan to use. UKBAnalytica_v2 checks optional packages only when the selected model or helper needs them. It does not install extra ML dependencies unless you explicitly opt in:\n\noptions(UKBAnalytica.auto_install_ml = TRUE)\n\nThe default is FALSE, which is safer on RAP and HPC systems because users can control the package library and CRAN/Bioconductor mirror themselves.\n\ninstall.packages(c(\n  \"ranger\",      # random forest\n  \"xgboost\",     # gradient boosting\n  \"glmnet\",      # regularized regression and glmnet feature selection\n  \"e1071\",       # SVM and naive Bayes\n  \"nnet\",        # neural network / multinomial regression\n  \"rpart\",       # decision tree\n  \"Boruta\",      # Boruta feature selection\n  \"fastshap\",    # SHAP explanations\n  \"pROC\",        # legacy ROC helpers\n  \"survival\",    # Cox and survival metrics\n  \"gbm\",         # boosted survival model\n  \"randomForestSRC\"  # random survival forest\n))\n\nlogistic and linear models use base R and do not require extra model backend packages. naive_bayes reuses e1071, so no separate package is needed if you already installed it for SVM. For survival ML, model = \"cox\" uses survival, model = \"coxnet\" uses glmnet, model = \"gbm_surv\" uses gbm, and model = \"rsf\" uses randomForestSRC.",
+    "crumbs": [
+      "Overview",
+      "Analysis modules",
+      "Machine Learning Workflow"
+    ]
+  },
+  {
+    "objectID": "11-ukbanalytica-skills.html",
+    "href": "11-ukbanalytica-skills.html",
+    "title": "UKBAnalytica Skills",
+    "section": "",
+    "text": "This section introduces the AI agent skills built into UKBAnalytica. These skills enable conversational AI agents (such as GitHub Copilot) to assist with your analytic workflows by understanding the codebase, project structure, and UK Biobank standards.\n\n\nThe UKBAnalytica_skills directory provides a comprehensive set of domain-specific skills for various stages of the epidemiological analysis pipeline in UK Biobank. The AI agents rely on these reference documents to write accurate code and structure results effectively.\n\n\n\n\nBaseline Construction (ukbsci-baseline): Automates creation of demographic and clinical baseline characteristics tables.\nCohort Phenotyping (ukbsci-cohort): Formats disease catalog logic and extracts definitions directly from standardized clinical code lists (ICD-10, OPCS-4, etc.).\nData Preprocessing (ukbsci-preprocess): Variable curation, renaming, cleaning, and formatting.\nMultiple Imputation (ukbsci-imputation): Implements standard missing data routines (MICE) correctly configured for UKB cohorts.\nStatistical Analysis:\n\nRegression Models (ukbsci-regression): Handles continuous and categorical outcomes.\nSurvival Analysis (ukbsci-survival): Standardizes proportional hazards (Cox) modeling and formatting of time-to-event outcomes.\nPropensity Scores (ukbsci-propensity) & Mediation (ukbsci-mediation): Specialized capabilities for causal inference modeling.\nSubgroup Sensitivity (ukbsci-subgroup-sensitivity): Evaluates consistency of effects across strata.\n\nAdvanced Modules:\n\nMachine Learning (ukbsci-ml): Sets up hyperparameter tuning and model prediction pipelines.\nProteomics (ukbsci-proteomics): Assists with Olink protein associations.\n\nRAP Extraction (ukbsci-rap-extract): Defines guardrails preventing unauthorized export of individual-level data out of the Research Analysis Platform (RAP), while providing code logic to execute queries securely within the RAP environment.\n\nBy integrating these built-in skills, you can instruct your AI assistant simply. For example, you can request “Use the ukbsci-survival skill to write a Cox model script for incident diabetes adjusting for age and BMI,” and the agent will use standard UKBAnalytica API structures for reliable code generation.",
+    "crumbs": [
+      "Overview",
+      "AI Agent Skills",
+      "UKBAnalytica Skills"
+    ]
+  },
+  {
+    "objectID": "11-ukbanalytica-skills.html#overview",
+    "href": "11-ukbanalytica-skills.html#overview",
+    "title": "UKBAnalytica Skills",
+    "section": "",
+    "text": "The UKBAnalytica_skills directory provides a comprehensive set of domain-specific skills for various stages of the epidemiological analysis pipeline in UK Biobank. The AI agents rely on these reference documents to write accurate code and structure results effectively.",
+    "crumbs": [
+      "Overview",
+      "AI Agent Skills",
+      "UKBAnalytica Skills"
+    ]
+  },
+  {
+    "objectID": "11-ukbanalytica-skills.html#key-capabilities",
+    "href": "11-ukbanalytica-skills.html#key-capabilities",
+    "title": "UKBAnalytica Skills",
+    "section": "",
+    "text": "Baseline Construction (ukbsci-baseline): Automates creation of demographic and clinical baseline characteristics tables.\nCohort Phenotyping (ukbsci-cohort): Formats disease catalog logic and extracts definitions directly from standardized clinical code lists (ICD-10, OPCS-4, etc.).\nData Preprocessing (ukbsci-preprocess): Variable curation, renaming, cleaning, and formatting.\nMultiple Imputation (ukbsci-imputation): Implements standard missing data routines (MICE) correctly configured for UKB cohorts.\nStatistical Analysis:\n\nRegression Models (ukbsci-regression): Handles continuous and categorical outcomes.\nSurvival Analysis (ukbsci-survival): Standardizes proportional hazards (Cox) modeling and formatting of time-to-event outcomes.\nPropensity Scores (ukbsci-propensity) & Mediation (ukbsci-mediation): Specialized capabilities for causal inference modeling.\nSubgroup Sensitivity (ukbsci-subgroup-sensitivity): Evaluates consistency of effects across strata.\n\nAdvanced Modules:\n\nMachine Learning (ukbsci-ml): Sets up hyperparameter tuning and model prediction pipelines.\nProteomics (ukbsci-proteomics): Assists with Olink protein associations.\n\nRAP Extraction (ukbsci-rap-extract): Defines guardrails preventing unauthorized export of individual-level data out of the Research Analysis Platform (RAP), while providing code logic to execute queries securely within the RAP environment.\n\nBy integrating these built-in skills, you can instruct your AI assistant simply. For example, you can request “Use the ukbsci-survival skill to write a Cox model script for incident diabetes adjusting for age and BMI,” and the agent will use standard UKBAnalytica API structures for reliable code generation.",
+    "crumbs": [
+      "Overview",
+      "AI Agent Skills",
+      "UKBAnalytica Skills"
+    ]
+  }
+]

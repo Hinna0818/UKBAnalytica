@@ -1,0 +1,253 @@
+# Variable Preprocessing {#preprocessing}
+
+After extracting data within RAP, the next step is to clean and recode baseline
+variables. UKBAnalytica provides `preprocess_baseline()` and several helper
+functions to handle this in a standardised way.
+
+## Available variables
+
+Use `get_variable_info()` to inspect the built-in variable catalogue:
+
+```r
+library(UKBAnalytica)
+
+# View all variables in a category
+get_variable_info("demographics")
+get_variable_info("lifestyle")
+get_variable_info("biomarkers")
+```
+
+```R
+> get_variable_info("demographics")
+   variable     category field_id ukb_column
+1       sex demographics       31        p31
+2       age demographics    21022     p21022
+3 ethnicity demographics    21000  p21000_i0
+                                                                                                                                                                                                                                                                                                                                                                                                                      description
+1                                                                                                                                                                                                                                                                                                                                                                                                 Sex; coding 9: 0=Female, 1=Male
+2                                                                                                                                                                                                                                                                                                                                                                                               Age at recruitment; integer years
+3 Ethnic background; coding 1001: White (British, Irish, Any other white background); Mixed (White and Black Caribbean, White and Black African, White and Asian, Any other mixed background); Asian or Asian British (Indian, Pakistani, Bangladeshi, Any other Asian background); Black or Black British (Caribbean, African, Any other Black background); Chinese; Other ethnic group; -1=Do not know; -3=Prefer not to answer
+> get_variable_info("lifestyle")
+            variable  category field_id ukb_column
+1            smoking lifestyle    20116  p20116_i0
+2           drinking lifestyle    20117  p20117_i0
+3     sleep_duration lifestyle     1160   p1160_i0
+4 exercise_intensity lifestyle    22032  p22032_i0
+                                                                                 description
+1         Smoking status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current
+2 Alcohol drinker status; coding 90: -3=Prefer not to answer, 0=Never, 1=Previous, 2=Current
+3  Sleep duration; integer hours/day; special values -1=Do not know, -3=Prefer not to answer
+4                              IPAQ activity group; coding 100700: 0=low, 1=moderate, 2=high
+> get_variable_info("biomarkers")
+       variable   category field_id ukb_column
+1 triglycerides biomarkers    30870  p30870_i0
+2           ldl biomarkers    30780  p30780_i0
+3           hdl biomarkers    30760  p30760_i0
+4         hba1c biomarkers    30750  p30750_i0
+5       glucose biomarkers    30740  p30740_i0
+                                        description
+1                  Triglycerides; continuous mmol/L
+2                     LDL direct; continuous mmol/L
+3                HDL cholesterol; continuous mmol/L
+4 Glycated haemoglobin (HbA1c); continuous mmol/mol
+5                        Glucose; continuous mmol/L
+```
+
+Each entry maps a human-readable name (e.g., `"bmi"`) to the corresponding UKB
+field column (e.g., `p21001_i0`).
+
+## How `preprocess_baseline()` works
+
+`preprocess_baseline()` uses the built-in variable catalogue to find the raw
+UKB column, creates a standardized output column, and applies a variable-specific
+processor when one is available.
+
+The variables with automatic recoding are:
+
+| Variable | Raw UKB coding | Processed output |
+|:--|:--|:--|
+| `sex` | Field 31; `0=Female`, `1=Male` | Factor: `Female`, `Male` |
+| `age` | Field 21022; integer years | Numeric age |
+| `ethnicity` | Field 21000; multiple ethnic background categories | Factor: `White`, `Others` |
+| `bmi` | Field 21001; kg/m^2^ | Numeric BMI |
+| `height` | Field 50; cm | Numeric height |
+| `weight` | Field 21002; kg | Numeric weight |
+| `smoking` | Field 20116; `0=Never`, `1=Previous`, `2=Current` | Factor: `Never`, `Previous`, `Current` |
+| `drinking` | Field 20117; `0=Never`, `1=Previous`, `2=Current` | Factor: `Never`, `Previous`, `Current` |
+| `sleep_duration` | Field 1160; hours/day | Numeric sleep duration; values outside 1--24 set to `NA` |
+| `education` | Field 6138; qualifications | Factor: `Low`, `Medium`, `High` |
+| `income` | Field 738; household income category | Integer category |
+
+For mapped variables without a dedicated processor, including most biomarkers,
+air-pollution variables, diet variables, blood-pressure raw readings, and
+custom variables, the function does a conservative default operation:
+
+1. copy the raw UKB column to the standardized variable name;
+2. if the raw column is numeric, convert `invalid_codes` to `NA`;
+3. leave the variable type otherwise unchanged.
+
+This means that if a variable is not supported by a dedicated processor, it is
+still useful for field extraction, column-name standardization, and basic
+missing-value handling, but study-specific recoding should be added by the user
+or by a downstream helper function.
+
+## Basic usage
+
+`preprocess_baseline()` selects, renames, and recodes the requested variables:
+  
+```r
+library(UKBAnalytica)
+library(data.table)
+
+ukb_data <- fread("population.csv")
+
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "ethnicity", "bmi",
+                "smoking", "education"),
+  missing_action = "keep")
+  
+head(processed)
+```
+
+Set `missing_action = "drop"` to remove any row that has `NA` in the selected
+variables.
+
+## Blood pressure
+
+UKB records automated and manual BP readings. The helper
+`calculate_blood_pressure()` averages available readings per participant:
+
+```r
+processed <- calculate_blood_pressure(processed, type = "sbp")
+processed <- calculate_blood_pressure(processed, type = "dbp")
+```
+
+This will create columns `sbp` and `dbp` from whichever readings are present
+(automated preferred, manual as fallback).
+
+## Medication use
+
+Extract binary indicators for medication use at baseline:
+
+```r
+processed <- extract_medications(
+  processed,
+  c("cholesterol", "blood_pressure", "insulin")
+)
+```
+
+The resulting columns are named `anti_cho`, `antihypertensive`, and `insulin`
+(1 = taking medication, 0 = not).
+
+## Air pollution exposure
+
+Calculate averaged air pollution exposures from the UKB environmental data:
+
+```r
+processed <- calculate_air_pollution(
+  processed,
+  c("NO2", "PM2.5", "PM10", "NOx")
+)
+```
+
+## Custom variable mapping
+
+If you need a UKB field that is not in the built-in catalogue, pass a
+`custom_mapping` list:
+
+```r
+custom <- list(
+  my_biomarker = list(
+    ukb_col = "p30000_i0",
+    description = "Custom biomarker"
+  )
+)
+
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("sex", "age", "my_biomarker"),
+  custom_mapping = custom
+)
+```
+
+The custom entry will be treated like any built-in variable -- the column is
+renamed and included in the output.
+
+For a custom variable, `preprocess_baseline()` will not guess the scientific
+recoding rule. A recommended pattern is to let UKBAnalytica standardize the
+column names first, and then apply a study-specific derivation function.
+
+```r
+derive_air_pollution_score <- function(dt) {
+  if (!data.table::is.data.table(dt)) {
+    dt <- data.table::as.data.table(dt)
+  }
+
+  dt[, air_pollution_score :=
+       as.numeric(scale(pm25)) + as.numeric(scale(no2))]
+  dt
+}
+
+custom <- list(
+  pm25 = list(
+    ukb_col = "p24006",
+    description = "PM2.5 air pollution; annual average"
+  ),
+  no2 = list(
+    ukb_col = "p24003",
+    description = "NO2 air pollution; 2010 estimate"
+  )
+)
+
+processed <- preprocess_baseline(
+  ukb_data,
+  variables = c("age", "sex", "pm25", "no2"),
+  custom_mapping = custom,
+  missing_action = "keep"
+)
+
+processed <- derive_air_pollution_score(processed)
+```
+
+This approach keeps the package responsible for UKB column matching, standard
+names, and basic missing-value handling, while keeping the research-specific
+definition explicit in the analysis script.
+
+## Complete preprocessing example
+
+A typical preprocessing pipeline for a cardiovascular study might look like
+this:
+
+```r
+library(UKBAnalytica)
+library(data.table)
+
+dt <- fread("population.csv")
+
+# Step 1: demographics + lifestyle + biomarkers
+dt <- preprocess_baseline(
+  dt,
+  variables = c(
+    "sex", "age", "ethnicity", "bmi",
+    "smoking", "drinking",
+    "sleep_duration", "exercise_intensity",
+    "education", "income",
+    "triglycerides", "ldl", "hdl", "hba1c"
+  )
+)
+
+# Step 2: blood pressure
+dt <- calculate_blood_pressure(dt, "sbp")
+dt <- calculate_blood_pressure(dt, "dbp")
+
+# Step 3: medications
+dt <- extract_medications(
+  dt, c("cholesterol", "blood_pressure", "insulin")
+)
+
+# Step 4: air pollution
+dt <- calculate_air_pollution(dt, c("NO2", "PM2.5"))
+
+str(dt)
+```

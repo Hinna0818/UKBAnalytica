@@ -1,0 +1,25 @@
+# UKBAnalytica Skills {#ukbanalytica-skills}
+
+This section introduces the AI agent skills built into UKBAnalytica. These skills enable conversational AI agents (such as GitHub Copilot) to assist with your analytic workflows by understanding the codebase, project structure, and UK Biobank standards.
+
+## Overview
+
+The `UKBAnalytica_skills` directory provides a comprehensive set of domain-specific skills for various stages of the epidemiological analysis pipeline in UK Biobank. The AI agents rely on these reference documents to write accurate code and structure results effectively.
+
+## Key Capabilities
+
+- **Baseline Construction (`ukbsci-baseline`)**: Automates creation of demographic and clinical baseline characteristics tables.
+- **Cohort Phenotyping (`ukbsci-cohort`)**: Formats disease catalog logic and extracts definitions directly from standardized clinical code lists (ICD-10, OPCS-4, etc.).
+- **Data Preprocessing (`ukbsci-preprocess`)**: Variable curation, renaming, cleaning, and formatting.
+- **Multiple Imputation (`ukbsci-imputation`)**: Implements standard missing data routines (MICE) correctly configured for UKB cohorts.
+- **Statistical Analysis**:
+    - **Regression Models (`ukbsci-regression`)**: Handles continuous and categorical outcomes.
+    - **Survival Analysis (`ukbsci-survival`)**: Standardizes proportional hazards (Cox) modeling and formatting of time-to-event outcomes.
+    - **Propensity Scores (`ukbsci-propensity`)** & **Mediation (`ukbsci-mediation`)**: Specialized capabilities for causal inference modeling.
+    - **Subgroup Sensitivity (`ukbsci-subgroup-sensitivity`)**: Evaluates consistency of effects across strata.
+- **Advanced Modules**:
+    - **Machine Learning (`ukbsci-ml`)**: Sets up hyperparameter tuning and model prediction pipelines.
+    - **Proteomics (`ukbsci-proteomics`)**: Assists with Olink protein associations.
+- **RAP Extraction (`ukbsci-rap-extract`)**: Defines guardrails preventing unauthorized export of individual-level data out of the Research Analysis Platform (RAP), while providing code logic to execute queries securely within the RAP environment.
+
+By integrating these built-in skills, you can instruct your AI assistant simply. For example, you can request *"Use the ukbsci-survival skill to write a Cox model script for incident diabetes adjusting for age and BMI,"* and the agent will use standard UKBAnalytica API structures for reliable code generation.

@@ -1,0 +1,117 @@
+project:
+  type: website
+  output-dir: ../docs
+  render:
+    - index.qmd
+    - 01-rap-download.qmd
+    - 02-preprocessing.qmd
+    - 03-disease-definitions.qmd
+    - 04-survival-analysis.qmd
+    - 05-baseline-table.qmd
+    - 06-imputation.qmd
+    - 07-main-analysis.qmd
+    - 08-advanced-analysis.qmd
+    - 09-machine-learning.qmd
+    - 10-proteomics-enrichment.qmd
+    - 11-ukbanalytica-skills.qmd
+    - 12-skill-creator.qmd
+
+website:
+  title: "UKBAnalytica"
+  description: "Scalable phenotyping and statistical workflow for UK Biobank RAP data"
+  repo-url: "https://github.com/Hinna0818/UKBAnalytica_v2"
+  repo-subdir: quarto-site
+  repo-actions: [source, issue]
+  page-navigation: true
+  reader-mode: true
+  search:
+    location: navbar
+    type: overlay
+  navbar:
+    logo: assets/logo.png
+    title: false
+    pinned: true
+    left:
+      - text: "Overview"
+        href: index.qmd
+      - text: "RAP workflow"
+        href: 01-rap-download.qmd
+      - text: "Phenotyping"
+        href: 03-disease-definitions.qmd
+      - text: "Analysis"
+        menu:
+          - text: "Baseline table"
+            href: 05-baseline-table.qmd
+          - text: "Multiple imputation"
+            href: 06-imputation.qmd
+          - text: "Main analysis"
+            href: 07-main-analysis.qmd
+          - text: "Advanced analysis"
+            href: 08-advanced-analysis.qmd
+          - text: "Survival analysis"
+            href: 04-survival-analysis.qmd
+          - text: "Machine learning"
+            href: 09-machine-learning.qmd
+          - text: "Bioinformatic and omics analyses"
+            href: 10-proteomics-enrichment.qmd
+      - text: "Skills"
+        menu:
+          - text: "UKBAnalytica Skills"
+            href: 11-ukbanalytica-skills.qmd
+          - text: "Skill Creator"
+            href: 12-skill-creator.qmd
+    right:
+      - text: "GitHub"
+        href: "https://github.com/Hinna0818/UKBAnalytica_v2"
+  sidebar:
+    style: docked
+    background: light
+    contents:
+      - section: "Start"
+        contents:
+          - index.qmd
+          - 01-rap-download.qmd
+          - 02-preprocessing.qmd
+      - section: "Cohort construction"
+        contents:
+          - 03-disease-definitions.qmd
+          - 04-survival-analysis.qmd
+          - 05-baseline-table.qmd
+      - section: "Analysis modules"
+        contents:
+          - 06-imputation.qmd
+          - 07-main-analysis.qmd
+          - 08-advanced-analysis.qmd
+          - 09-machine-learning.qmd
+          - 10-proteomics-enrichment.qmd
+      - section: "AI Agent Skills"
+        contents:
+          - 11-ukbanalytica-skills.qmd
+          - 12-skill-creator.qmd
+  page-footer:
+    left: "UKBAnalytica"
+    right: "Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects."
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    code-overflow: wrap
+    smooth-scroll: true
+    link-external-newwindow: true
+    grid:
+      sidebar-width: 260px
+      body-width: 900px
+      margin-width: 260px
+
+execute:
+  eval: false
+  echo: true
+  warning: false
+  message: false
+  freeze: auto

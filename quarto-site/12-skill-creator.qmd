@@ -1,0 +1,9 @@
+# Skill Creator {#skill-creator}
+
+The `skill-creator` folder contains a toolkit and agent instructions for generating and evaluating new custom skills.
+
+## Programmatic Skill Generation
+
+The skill creator provides instructions and evaluation templates (e.g., `smoke_test_core.R`) allowing developers to programmatically create and validate new AI agent skills based on the UKBAnalytica standard. 
+
+By utilizing these templates, you can extend the built-in capabilities and ensure new custom skills accurately conform to data privacy guidelines, UK Biobank workflow requirements, and the correct API designs for `UKBAnalytica`.
