@@ -43,7 +43,7 @@
       "name": "ukbsci-regression",
       "phase": "P3",
       "path": "ukbsci-regression",
-      "summary": "Batch linear / logistic / Cox regression with PH diagnostics, lag sensitivity, Fine-Gray competing risks, and trend tests."
+      "summary": "Batch linear / logistic / Cox / GLM / negative-binomial / GAM regression (unified run_regression interface) with PH diagnostics, lag sensitivity, competing risks, and trend tests."
     },
     {
       "name": "ukbsci-survival",
@@ -73,13 +73,19 @@
       "name": "ukbsci-subgroup-sensitivity",
       "phase": "P4",
       "path": "ukbsci-subgroup-sensitivity",
-      "summary": "Subgroup × interaction tests; sensitivity filters (drop early events, complete-case)."
+      "summary": "Subgroup × interaction tests across Cox / logistic / linear / GLM / negbin model families; sensitivity filters (drop early events, complete-case)."
     },
     {
       "name": "ukbsci-imputation",
       "phase": "P4",
       "path": "ukbsci-imputation",
       "summary": "Multiple imputation (mice) and Rubin's-rules pooling (mitools) with FMI diagnostics; supports custom-estimate pooling."
+    },
+    {
+      "name": "ukbsci-metabolomics",
+      "phase": "P5",
+      "path": "ukbsci-metabolomics",
+      "summary": "Nightingale NMR metabolite ORA: name mapping, classification, custom or MetaboAnalystR ORA, dot/bar plot visualization."
     },
     {
       "name": "ukbsci-proteomics",

@@ -1,0 +1,31 @@
+{
+  "skill": "ukbsci-metabolomics",
+  "version": "1.0.0",
+  "evals": [
+    {
+      "id": "metab-classify-001",
+      "prompt": "I have significant metabolites from my Cox analysis: Alanine, Glutamine, LDL Cholesterol, Apolipoprotein B. How do I classify them before ORA?",
+      "expected_behavior": "Call classify_metabolites(); explain that LDL Cholesterol and Apolipoprotein B are lipoprotein_lipid and protein respectively and will be excluded from small-molecule ORA."
+    },
+    {
+      "id": "metab-ora-001",
+      "prompt": "Run ORA for hits c('Alanine', 'Glutamine', 'Glycine', 'Lactate', 'Pyruvate') against a custom pathway library with columns pathway and metabolite.",
+      "expected_behavior": "Generate script calling run_metabolite_ora() with backend='custom', pathway_db supplied, p_adjust_method='BH'."
+    },
+    {
+      "id": "metab-plot-001",
+      "prompt": "Show me a dot plot of the ORA results.",
+      "expected_behavior": "Call plot_metabolite_ora_dotplot(ora) with reasonable top_n; mention fold_enrichment on x-axis and point size = hits."
+    },
+    {
+      "id": "metab-mapping-001",
+      "prompt": "My hit list includes '3OHB' which isn't in the built-in map. How do I add it?",
+      "expected_behavior": "Show metabolite_to_metaboanalyst_name() or run_metabolite_ora() with mapping_table parameter containing '3OHB' -> '3-Hydroxybutyric acid'."
+    },
+    {
+      "id": "metab-metaboanalyst-001",
+      "prompt": "Can I use MetaboAnalystR's smpdb_pathway library instead?",
+      "expected_behavior": "Set backend='metaboanalyst', library='smpdb_pathway', note that MetaboAnalystR must be installed and internet access is required; mention run_subprocess=TRUE default."
+    }
+  ]
+}

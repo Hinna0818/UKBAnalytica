@@ -3,16 +3,20 @@ name: ukbsci-subgroup-sensitivity
 description: >
   Subgroup interaction tests and sensitivity-analysis filters for UK Biobank
   Research Analysis Platform (RAP) cohorts built with UKBAnalytica. Covers
-  run_subgroup_analysis and run_multi_subgroup (stratum-specific Cox /
-  logistic / linear effects + interaction p-value),
+  run_subgroup_analysis and run_multi_subgroup (stratum-specific Cox / logistic /
+  linear / GLM / negative-binomial effects + interaction p-value),
   sensitivity_exclude_early_events (drop events within N years of baseline
   to guard against reverse causation), and sensitivity_exclude_missing_covariates
   (complete-case analysis with optional flow tracking). Use this skill when
   the user asks for subgroup analysis, interaction tests, effect modification,
-  complete-case sensitivity, or early-event exclusion sensitivity. Triggers:
-  subgroup analysis, interaction p-value, effect modification,
-  sensitivity analysis, complete-case analysis, lag analysis, 亚组分析,
-  敏感性分析, /ukbsci-subgroup-sensitivity. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
+  complete-case sensitivity, or early-event exclusion sensitivity. Subgroup
+  analysis now supports all model families: cox, logistic, linear, glm
+  (any GLM family including Poisson, quasi-Poisson, Gamma), and negbin
+  (negative-binomial). Triggers: subgroup analysis, interaction p-value,
+  effect modification, sensitivity analysis, complete-case analysis, lag analysis,
+  亚组分析, 敏感性分析, /ukbsci-subgroup-sensitivity. Hard rule: local agents must
+  not read or inspect real UKB RAP participant-level data; generate scripts for
+  RAP execution and interpret aggregate outputs only.
 ---
 
 # ukbsci-subgroup-sensitivity — Subgroup & sensitivity analyses
@@ -62,20 +66,53 @@ stopifnot(all(c("outcome_status", "outcome_surv_time") %in% colnames(cohort)))
 
 ### Phase 1 — Single-modifier subgroup analysis
 
+`run_subgroup_analysis()` estimates stratum-specific effects **and** an interaction
+p-value for any of five model families: `"cox"`, `"logistic"`, `"linear"`, `"glm"`,
+`"negbin"`.
+
 ```r
-sub <- run_subgroup_analysis(
+# Cox subgroup (default use-case)
+sub_cox <- run_subgroup_analysis(
   data         = cohort,
   exposure     = "sbp",
-  subgroup_var = "sex",                          # categorical modifier
+  subgroup_var = "sex",
   covariates   = c("age", "bmi", "smoking_status"),
   model_type   = "cox",
   endpoint     = c("outcome_surv_time", "outcome_status"),
   ref_level    = "Male"
 )
 # data.frame: one row per subgroup level
-#   subgroup_var, subgroup, n, n_event, estimate (HR/OR/β),
+#   subgroup_var, subgroup, n, n_event, estimate (HR / OR / β / IRR),
 #   lower95, upper95, pvalue, p_interaction
+
+# GLM subgroup — Poisson (incidence rate ratio)
+sub_glm <- run_subgroup_analysis(
+  data         = cohort,
+  exposure     = "sbp",
+  outcome      = "hospitalisation_count",
+  subgroup_var = "sex",
+  covariates   = c("age", "bmi", "smoking_status"),
+  model_type   = "glm",
+  family       = "poisson"
+)
+# family accepts character, function, or family object
+# quasi-Poisson → Wald CI; log/logit link → estimate column is exponentiated
+
+# Negative-binomial subgroup (IRR = exp(beta))
+sub_nb <- run_subgroup_analysis(
+  data         = cohort,
+  exposure     = "sbp",
+  outcome      = "hospitalisation_count",
+  subgroup_var = "sex",
+  covariates   = c("age", "bmi", "smoking_status"),
+  model_type   = "negbin"
+)
 ```
+
+**Interaction p-value method:**
+- Binary subgroup or continuous exposure × binary factor → Wald p on single interaction term.
+- Multi-level factor → likelihood-ratio test (LRT) via `anova()`; quasi-likelihood falls back
+  to an F-test.
 
 ### Phase 2 — Multiple modifiers
 
@@ -83,17 +120,16 @@ sub <- run_subgroup_analysis(
 multi_sub <- run_multi_subgroup(
   data           = cohort,
   exposure       = "sbp",
-  subgroup_vars  = c("sex", "age_band", "smoking_status",
-                     "Diabetes_history"),
+  subgroup_vars  = c("sex", "age_band", "smoking_status", "Diabetes_history"),
   covariates     = c("age", "bmi"),
-  model_type     = "cox",
+  model_type     = "cox",           # or "glm", "negbin", "logistic", "linear"
   endpoint       = c("outcome_surv_time", "outcome_status")
 )
 fwrite(multi_sub, "/mnt/project/<area>/04-results/03-cox_subgroup.csv")
 ```
 
-The output is long; `p_interaction` is repeated for each level of a
-given subgroup variable.
+The output is long; `p_interaction` is repeated for each level of a given subgroup variable.
+`model_type` and `family` are forwarded to `run_subgroup_analysis()` — all five families apply.
 
 ### Phase 3 — Sensitivity analysis: drop early events
 
@@ -177,10 +213,21 @@ check, not the main analysis.
 
 | Function | Returns |
 |----------|---------|
-| `run_subgroup_analysis(data, exposure, outcome = NULL, subgroup_var, covariates = NULL, model_type, endpoint = NULL, ref_level = NULL)` | data.frame: per-level estimates + `p_interaction` |
-| `run_multi_subgroup(..., subgroup_vars)` | concatenated long table |
+| `run_subgroup_analysis(data, exposure, outcome = NULL, subgroup_var, covariates = NULL, model_type = c("cox","logistic","linear","glm","negbin"), family = "poisson", endpoint = NULL, ref_level = NULL)` | data.frame: per-level estimates + `p_interaction` |
+| `run_multi_subgroup(..., subgroup_vars, model_type, family)` | concatenated long table |
 | `sensitivity_exclude_early_events(data, endpoint, n_years, copy = TRUE, verbose = TRUE)` | filtered data + `sensitivity_info` attr |
 | `sensitivity_exclude_missing_covariates(data, covariates, copy = TRUE, stepwise = FALSE, verbose = TRUE)` | filtered data + `sensitivity_info` (+ `complete_case_flow` if stepwise) |
+
+**`model_type` effect estimate column mapping:**
+
+| `model_type` | `estimate` column | CI method |
+|---|---|---|
+| `"cox"` | Hazard ratio (HR) | `summary(coxph)$conf.int` |
+| `"logistic"` | Odds ratio (OR) | Profile-likelihood |
+| `"linear"` | Beta (mean difference) | `confint(lm)` |
+| `"glm"` log/logit link | Ratio `exp(beta)` | Profile-likelihood (Wald for quasi) |
+| `"glm"` identity link | Beta | Profile-likelihood |
+| `"negbin"` | IRR `exp(beta)` | Profile-likelihood |
 
 ---
 
