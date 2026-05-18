@@ -337,8 +337,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Machine learning</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./10-proteomics-enrichment.html">
- <span class="dropdown-text">Bioinformatic and omics analyses</span></a>
+    <a class="dropdown-item" href="./bioinformatics-omics.html">
+ <span class="dropdown-text">Bioinformatics and omics analyses</span></a>
   </li>  
     </ul>
   </li>
@@ -485,8 +485,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./10-proteomics-enrichment.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Bioinformatic and omics analyses</span></a>
+  <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Bioinformatics and omics analyses</span></a>
   </div>
 </li>
       </ul>
@@ -532,6 +532,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#linear-regression" id="toc-linear-regression" class="nav-link" data-scroll-target="#linear-regression">Linear regression</a></li>
   <li><a href="#logistic-regression" id="toc-logistic-regression" class="nav-link" data-scroll-target="#logistic-regression">Logistic regression</a></li>
   <li><a href="#cox-proportional-hazards-regression" id="toc-cox-proportional-hazards-regression" class="nav-link" data-scroll-target="#cox-proportional-hazards-regression">Cox proportional hazards regression</a></li>
+  <li><a href="#generalised-linear-models" id="toc-generalised-linear-models" class="nav-link" data-scroll-target="#generalised-linear-models">Generalised linear models</a></li>
+  <li><a href="#negative-binomial-regression" id="toc-negative-binomial-regression" class="nav-link" data-scroll-target="#negative-binomial-regression">Negative-binomial regression</a></li>
+  <li><a href="#generalised-additive-models-gam" id="toc-generalised-additive-models-gam" class="nav-link" data-scroll-target="#generalised-additive-models-gam">Generalised additive models (GAM)</a></li>
+  </ul></li>
+  <li><a href="#run-regression" id="toc-run-regression" class="nav-link" data-scroll-target="#run-regression">Unified interface: <code>run_regression()</code></a>
+  <ul class="collapse">
+  <li><a href="#continuous-outcome" id="toc-continuous-outcome" class="nav-link" data-scroll-target="#continuous-outcome">Continuous outcome</a></li>
+  <li><a href="#binary-outcome" id="toc-binary-outcome" class="nav-link" data-scroll-target="#binary-outcome">Binary outcome</a></li>
+  <li><a href="#time-to-event-outcome" id="toc-time-to-event-outcome" class="nav-link" data-scroll-target="#time-to-event-outcome">Time-to-event outcome</a></li>
+  <li><a href="#count-outcome-glm" id="toc-count-outcome-glm" class="nav-link" data-scroll-target="#count-outcome-glm">Count outcome (GLM)</a></li>
+  <li><a href="#count-outcome-negative-binomial" id="toc-count-outcome-negative-binomial" class="nav-link" data-scroll-target="#count-outcome-negative-binomial">Count outcome (negative-binomial)</a></li>
+  <li><a href="#non-linear-screening-gam" id="toc-non-linear-screening-gam" class="nav-link" data-scroll-target="#non-linear-screening-gam">Non-linear screening (GAM)</a></li>
   </ul></li>
   <li><a href="#minimal-workflow" id="toc-minimal-workflow" class="nav-link" data-scroll-target="#minimal-workflow">Minimal workflow</a></li>
   </ul></li>
@@ -547,7 +559,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="main-analysis" class="level1">
 <h1>Main analysis</h1>
-<p>This chapter shows the core statistical-analysis functions in <strong>UKBAnalytica</strong>. The main workflow is intentionally simple: first inspect correlations among candidate variables, then run one of three regression families according to the outcome type.</p>
+<p>This chapter shows the core statistical-analysis functions in <strong>UKBAnalytica</strong>. The main workflow is intentionally simple: first inspect correlations among candidate variables, then run one of six regression families according to the outcome type — either via the individual functions or through the unified <code>run_regression()</code> interface.</p>
 <section id="correlation" class="level2">
 <h2 class="anchored" data-anchor-id="correlation">Correlation pre-analysis</h2>
 <p>Before regression modeling, <code>run_correlation()</code> can be used to inspect correlations among candidate exposures or covariates. This is useful for identifying highly correlated variables before building adjusted models.</p>
@@ -576,8 +588,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="regression" class="level2">
 <h2 class="anchored" data-anchor-id="regression">Regression analyses</h2>
-<p>The three main regression functions share the same design: each variable in <code>main_var</code> is tested separately, and <code>covariates</code> defines the adjustment set. This makes it straightforward to screen multiple exposures while keeping model specification consistent.</p>
+<p>The six main regression functions share the same design: each variable in <code>main_var</code> is tested separately, and <code>covariates</code> defines the adjustment set. This makes it straightforward to screen multiple exposures while keeping model specification consistent.</p>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
 <thead>
 <tr class="header">
 <th>Outcome type</th>
@@ -589,7 +606,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>Continuous outcome</td>
 <td><code>runmulti_lm()</code></td>
-<td>beta</td>
+<td>beta (mean difference)</td>
 </tr>
 <tr class="even">
 <td>Binary outcome</td>
@@ -600,6 +617,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Time-to-event outcome</td>
 <td><code>runmulti_cox()</code></td>
 <td>hazard ratio (HR)</td>
+</tr>
+<tr class="even">
+<td>Count / rate outcome</td>
+<td><code>runmulti_glm()</code></td>
+<td>beta on link scale</td>
+</tr>
+<tr class="odd">
+<td>Overdispersed count</td>
+<td><code>runmulti_negbin()</code></td>
+<td>incidence rate ratio (IRR)</td>
+</tr>
+<tr class="even">
+<td>Non-linear association</td>
+<td><code>runmulti_gam()</code></td>
+<td>edf + p-value (smooth) / beta (linear)</td>
 </tr>
 </tbody>
 </table>
@@ -653,31 +685,304 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>The output includes <code>variable</code>, <code>coef</code>, <code>HR</code>, <code>lower95</code>, <code>upper95</code>, <code>pvalue</code>, <code>n</code>, and <code>n_event</code>. The <code>endpoint</code> argument should contain the follow-up time column followed by the event indicator column, where 1 indicates an incident event and 0 indicates censoring.</p>
 </section>
+<section id="generalised-linear-models" class="level3">
+<h3 class="anchored" data-anchor-id="generalised-linear-models">Generalised linear models</h3>
+<p>Use <code>runmulti_glm()</code> when the outcome distribution does not fit linear or logistic regression — for example, count outcomes (Poisson), overdispersed counts (quasi-Poisson), or positive-continuous outcomes (Gamma).</p>
+<p>The <code>family</code> argument accepts a character string, a family function, or a family object, which allows the link function to be customised.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Poisson regression — incidence rate ratio = exp(beta)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>poisson_res <span class="ot">&lt;-</span> <span class="fu">runmulti_glm</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">"poisson"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>poisson_res</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co"># exp(poisson_res$beta)      # incidence rate ratio</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># exp(poisson_res$lower95)   # lower 95 % CI on ratio scale</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co"># exp(poisson_res$upper95)   # upper 95 % CI on ratio scale</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The output includes <code>variable</code>, <code>family</code>, <code>link</code>, <code>beta</code>, <code>lower95</code>, <code>upper95</code>, <code>pvalue</code>, and <code>n</code>. Coefficients are on the link scale; for log-link families exponentiate to obtain the ratio-scale effect.</p>
+<p>For overdispersed count outcomes, switch to quasi-Poisson. Confidence intervals are computed via the Wald method because profile-likelihood CIs are not available for quasi-likelihood models.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>qpois_res <span class="ot">&lt;-</span> <span class="fu">runmulti_glm</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">"quasipoisson"</span>,          <span class="co"># Wald CI used automatically</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For positive-continuous outcomes such as biomarker concentrations, a Gamma model with a log link is often preferable to a log-transformed linear model.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>gamma_res <span class="ot">&lt;-</span> <span class="fu">runmulti_glm</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> stats<span class="sc">::</span><span class="fu">Gamma</span>(<span class="at">link =</span> <span class="st">"log"</span>),  <span class="co"># family object with custom link</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"crp"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="negative-binomial-regression" class="level3">
+<h3 class="anchored" data-anchor-id="negative-binomial-regression">Negative-binomial regression</h3>
+<p>Use <code>runmulti_negbin()</code> for overdispersed count outcomes as a more principled alternative to quasi-Poisson. The model estimates the overdispersion parameter <code>theta</code> alongside the effect; larger <code>theta</code> indicates less overdispersion (approaching Poisson behaviour as <code>theta → ∞</code>).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>negbin_res <span class="ot">&lt;-</span> <span class="fu">runmulti_negbin</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>negbin_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The output includes <code>variable</code>, <code>IRR</code> (incidence rate ratio = <code>exp(beta)</code>), <code>lower95</code>, <code>upper95</code>, <code>pvalue</code>, <code>theta</code>, and <code>n</code>. Confidence intervals use profile likelihood.</p>
+<p><strong>When to prefer negative-binomial over quasi-Poisson:</strong> negative-binomial is a proper probability model with a likelihood, enabling AIC-based model comparison and more reliable inference under heavy overdispersion. Quasi-Poisson adjusts the standard errors but does not change the coefficient estimates.</p>
+</section>
+<section id="generalised-additive-models-gam" class="level3">
+<h3 class="anchored" data-anchor-id="generalised-additive-models-gam">Generalised additive models (GAM)</h3>
+<p>Use <code>runmulti_gam()</code> to test whether exposures have non-linear associations with the outcome. By default each main variable enters the model as a penalised thin-plate regression spline <code>s(var)</code>, allowing the dose-response curve to take any smooth shape.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gam_res <span class="ot">&lt;-</span> <span class="fu">runmulti_gam</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>gam_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>When <code>smooth = TRUE</code> (default) the output includes <code>variable</code>, <code>edf</code> (estimated degrees of freedom), <code>ref_df</code>, <code>stat</code> (F- or chi-squared statistic depending on the response family), <code>stat_type</code>, <code>pvalue</code>, <code>family</code>, <code>link</code>, and <code>n</code>. An <code>edf</code> close to 1 suggests a near-linear relationship; <code>edf &gt; 1</code> indicates non-linearity.</p>
+<p>A common workflow is to screen with the smooth GAM first, then re-fit a linear model for variables where <code>edf ≈ 1</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1 — screen for non-linearity</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>gam_screen <span class="ot">&lt;-</span> <span class="fu">runmulti_gam</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"hba1c"</span>, <span class="st">"crp"</span>, <span class="st">"age"</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Variables with edf close to 1 are approximately linear</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>linear_vars  <span class="ot">&lt;-</span> gam_screen<span class="sc">$</span>variable[gam_screen<span class="sc">$</span>edf <span class="sc">&lt;</span> <span class="fl">1.5</span>]</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>nonlin_vars  <span class="ot">&lt;-</span> gam_screen<span class="sc">$</span>variable[gam_screen<span class="sc">$</span>edf <span class="sc">&gt;=</span> <span class="fl">1.5</span>]</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2 — fit linear model for linear variables</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>lm_res <span class="ot">&lt;-</span> <span class="fu">runmulti_lm</span>(</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> linear_vars,</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3 — keep GAM smooth for non-linear variables (visualise separately)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For count outcomes, specify the appropriate family.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>gam_count <span class="ot">&lt;-</span> <span class="fu">runmulti_gam</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">family =</span> <span class="st">"poisson"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co"># stat_type will be "Chi.sq" for Poisson (vs "F" for Gaussian)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>To fit a parametric linear term inside a GAM (e.g.&nbsp;when non-linearity is ruled out but GAM covariates are still desired), set <code>smooth = FALSE</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gam_linear <span class="ot">&lt;-</span> <span class="fu">runmulti_gam</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">smooth =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Output mirrors runmulti_glm: beta, lower95, upper95, pvalue</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="run-regression" class="level2">
+<h2 class="anchored" data-anchor-id="run-regression">Unified interface: <code>run_regression()</code></h2>
+<p><code>run_regression()</code> wraps all six regression functions behind a single call. The <code>type</code> argument selects the model family; all other arguments are forwarded to the corresponding underlying function.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>type</code></th>
+<th>Underlying function</th>
+<th>Key extra args</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"lm"</code></td>
+<td><code>runmulti_lm()</code></td>
+<td><code>outcome</code></td>
+</tr>
+<tr class="even">
+<td><code>"logit"</code></td>
+<td><code>runmulti_logit()</code></td>
+<td><code>outcome</code></td>
+</tr>
+<tr class="odd">
+<td><code>"cox"</code></td>
+<td><code>runmulti_cox()</code></td>
+<td><code>endpoint</code></td>
+</tr>
+<tr class="even">
+<td><code>"glm"</code></td>
+<td><code>runmulti_glm()</code></td>
+<td><code>outcome</code>, <code>family</code> (default <code>"poisson"</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>"negbin"</code></td>
+<td><code>runmulti_negbin()</code></td>
+<td><code>outcome</code></td>
+</tr>
+<tr class="even">
+<td><code>"gam"</code></td>
+<td><code>runmulti_gam()</code></td>
+<td><code>outcome</code>, <code>family</code>, <code>smooth</code></td>
+</tr>
+</tbody>
+</table>
+<section id="continuous-outcome" class="level3">
+<h3 class="anchored" data-anchor-id="continuous-outcome">Continuous outcome</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"lm"</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="binary-outcome" class="level3">
+<h3 class="anchored" data-anchor-id="binary-outcome">Binary outcome</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"logit"</span>,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"diabetes_status"</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="time-to-event-outcome" class="level3">
+<h3 class="anchored" data-anchor-id="time-to-event-outcome">Time-to-event outcome</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> survival_data,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"cox"</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint   =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="count-outcome-glm" class="level3">
+<h3 class="anchored" data-anchor-id="count-outcome-glm">Count outcome (GLM)</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"glm"</span>,</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">family     =</span> <span class="st">"poisson"</span>,            <span class="co"># default; change to "quasipoisson" etc.</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="count-outcome-negative-binomial" class="level3">
+<h3 class="anchored" data-anchor-id="count-outcome-negative-binomial">Count outcome (negative-binomial)</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"negbin"</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="non-linear-screening-gam" class="level3">
+<h3 class="anchored" data-anchor-id="non-linear-screening-gam">Non-linear screening (GAM)</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Smooth GAM (default) — tests association and non-linearity</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"gam"</span>,</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Linear GAM — parametric term inside a GAM framework</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="fu">run_regression</span>(</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"gam"</span>,</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">smooth     =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><code>run_regression()</code> is convenient when the model type is determined programmatically or when a single, consistent call site is preferred across different analysis scripts.</p>
+</section>
 </section>
 <section id="minimal-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="minimal-workflow">Minimal workflow</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>exposures <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>adjustment <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>corr_mat <span class="ot">&lt;-</span> <span class="fu">run_correlation</span>(</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  analysis_data,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">vars =</span> <span class="fu">c</span>(exposures, adjustment),</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"spearman"</span>,</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">threshold =</span> <span class="fl">0.70</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>cox_res <span class="ot">&lt;-</span> <span class="fu">runmulti_cox</span>(</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> survival_data,</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var =</span> exposures,</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> adjustment</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>cox_res<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_res<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>cox_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>exposures  <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"hba1c"</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>adjustment <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Pre-analysis: correlation screening</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>corr_mat <span class="ot">&lt;-</span> <span class="fu">run_correlation</span>(</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  analysis_data,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">vars      =</span> <span class="fu">c</span>(exposures, adjustment),</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">method    =</span> <span class="st">"spearman"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">threshold =</span> <span class="fl">0.70</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Non-linearity check with GAM before committing to linear Cox</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>gam_screen <span class="ot">&lt;-</span> <span class="fu">run_regression</span>(</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> exposures,</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"gam"</span>,</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"sbp"</span>,</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> adjustment</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Primary analysis: Cox regression for incident events</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>cox_res <span class="ot">&lt;-</span> <span class="fu">run_regression</span>(</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> survival_data,</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> exposures,</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"cox"</span>,</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint   =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> adjustment</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>cox_res<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_res<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Secondary: negative-binomial for hospital admissions count</span></span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>negbin_res <span class="ot">&lt;-</span> <span class="fu">run_regression</span>(</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> analysis_data,</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>  <span class="at">main_var   =</span> exposures,</span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">type       =</span> <span class="st">"negbin"</span>,</span>
+<span id="cb21-36"><a href="#cb21-36" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome    =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb21-37"><a href="#cb21-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> adjustment</span>
+<span id="cb21-38"><a href="#cb21-38" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-39"><a href="#cb21-39" aria-hidden="true" tabindex="-1"></a>negbin_res<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(negbin_res<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>This structure covers the main statistical layer of UKBAnalytica: correlation pre-analysis followed by linear, logistic, or Cox regression according to the outcome definition.</p>
+<p>This structure covers the main statistical layer of UKBAnalytica: correlation pre-analysis, non-linearity screening with GAM, followed by linear, logistic, Cox, generalised linear, negative-binomial, or GAM regression according to the outcome definition.</p>
 
 
 </section>

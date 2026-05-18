@@ -10,7 +10,8 @@ run_subgroup_analysis(
   outcome = NULL,
   subgroup_var,
   covariates = NULL,
-  model_type = c("cox", "logistic", "linear"),
+  model_type = c("cox", "logistic", "linear", "glm", "negbin"),
+  family = "poisson",
   endpoint = NULL,
   ref_level = NULL
 )
@@ -27,7 +28,12 @@ For Cox models, this can be NULL if endpoint is specified.}
 
 \item{covariates}{Character vector of covariate names to adjust for. Default NULL.}
 
-\item{model_type}{Character string specifying model type: "cox", "logistic", or "linear".}
+\item{model_type}{Character string specifying model type: \code{"cox"},
+\code{"logistic"}, \code{"linear"}, \code{"glm"}, or \code{"negbin"}.}
+
+\item{family}{For \code{model_type = "glm"} only: the GLM family.  Accepts
+a character string, function, or family object (see
+\code{\link{runmulti_glm}}).  Default \code{"poisson"}.}
 
 \item{endpoint}{Character vector of length 2 for Cox models: c("time", "status").
 Required when model_type = "cox".}

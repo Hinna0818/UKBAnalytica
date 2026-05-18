@@ -2,8 +2,9 @@
 
 This chapter shows the core statistical-analysis functions in
 **UKBAnalytica**. The main workflow is intentionally simple: first inspect
-correlations among candidate variables, then run one of three regression
-families according to the outcome type.
+correlations among candidate variables, then run one of six regression
+families according to the outcome type — either via the individual functions
+or through the unified `run_regression()` interface.
 
 ## Correlation pre-analysis {#correlation}
 
@@ -40,16 +41,19 @@ and `method = "spearman"` for rank-based or skewed variables.
 
 ## Regression analyses {#regression}
 
-The three main regression functions share the same design: each variable in
+The six main regression functions share the same design: each variable in
 `main_var` is tested separately, and `covariates` defines the adjustment set.
 This makes it straightforward to screen multiple exposures while keeping model
 specification consistent.
 
 | Outcome type | Function | Effect estimate |
 |---|---|---|
-| Continuous outcome | `runmulti_lm()` | beta |
+| Continuous outcome | `runmulti_lm()` | beta (mean difference) |
 | Binary outcome | `runmulti_logit()` | odds ratio (OR) |
 | Time-to-event outcome | `runmulti_cox()` | hazard ratio (HR) |
+| Count / rate outcome | `runmulti_glm()` | beta on link scale |
+| Overdispersed count | `runmulti_negbin()` | incidence rate ratio (IRR) |
+| Non-linear association | `runmulti_gam()` | edf + p-value (smooth) / beta (linear) |
 
 For high-dimensional analyses, such as biomarker or protein screening, adjust
 the returned p-values with `p.adjust()`.
@@ -116,30 +120,316 @@ The output includes `variable`, `coef`, `HR`, `lower95`, `upper95`, `pvalue`,
 column followed by the event indicator column, where 1 indicates an incident
 event and 0 indicates censoring.
 
+### Generalised linear models
+
+Use `runmulti_glm()` when the outcome distribution does not fit linear or
+logistic regression — for example, count outcomes (Poisson), overdispersed
+counts (quasi-Poisson), or positive-continuous outcomes (Gamma).
+
+The `family` argument accepts a character string, a family function, or a
+family object, which allows the link function to be customised.
+
+```{r glm-poisson, eval=FALSE}
+# Poisson regression — incidence rate ratio = exp(beta)
+poisson_res <- runmulti_glm(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status", "hba1c"),
+  family = "poisson",
+  outcome = "hospitalisation_count",
+  covariates = c("age", "sex", "ethnic")
+)
+
+poisson_res
+# exp(poisson_res$beta)      # incidence rate ratio
+# exp(poisson_res$lower95)   # lower 95 % CI on ratio scale
+# exp(poisson_res$upper95)   # upper 95 % CI on ratio scale
+```
+
+The output includes `variable`, `family`, `link`, `beta`, `lower95`,
+`upper95`, `pvalue`, and `n`. Coefficients are on the link scale; for
+log-link families exponentiate to obtain the ratio-scale effect.
+
+For overdispersed count outcomes, switch to quasi-Poisson. Confidence
+intervals are computed via the Wald method because profile-likelihood CIs are
+not available for quasi-likelihood models.
+
+```{r glm-quasipoisson, eval=FALSE}
+qpois_res <- runmulti_glm(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status"),
+  family = "quasipoisson",          # Wald CI used automatically
+  outcome = "hospitalisation_count",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+For positive-continuous outcomes such as biomarker concentrations, a Gamma
+model with a log link is often preferable to a log-transformed linear model.
+
+```{r glm-gamma, eval=FALSE}
+gamma_res <- runmulti_glm(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status"),
+  family = stats::Gamma(link = "log"),  # family object with custom link
+  outcome = "crp",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Negative-binomial regression
+
+Use `runmulti_negbin()` for overdispersed count outcomes as a more principled
+alternative to quasi-Poisson.  The model estimates the overdispersion
+parameter `theta` alongside the effect; larger `theta` indicates less
+overdispersion (approaching Poisson behaviour as `theta → ∞`).
+
+```{r negbin-example, eval=FALSE}
+negbin_res <- runmulti_negbin(
+  data = analysis_data,
+  main_var = c("bmi", "smoking_status", "hba1c"),
+  outcome = "hospitalisation_count",
+  covariates = c("age", "sex", "ethnic")
+)
+
+negbin_res
+```
+
+The output includes `variable`, `IRR` (incidence rate ratio = `exp(beta)`),
+`lower95`, `upper95`, `pvalue`, `theta`, and `n`.  Confidence intervals use
+profile likelihood.
+
+**When to prefer negative-binomial over quasi-Poisson:** negative-binomial is
+a proper probability model with a likelihood, enabling AIC-based model
+comparison and more reliable inference under heavy overdispersion.
+Quasi-Poisson adjusts the standard errors but does not change the coefficient
+estimates.
+
+### Generalised additive models (GAM)
+
+Use `runmulti_gam()` to test whether exposures have non-linear associations
+with the outcome.  By default each main variable enters the model as a
+penalised thin-plate regression spline `s(var)`, allowing the dose-response
+curve to take any smooth shape.
+
+```{r gam-smooth, eval=FALSE}
+gam_res <- runmulti_gam(
+  data = analysis_data,
+  main_var = c("bmi", "hba1c"),
+  outcome = "sbp",
+  covariates = c("age", "sex", "ethnic")
+)
+
+gam_res
+```
+
+When `smooth = TRUE` (default) the output includes `variable`, `edf`
+(estimated degrees of freedom), `ref_df`, `stat` (F- or chi-squared
+statistic depending on the response family), `stat_type`, `pvalue`, `family`,
+`link`, and `n`.  An `edf` close to 1 suggests a near-linear relationship;
+`edf > 1` indicates non-linearity.
+
+A common workflow is to screen with the smooth GAM first, then re-fit a
+linear model for variables where `edf ≈ 1`.
+
+```{r gam-workflow, eval=FALSE}
+# Step 1 — screen for non-linearity
+gam_screen <- runmulti_gam(
+  data = analysis_data,
+  main_var = c("bmi", "hba1c", "crp", "age"),
+  outcome = "sbp",
+  covariates = c("sex", "ethnic")
+)
+
+# Variables with edf close to 1 are approximately linear
+linear_vars  <- gam_screen$variable[gam_screen$edf < 1.5]
+nonlin_vars  <- gam_screen$variable[gam_screen$edf >= 1.5]
+
+# Step 2 — fit linear model for linear variables
+lm_res <- runmulti_lm(
+  data = analysis_data,
+  main_var = linear_vars,
+  outcome = "sbp",
+  covariates = c("sex", "ethnic")
+)
+
+# Step 3 — keep GAM smooth for non-linear variables (visualise separately)
+```
+
+For count outcomes, specify the appropriate family.
+
+```{r gam-poisson, eval=FALSE}
+gam_count <- runmulti_gam(
+  data = analysis_data,
+  main_var = c("bmi", "hba1c"),
+  outcome = "hospitalisation_count",
+  family = "poisson",
+  covariates = c("age", "sex", "ethnic")
+)
+# stat_type will be "Chi.sq" for Poisson (vs "F" for Gaussian)
+```
+
+To fit a parametric linear term inside a GAM (e.g. when non-linearity is
+ruled out but GAM covariates are still desired), set `smooth = FALSE`.
+
+```{r gam-linear, eval=FALSE}
+gam_linear <- runmulti_gam(
+  data = analysis_data,
+  main_var = c("bmi", "hba1c"),
+  outcome = "sbp",
+  smooth = FALSE,
+  covariates = c("age", "sex", "ethnic")
+)
+# Output mirrors runmulti_glm: beta, lower95, upper95, pvalue
+```
+
+## Unified interface: `run_regression()` {#run-regression}
+
+`run_regression()` wraps all six regression functions behind a single call.
+The `type` argument selects the model family; all other arguments are
+forwarded to the corresponding underlying function.
+
+| `type` | Underlying function | Key extra args |
+|---|---|---|
+| `"lm"` | `runmulti_lm()` | `outcome` |
+| `"logit"` | `runmulti_logit()` | `outcome` |
+| `"cox"` | `runmulti_cox()` | `endpoint` |
+| `"glm"` | `runmulti_glm()` | `outcome`, `family` (default `"poisson"`) |
+| `"negbin"` | `runmulti_negbin()` | `outcome` |
+| `"gam"` | `runmulti_gam()` | `outcome`, `family`, `smooth` |
+
+### Continuous outcome
+
+```{r rr-lm, eval=FALSE}
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "lm",
+  outcome    = "sbp",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Binary outcome
+
+```{r rr-logit, eval=FALSE}
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "logit",
+  outcome    = "diabetes_status",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Time-to-event outcome
+
+```{r rr-cox, eval=FALSE}
+run_regression(
+  data       = survival_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "cox",
+  endpoint   = c("follow_up_time", "incident_status"),
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Count outcome (GLM)
+
+```{r rr-glm, eval=FALSE}
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "glm",
+  family     = "poisson",            # default; change to "quasipoisson" etc.
+  outcome    = "hospitalisation_count",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Count outcome (negative-binomial)
+
+```{r rr-negbin, eval=FALSE}
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "negbin",
+  outcome    = "hospitalisation_count",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+### Non-linear screening (GAM)
+
+```{r rr-gam, eval=FALSE}
+# Smooth GAM (default) — tests association and non-linearity
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "smoking_status", "hba1c"),
+  type       = "gam",
+  outcome    = "sbp",
+  covariates = c("age", "sex", "ethnic")
+)
+
+# Linear GAM — parametric term inside a GAM framework
+run_regression(
+  data       = analysis_data,
+  main_var   = c("bmi", "hba1c"),
+  type       = "gam",
+  smooth     = FALSE,
+  outcome    = "sbp",
+  covariates = c("age", "sex", "ethnic")
+)
+```
+
+`run_regression()` is convenient when the model type is determined
+programmatically or when a single, consistent call site is preferred across
+different analysis scripts.
+
 ## Minimal workflow
 
 ```{r minimal-workflow, eval=FALSE}
-exposures <- c("bmi", "smoking_status", "hba1c")
+exposures  <- c("bmi", "smoking_status", "hba1c")
 adjustment <- c("age", "sex", "ethnic")
 
+# Pre-analysis: correlation screening
 corr_mat <- run_correlation(
   analysis_data,
-  vars = c(exposures, adjustment),
-  method = "spearman",
+  vars      = c(exposures, adjustment),
+  method    = "spearman",
   threshold = 0.70
 )
 
-cox_res <- runmulti_cox(
-  data = survival_data,
-  main_var = exposures,
-  endpoint = c("follow_up_time", "incident_status"),
+# Non-linearity check with GAM before committing to linear Cox
+gam_screen <- run_regression(
+  data       = analysis_data,
+  main_var   = exposures,
+  type       = "gam",
+  outcome    = "sbp",
   covariates = adjustment
 )
 
+# Primary analysis: Cox regression for incident events
+cox_res <- run_regression(
+  data       = survival_data,
+  main_var   = exposures,
+  type       = "cox",
+  endpoint   = c("follow_up_time", "incident_status"),
+  covariates = adjustment
+)
 cox_res$p_bh <- p.adjust(cox_res$pvalue, method = "BH")
-cox_res
+
+# Secondary: negative-binomial for hospital admissions count
+negbin_res <- run_regression(
+  data       = analysis_data,
+  main_var   = exposures,
+  type       = "negbin",
+  outcome    = "hospitalisation_count",
+  covariates = adjustment
+)
+negbin_res$p_bh <- p.adjust(negbin_res$pvalue, method = "BH")
 ```
 
 This structure covers the main statistical layer of UKBAnalytica: correlation
-pre-analysis followed by linear, logistic, or Cox regression according to the
+pre-analysis, non-linearity screening with GAM, followed by linear, logistic,
+Cox, generalised linear, negative-binomial, or GAM regression according to the
 outcome definition.

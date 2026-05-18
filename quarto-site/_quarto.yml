@@ -12,7 +12,7 @@ project:
     - 07-main-analysis.qmd
     - 08-advanced-analysis.qmd
     - 09-machine-learning.qmd
-    - 10-proteomics-enrichment.qmd
+    - bioinformatics-omics.qmd
     - 11-ukbanalytica-skills.qmd
     - 12-skill-creator.qmd
 
@@ -52,8 +52,8 @@ website:
             href: 04-survival-analysis.qmd
           - text: "Machine learning"
             href: 09-machine-learning.qmd
-          - text: "Bioinformatic and omics analyses"
-            href: 10-proteomics-enrichment.qmd
+          - text: "Bioinformatics and omics analyses"
+            href: bioinformatics-omics.qmd
       - text: "Skills"
         menu:
           - text: "UKBAnalytica Skills"
@@ -83,7 +83,7 @@ website:
           - 07-main-analysis.qmd
           - 08-advanced-analysis.qmd
           - 09-machine-learning.qmd
-          - 10-proteomics-enrichment.qmd
+          - bioinformatics-omics.qmd
       - section: "AI Agent Skills"
         contents:
           - 11-ukbanalytica-skills.qmd

@@ -18,45 +18,106 @@ chapter.
 
 ## Subgroup analysis {#subgroup}
 
-`run_subgroup_analysis()` fits the same model within each level of a subgroup
-variable and reports an interaction p-value. Cox, logistic, and linear models
-are supported.
+`run_subgroup_analysis()` estimates an interaction p-value from a full model
+containing an exposure-by-subgroup term, then refits separate models within
+each subgroup level and returns a harmonised table of effect estimates,
+confidence intervals, and interaction statistics.
 
-```{r subgroup-basic, eval=FALSE}
+Five model families are supported via the `model_type` argument:
+
+| `model_type` | Fitting function | Effect estimate |
+|---|---|---|
+| `"cox"` | `survival::coxph()` | Hazard ratio (HR) |
+| `"logistic"` | `stats::glm(binomial)` | Odds ratio (OR) |
+| `"linear"` | `stats::lm()` | Beta (mean difference) |
+| `"glm"` | `stats::glm(family)` | Ratio (log/logit link) or beta (identity) |
+| `"negbin"` | `MASS::glm.nb()` | Incidence rate ratio (IRR) |
+
+### Time-to-event outcome
+
+```{r subgroup-cox, eval=FALSE}
 subgroup_res <- run_subgroup_analysis(
-  data = analysis_data,
-  exposure = "smoking_status",
+  data       = survival_data,
+  exposure   = "smoking_status",
   subgroup_var = "sex",
   model_type = "cox",
-  endpoint = c("follow_up_time", "incident_status"),
+  endpoint   = c("follow_up_time", "incident_status"),
   covariates = c("age", "bmi", "ethnic")
 )
 
 subgroup_res
 ```
 
+### Count outcome (Poisson GLM)
+
+Use `model_type = "glm"` with `family = "poisson"` for count outcomes.  The
+`estimate` column returns the incidence rate ratio (`exp(beta)`) when the
+family uses a log link.
+
+```{r subgroup-glm, eval=FALSE}
+subgroup_glm <- run_subgroup_analysis(
+  data         = analysis_data,
+  exposure     = "smoking_status",
+  outcome      = "hospitalisation_count",
+  subgroup_var = "sex",
+  model_type   = "glm",
+  family       = "poisson",
+  covariates   = c("age", "bmi", "ethnic")
+)
+```
+
+For overdispersed count outcomes, substitute `model_type = "negbin"` (no
+`family` argument required).
+
+```{r subgroup-negbin, eval=FALSE}
+subgroup_nb <- run_subgroup_analysis(
+  data         = analysis_data,
+  exposure     = "smoking_status",
+  outcome      = "hospitalisation_count",
+  subgroup_var = "sex",
+  model_type   = "negbin",
+  covariates   = c("age", "bmi", "ethnic")
+)
+# estimate column = IRR = exp(beta); theta (dispersion) is reported per model
+```
+
+### Multiple subgroup variables
+
 For multiple subgroup variables, use `run_multi_subgroup()` and visualize the
 result with `plot_forest()`.
 
 ```{r subgroup-multi, eval=FALSE}
 subgroup_all <- run_multi_subgroup(
-  data = analysis_data,
-  exposure = "smoking_status",
+  data         = analysis_data,
+  exposure     = "smoking_status",
   subgroup_vars = c("sex", "age_group", "bmi_group"),
-  model_type = "cox",
-  endpoint = c("follow_up_time", "incident_status"),
-  covariates = c("age", "bmi", "ethnic")
+  model_type   = "cox",
+  endpoint     = c("follow_up_time", "incident_status"),
+  covariates   = c("age", "bmi", "ethnic")
 )
 
 plot_forest(
   subgroup_all,
   estimate_col = "estimate",
-  lower_col = "lower95",
-  upper_col = "upper95",
-  null_value = 1,
-  log_scale = TRUE
+  lower_col    = "lower95",
+  upper_col    = "upper95",
+  null_value   = 1,
+  log_scale    = TRUE
 )
 ```
+
+The same `model_type` and `family` arguments apply to `run_multi_subgroup()`.
+
+### Interaction p-value notes
+
+- For single-level binary subgroups the interaction p-value comes from the
+  Wald test on the single interaction coefficient.
+- For multi-level factors a likelihood-ratio test (LRT) is used: the full
+  model with all interaction terms is compared against the main-effects model
+  via `stats::anova()`.  Quasi-likelihood families fall back to an F-test.
+- When the exposure has no variation within a subgroup level, the function
+  returns `NA` for the effect estimate and issues a warning rather than
+  stopping.
 
 ## Propensity score analysis {#propensity}
 

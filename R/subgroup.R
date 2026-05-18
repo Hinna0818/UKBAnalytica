@@ -14,7 +14,11 @@ NULL
 #'   For Cox models, this can be NULL if endpoint is specified.
 #' @param subgroup_var Character string specifying the subgroup variable name.
 #' @param covariates Character vector of covariate names to adjust for. Default NULL.
-#' @param model_type Character string specifying model type: "cox", "logistic", or "linear".
+#' @param model_type Character string specifying model type: \code{"cox"},
+#'   \code{"logistic"}, \code{"linear"}, \code{"glm"}, or \code{"negbin"}.
+#' @param family For \code{model_type = "glm"} only: the GLM family.  Accepts
+#'   a character string, function, or family object (see
+#'   \code{\link{runmulti_glm}}).  Default \code{"poisson"}.
 #' @param endpoint Character vector of length 2 for Cox models: c("time", "status").
 #'   Required when model_type = "cox".
 #' @param ref_level Character string specifying the reference level for the subgroup variable.
@@ -56,18 +60,24 @@ NULL
 #' )
 #' }
 #'
-#' @importFrom stats as.formula glm binomial lm coef confint
+#' @importFrom stats as.formula glm binomial lm coef confint qnorm
 #' @export
 run_subgroup_analysis <- function(data,
                                    exposure,
                                    outcome = NULL,
                                    subgroup_var,
                                    covariates = NULL,
-                                   model_type = c("cox", "logistic", "linear"),
+                                   model_type = c("cox", "logistic", "linear",
+                                                  "glm", "negbin"),
+                                   family = "poisson",
                                    endpoint = NULL,
                                    ref_level = NULL) {
 
   model_type <- match.arg(model_type)
+
+  # Parse GLM family (only used when model_type == "glm")
+  family_obj <- if (model_type == "glm") .parse_glm_family(family) else NULL
+  is_quasi   <- !is.null(family_obj) && grepl("^quasi", family_obj$family)
 
   # Validate inputs
   if (!is.data.frame(data)) {
@@ -91,7 +101,9 @@ run_subgroup_analysis <- function(data,
     required_cols <- c(exposure, subgroup_var, covariates, endpoint)
   } else {
     if (is.null(outcome)) {
-      stop("'outcome' is required for logistic and linear models.")
+      stop(sprintf(
+        "'outcome' is required for %s models.", model_type
+      ))
     }
     required_cols <- c(exposure, outcome, subgroup_var, covariates)
   }
@@ -128,7 +140,9 @@ run_subgroup_analysis <- function(data,
     subgroup_var = subgroup_var,
     covariates = covariates,
     model_type = model_type,
-    endpoint = endpoint
+    endpoint = endpoint,
+    family_obj = family_obj,
+    is_quasi = is_quasi
   )
 
   # Get subgroup levels
@@ -146,7 +160,7 @@ run_subgroup_analysis <- function(data,
     n_event <- NA
     if (model_type == "cox") {
       n_event <- sum(subset_data[[endpoint[2]]] == 1, na.rm = TRUE)
-    } else if (model_type == "logistic") {
+    } else if (model_type %in% c("logistic", "glm", "negbin")) {
       n_event <- sum(subset_data[[outcome]] == 1, na.rm = TRUE)
     }
 
@@ -158,18 +172,7 @@ run_subgroup_analysis <- function(data,
         "Exposure '%s' has no variation in subgroup '%s'; returning NA for effect estimate.",
         exposure, level
       ))
-      return(data.frame(
-        subgroup_var = subgroup_var,
-        subgroup = level,
-        n = n,
-        n_event = n_event,
-        estimate = NA,
-        lower95 = NA,
-        upper95 = NA,
-        pvalue = NA,
-        p_interaction = p_interaction,
-        stringsAsFactors = FALSE
-      ))
+      return(.na_subgroup_row(subgroup_var, level, n, n_event, p_interaction))
     }
 
     # Build formula
@@ -199,18 +202,8 @@ run_subgroup_analysis <- function(data,
         # Find the row for exposure using model-term mapping to avoid prefix mis-match.
         exp_row <- .find_exposure_row(model, coefs, exposure)
         if (is.na(exp_row)) {
-          return(data.frame(
-            subgroup_var = subgroup_var,
-            subgroup = level,
-            n = n,
-            n_event = n_event,
-            estimate = NA,
-            lower95 = NA,
-            upper95 = NA,
-            pvalue = NA,
-            p_interaction = p_interaction,
-            stringsAsFactors = FALSE
-          ))
+          return(.na_subgroup_row(subgroup_var, level, n, n_event,
+                                  p_interaction))
         }
 
         estimate <- conf[exp_row, "exp(coef)"]
@@ -226,24 +219,63 @@ run_subgroup_analysis <- function(data,
 
         exp_row <- .find_exposure_row(model, coefs, exposure)
         if (is.na(exp_row)) {
-          return(data.frame(
-            subgroup_var = subgroup_var,
-            subgroup = level,
-            n = n,
-            n_event = n_event,
-            estimate = NA,
-            lower95 = NA,
-            upper95 = NA,
-            pvalue = NA,
-            p_interaction = p_interaction,
-            stringsAsFactors = FALSE
-          ))
+          return(.na_subgroup_row(subgroup_var, level, n, n_event,
+                                  p_interaction))
         }
 
         estimate <- exp(coefs[exp_row, "Estimate"])
         lower95 <- exp(ci[exp_row, 1])
         upper95 <- exp(ci[exp_row, 2])
         pvalue <- coefs[exp_row, "Pr(>|z|)"]
+
+      } else if (model_type == "glm") {
+        model     <- stats::glm(formula_obj, data = subset_data,
+                                family = family_obj)
+        sum_model <- summary(model)
+        coefs     <- sum_model$coefficients
+        exp_row   <- .find_exposure_row(model, coefs, exposure)
+
+        if (is.na(exp_row)) {
+          return(.na_subgroup_row(subgroup_var, level, n, n_event,
+                                  p_interaction))
+        }
+
+        b  <- coefs[exp_row, "Estimate"]
+        se <- coefs[exp_row, "Std. Error"]
+
+        if (is_quasi) {
+          z95 <- stats::qnorm(0.975)
+          ci_lo <- b - z95 * se
+          ci_hi <- b + z95 * se
+        } else {
+          ci_mat <- suppressWarnings(stats::confint(model))
+          ci_lo  <- ci_mat[exp_row, 1]
+          ci_hi  <- ci_mat[exp_row, 2]
+        }
+
+        exp_scale <- family_obj$link %in% c("log", "logit", "cloglog")
+        estimate  <- if (exp_scale) exp(b)    else b
+        lower95   <- if (exp_scale) exp(ci_lo) else ci_lo
+        upper95   <- if (exp_scale) exp(ci_hi) else ci_hi
+        pval_col  <- if ("Pr(>|t|)" %in% colnames(coefs)) "Pr(>|t|)" else "Pr(>|z|)"
+        pvalue    <- coefs[exp_row, pval_col]
+
+      } else if (model_type == "negbin") {
+        model     <- MASS::glm.nb(formula_obj, data = subset_data)
+        sum_model <- summary(model)
+        coefs     <- sum_model$coefficients
+        exp_row   <- .find_exposure_row(model, coefs, exposure)
+
+        if (is.na(exp_row)) {
+          return(.na_subgroup_row(subgroup_var, level, n, n_event,
+                                  p_interaction))
+        }
+
+        ci_mat   <- suppressWarnings(stats::confint(model))
+        estimate <- exp(coefs[exp_row, "Estimate"])
+        lower95  <- exp(ci_mat[exp_row, 1])
+        upper95  <- exp(ci_mat[exp_row, 2])
+        pvalue   <- coefs[exp_row, "Pr(>|z|)"]
 
       } else {
         # Linear model
@@ -254,18 +286,7 @@ run_subgroup_analysis <- function(data,
 
         exp_row <- .find_exposure_row(model, coefs, exposure)
         if (is.na(exp_row)) {
-          return(data.frame(
-            subgroup_var = subgroup_var,
-            subgroup = level,
-            n = n,
-            n_event = NA,
-            estimate = NA,
-            lower95 = NA,
-            upper95 = NA,
-            pvalue = NA,
-            p_interaction = p_interaction,
-            stringsAsFactors = FALSE
-          ))
+          return(.na_subgroup_row(subgroup_var, level, n, NA, p_interaction))
         }
 
         estimate <- coefs[exp_row, "Estimate"]
@@ -288,19 +309,9 @@ run_subgroup_analysis <- function(data,
       )
 
     }, error = function(e) {
-      warning(sprintf("Model fitting failed for subgroup '%s': %s", level, e$message))
-      data.frame(
-        subgroup_var = subgroup_var,
-        subgroup = level,
-        n = n,
-        n_event = n_event,
-        estimate = NA,
-        lower95 = NA,
-        upper95 = NA,
-        pvalue = NA,
-        p_interaction = p_interaction,
-        stringsAsFactors = FALSE
-      )
+      warning(sprintf("Model fitting failed for subgroup '%s': %s",
+                      level, e$message))
+      .na_subgroup_row(subgroup_var, level, n, n_event, p_interaction)
     })
   })
 
@@ -375,7 +386,9 @@ run_multi_subgroup <- function(data,
                                 outcome = NULL,
                                 subgroup_vars,
                                 covariates = NULL,
-                                model_type = c("cox", "logistic", "linear"),
+                                model_type = c("cox", "logistic", "linear",
+                                               "glm", "negbin"),
+                                family = "poisson",
                                 endpoint = NULL) {
 
   model_type <- match.arg(model_type)
@@ -394,6 +407,7 @@ run_multi_subgroup <- function(data,
       subgroup_var = sv,
       covariates = covariates,
       model_type = model_type,
+      family = family,
       endpoint = endpoint
     )
   })
@@ -422,88 +436,132 @@ run_multi_subgroup <- function(data,
                                            subgroup_var,
                                            covariates,
                                            model_type,
-                                           endpoint) {
+                                           endpoint,
+                                           family_obj = NULL,
+                                           is_quasi   = FALSE) {
+
+  .build_int_rhs <- function(int_term) {
+    if (!is.null(covariates))
+      paste(c(int_term, covariates), collapse = " + ")
+    else
+      int_term
+  }
+  .build_no_int_rhs <- function() {
+    paste(c(exposure, subgroup_var, covariates), collapse = " + ")
+  }
+  int_term <- paste0(exposure, " * ", subgroup_var)
 
   tryCatch({
-    # Build formula with interaction term
+    # ── fit full (interaction) model ──────────────────────────────────────────
     if (model_type == "cox") {
-      interaction_term <- paste0(exposure, " * ", subgroup_var)
-      rhs <- interaction_term
-      if (!is.null(covariates)) {
-        rhs <- paste(c(interaction_term, covariates), collapse = " + ")
-      }
-      formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
-      formula_obj <- stats::as.formula(formula_str)
+      formula_obj <- stats::as.formula(paste0(
+        "Surv(", endpoint[1], ", ", endpoint[2], ") ~ ",
+        .build_int_rhs(int_term)
+      ))
       model <- coxph(formula_obj, data = data)
 
     } else if (model_type == "logistic") {
-      interaction_term <- paste0(exposure, " * ", subgroup_var)
-      rhs <- interaction_term
-      if (!is.null(covariates)) {
-        rhs <- paste(c(interaction_term, covariates), collapse = " + ")
-      }
-      formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+      formula_obj <- stats::as.formula(
+        paste(outcome, "~", .build_int_rhs(int_term))
+      )
       model <- stats::glm(formula_obj, data = data, family = stats::binomial())
 
+    } else if (model_type == "glm") {
+      formula_obj <- stats::as.formula(
+        paste(outcome, "~", .build_int_rhs(int_term))
+      )
+      model <- stats::glm(formula_obj, data = data, family = family_obj)
+
+    } else if (model_type == "negbin") {
+      formula_obj <- stats::as.formula(
+        paste(outcome, "~", .build_int_rhs(int_term))
+      )
+      model <- MASS::glm.nb(formula_obj, data = data)
+
     } else {
-      # Linear model
-      interaction_term <- paste0(exposure, " * ", subgroup_var)
-      rhs <- interaction_term
-      if (!is.null(covariates)) {
-        rhs <- paste(c(interaction_term, covariates), collapse = " + ")
-      }
-      formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+      formula_obj <- stats::as.formula(
+        paste(outcome, "~", .build_int_rhs(int_term))
+      )
       model <- stats::lm(formula_obj, data = data)
     }
 
-    # Extract interaction term p-value
+    # ── locate interaction coefficient rows ───────────────────────────────────
     coefs <- summary(model)$coefficients
-    interaction_rows <- grep(paste0(exposure, ":", subgroup_var, "|",
-                                     subgroup_var, ":", exposure), rownames(coefs))
+    pat   <- paste0(exposure, ":", subgroup_var, "|",
+                    subgroup_var, ":", exposure)
+    interaction_rows <- grep(pat, rownames(coefs))
 
-    if (length(interaction_rows) == 0) {
-      return(NA)
+    if (length(interaction_rows) == 0) return(NA)
+
+    # ── single interaction term → Wald p-value ────────────────────────────────
+    if (length(interaction_rows) == 1) {
+      pval_col <- if ("Pr(>|t|)" %in% colnames(coefs)) "Pr(>|t|)" else "Pr(>|z|)"
+      return(coefs[interaction_rows[1], pval_col])
     }
 
-    # If multiple interaction terms (multiple levels), use Wald test
-    if (length(interaction_rows) > 1) {
-      # Use anova for overall interaction test
-      if (model_type == "cox") {
-        # Build model without interaction
-        rhs_no_int <- paste(c(exposure, subgroup_var, covariates), collapse = " + ")
-        formula_no_int <- stats::as.formula(
-          paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs_no_int)
-        )
-        model_no_int <- coxph(formula_no_int, data = data)
-        anova_result <- stats::anova(model_no_int, model)
-        p_val <- anova_result[["Pr(>|Chi|)"]][2]
-      } else if (model_type == "logistic") {
-        rhs_no_int <- paste(c(exposure, subgroup_var, covariates), collapse = " + ")
-        formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-        model_no_int <- stats::glm(formula_no_int, data = data, family = stats::binomial())
-        anova_result <- stats::anova(model_no_int, model, test = "Chisq")
-        p_val <- anova_result[["Pr(>Chi)"]][2]
-      } else {
-        rhs_no_int <- paste(c(exposure, subgroup_var, covariates), collapse = " + ")
-        formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-        model_no_int <- stats::lm(formula_no_int, data = data)
-        anova_result <- stats::anova(model_no_int, model)
-        p_val <- anova_result[["Pr(>F)"]][2]
-      }
-      return(p_val)
-    }
+    # ── multiple terms → LRT via anova ───────────────────────────────────────
+    rhs_no_int <- .build_no_int_rhs()
 
-    # Single interaction term
-    if (model_type == "cox" || model_type == "logistic") {
-      p_val <- coefs[interaction_rows[1], "Pr(>|z|)"]
+    if (model_type == "cox") {
+      formula_no_int <- stats::as.formula(paste0(
+        "Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs_no_int
+      ))
+      model_no_int <- coxph(formula_no_int, data = data)
+      av <- stats::anova(model_no_int, model)
+
+    } else if (model_type == "logistic") {
+      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- stats::glm(formula_no_int, data = data,
+                                   family = stats::binomial())
+      av <- stats::anova(model_no_int, model, test = "Chisq")
+
+    } else if (model_type == "glm") {
+      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- stats::glm(formula_no_int, data = data,
+                                   family = family_obj)
+      test_type <- if (is_quasi) "F" else "Chisq"
+      av <- stats::anova(model_no_int, model, test = test_type)
+
+    } else if (model_type == "negbin") {
+      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- MASS::glm.nb(formula_no_int, data = data)
+      av <- stats::anova(model_no_int, model, test = "Chisq")
+
     } else {
-      p_val <- coefs[interaction_rows[1], "Pr(>|t|)"]
+      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- stats::lm(formula_no_int, data = data)
+      av <- stats::anova(model_no_int, model)
     }
 
-    return(p_val)
+    # Robustly extract p-value regardless of column name differences
+    pval_candidates <- c("Pr(>|Chi|)", "Pr(>Chi)", "Pr(>F)", "Pr(Chi)")
+    av_df <- as.data.frame(av)
+    for (col in pval_candidates) {
+      if (col %in% names(av_df)) return(av_df[[col]][2])
+    }
+    NA
 
   }, error = function(e) {
     warning(sprintf("Failed to calculate interaction p-value: %s", e$message))
-    return(NA)
+    NA
   })
+}
+
+
+#' Build a one-row NA result for a subgroup
+#' @keywords internal
+#' @noRd
+.na_subgroup_row <- function(subgroup_var, level, n, n_event, p_interaction) {
+  data.frame(
+    subgroup_var  = subgroup_var,
+    subgroup      = level,
+    n             = n,
+    n_event       = n_event,
+    estimate      = NA_real_,
+    lower95       = NA_real_,
+    upper95       = NA_real_,
+    pvalue        = NA_real_,
+    p_interaction = p_interaction,
+    stringsAsFactors = FALSE
+  )
 }

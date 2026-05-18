@@ -1,15 +1,18 @@
-# Bioinformatic and omics analyses {#bioinformatics}
+# Bioinformatics and omics analyses {#bioinformatics}
 
 This chapter introduces the omics-analysis layer in **UKBAnalytica**. The
-current implementation focuses on plasma proteomics workflows, especially Olink
-proteins from UK Biobank RAP analyses. Metabolomics support will be documented
-in a future update.
+current implementation supports proteomics workflows and a first metabolomics
+over-representation analysis (ORA) workflow. The proteomics module is mainly
+designed for plasma Olink proteins from UK Biobank RAP analyses, whereas the
+metabolomics module focuses on mapped small-molecule metabolites from UKB
+Nightingale-style panels.
 
-The proteomics workflow is organized around three tasks:
+The omics workflow is organized around four tasks:
 
 1. association screening between proteins and clinical outcomes;
 2. functional enrichment analysis of selected proteins;
 3. STRING-based protein-protein interaction (PPI) network analysis.
+4. metabolite-set ORA and pathway visualization.
 
 In RAP projects, participant-level matrices should remain inside the approved
 analysis environment. The examples below assume that users export only aggregate
@@ -18,14 +21,18 @@ regression results, enrichment summaries, and figures.
 ## Required packages
 
 Proteomics enrichment and network analysis use optional Bioconductor and network
-packages. Install them before running the examples.
+packages. Metabolomics ORA can either use a user-supplied metabolite pathway
+library or the optional **MetaboAnalystR** backend.
 
-```{r proteomics-install, eval=FALSE}
+```{r omics-install, eval=FALSE}
 install.packages("BiocManager")
 BiocManager::install(c("clusterProfiler", "AnnotationDbi", "org.Hs.eg.db"))
 
 # Optional helper used by several PPI and enrichment wrappers
 remotes::install_github("Hinna0818/TCMDATA")
+
+# Optional backend for metabolite-set ORA
+remotes::install_github("xia-lab/MetaboAnalystR")
 ```
 
 ## Proteomics input and identifier handling
@@ -261,11 +268,127 @@ cluster_go <- clusterProfiler::compareCluster(
 When interpreting PPI clusters, keep the STRING score cutoff, disconnected
 components, and cluster size threshold explicit in the methods section.
 
-## Metabolomics analysis
+## Metabolomics input and metabolite mapping
 
-Metabolomics workflows will be added in a future release. This section is
-reserved for regression screening, multiple-testing correction, pathway
-annotation, and metabolite-set enrichment examples.
+UK Biobank metabolomics data contain a mixture of small molecules, lipoprotein
+subclass measurements, aggregate lipid traits, and protein measurements.
+`load_ukb_metabolite_panel()` reads the bundled non-ratio metabolite panel, and
+`classify_metabolites()` separates small molecules from lipoprotein-related
+traits. Small molecules are then mapped to MetaboAnalyst-compatible names using
+`metabolite_to_metaboanalyst_name()`.
+
+```{r metabolomics-panel, eval=FALSE}
+library(UKBAnalytica)
+
+panel <- load_ukb_metabolite_panel()
+
+metab_map <- classify_metabolites(panel$Description)
+table(metab_map$category)
+
+small_molecules <- subset(metab_map, category == "small_molecule")
+head(small_molecules)
+```
+
+If a study uses platform-specific metabolite names, users can provide a custom
+mapping table. Custom mappings override the built-in UKB/Nightingale mapping.
+
+```{r metabolomics-custom-map, eval=FALSE}
+custom_metab_map <- data.frame(
+  metabolite = c("beta-hydroxybutyrate", "lactate"),
+  metaboanalyst_name = c("3-Hydroxybutyric acid", "Lactic acid")
+)
+
+metabolite_to_metaboanalyst_name(
+  c("beta-hydroxybutyrate", "lactate"),
+  mapping_table = custom_metab_map
+)
+```
+
+## Metabolite over-representation analysis
+
+`run_metabolite_ora()` performs metabolite ORA and returns a standardized
+`ukb_metabolite_ora` object with the input list, mapping table, matched
+metabolites, unmatched metabolites, and ORA result table.
+
+The most transparent option is `backend = "custom"`, where users provide a
+two-column metabolite-set library. This is suitable when a project has a curated
+pathway database or wants a fully offline workflow.
+
+```{r metabolomics-custom-ora, eval=FALSE}
+hits <- c("Alanine", "Glutamine", "Glycine", "Lactate", "Pyruvate")
+
+pathway_db <- data.frame(
+  pathway = c(
+    rep("Amino acid metabolism", 3),
+    rep("Energy metabolism", 2)
+  ),
+  metabolite = c(
+    "L-Alanine", "L-Glutamine", "Glycine",
+    "Lactic acid", "Pyruvic acid"
+  )
+)
+
+ora_custom <- run_metabolite_ora(
+  metabolites = hits,
+  pathway_db = pathway_db,
+  backend = "custom",
+  p_adjust_method = "BH"
+)
+
+ora_custom$ora_result
+```
+
+For users who have installed **MetaboAnalystR**, `backend = "metaboanalyst"`
+can query its metabolite-set libraries, such as SMPDB pathways. The wrapper
+automatically harmonizes common UKB/Nightingale metabolite names before calling
+MetaboAnalystR.
+
+```{r metabolomics-metaboanalyst-ora, eval=FALSE}
+hits <- c(
+  "Alanine", "Glutamine", "Glycine", "Histidine",
+  "Isoleucine", "Leucine", "Valine", "Phenylalanine",
+  "Tyrosine", "Glucose", "Lactate", "Pyruvate",
+  "Citrate", "Acetone", "Acetoacetate", "Acetate"
+)
+
+ora_ma <- run_metabolite_ora(
+  metabolites = hits,
+  backend = "metaboanalyst",
+  library = "smpdb_pathway",
+  p_adjust_method = "BH"
+)
+
+head(ora_ma$mapping)
+head(ora_ma$ora_result)
+```
+
+The result table contains pathway names, raw p-values, adjusted p-values, hit
+counts, expected counts, and fold enrichment. The two plotting helpers create
+publication-oriented dot plots and bar plots using the same standardized ORA
+object.
+
+```{r metabolomics-ora-plot, eval=FALSE}
+plot_metabolite_ora_dotplot(
+  ora_ma,
+  top_n = 10
+)
+
+plot_metabolite_ora_barplot(
+  ora_ma,
+  top_n = 10
+)
+```
+
+![Example metabolite ORA dot plot based on mapped UKB/Nightingale small-molecule metabolites.](assets/metabolite-ora-demo-dotplot.png){.workflow-img fig-alt="Example metabolite ORA dot plot"}
+
+## Notes on metabolomics interpretation
+
+Metabolite ORA depends strongly on the metabolite universe and identifier
+mapping. For UKB Nightingale data, lipoprotein subclass and aggregate lipid
+measurements should not be interpreted as individual small-molecule metabolites
+unless a study defines a specific mapping strategy. For pathway enrichment,
+report the metabolite list, background universe, pathway database, identifier
+mapping rules, and multiple-testing method.
 
 ## Practical recommendations
 
@@ -276,4 +399,6 @@ annotation, and metabolite-set enrichment examples.
   validation analyses.
 - For PPI analyses, record the STRING network type, score cutoff, filtering
   rules, and clustering algorithm.
+- For metabolomics ORA, record the metabolite identifier mapping and the
+  pathway database used for enrichment.
 - Export only aggregate summaries and publication figures from RAP projects.
