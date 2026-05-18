@@ -106,8 +106,8 @@ format:
     link-external-newwindow: true
     grid:
       sidebar-width: 260px
-      body-width: 900px
-      margin-width: 260px
+      body-width: 1050px
+      margin-width: 200px
 
 execute:
   eval: false
