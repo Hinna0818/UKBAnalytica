@@ -1,5 +1,5 @@
 ---
-title: "Air pollution and incident arrhythmia: a UKBAnalytica demo case study"
+title: "Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study"
 format:
   html:
     toc: true
@@ -30,8 +30,8 @@ covers raw field extraction, phenotype definition, baseline preprocessing,
 participant flow, baseline table generation, Cox regression, and sensitivity
 analyses.
 
-The demo data are synthetic and do not contain UK Biobank participant-level
-source records. Results are for workflow illustration only.
+The demo data are **synthetic and do not contain UK Biobank participant-level
+source records. Results are for workflow illustration only.**
 
 ## Load demo data
 

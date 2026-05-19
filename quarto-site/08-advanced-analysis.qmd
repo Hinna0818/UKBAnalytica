@@ -2,19 +2,152 @@
 
 This chapter summarizes the advanced statistical modules in **UKBAnalytica**.
 These functions are intended for common epidemiological extensions after the
-main regression analyses: subgroup analysis, propensity score analysis, and
-causal mediation analysis.
+main regression analyses: restricted cubic spline analysis, subgroup analysis,
+propensity score analysis, and causal mediation analysis.
 
 ## Module overview
 
 | Analysis task | Main functions | Typical use |
 |---|---|---|
+| Restricted cubic spline analysis | `run_rcs()`, `plot_rcs()` | Visualize nonlinear dose-response relationships for continuous exposures |
 | Subgroup analysis | `run_subgroup_analysis()`, `run_multi_subgroup()` | Estimate effects within strata and report interaction p-values |
 | Propensity score analysis | `estimate_propensity_score()`, `match_propensity()`, `calculate_weights()`, `run_weighted_analysis()` | Reduce confounding in observational treatment or exposure comparisons |
 | Mediation analysis | `run_mediation()`, `run_multi_mediator()` | Decompose total effects into direct and indirect pathways |
 
 For multiple imputation workflows, see the [Multiple imputation](06-imputation.qmd)
 chapter.
+
+## Restricted cubic spline analysis {#rcs}
+
+Restricted cubic spline (RCS) analysis is used to inspect whether a continuous
+exposure has a linear, threshold-like, U-shaped, or otherwise nonlinear
+association with an outcome. This is useful for air pollutants, biomarkers,
+proteins, metabolites, and clinical measurements where categorizing the exposure
+would discard information.
+
+UKBAnalytica provides two functions:
+
+- `run_rcs()` fits the spline model and returns prediction data, 95% confidence
+  intervals, the reference value, the knot count, the overall P value, and the
+  nonlinear P value.
+- `plot_rcs()` visualizes the curve with a confidence ribbon, null reference
+  line, reference point, optional exposure distribution, and P-value annotation.
+
+The function supports three model families:
+
+| `model_type` | Outcome type | Effect scale |
+|---|---|---|
+| `"cox"` | Time-to-event outcome | Hazard ratio (HR) |
+| `"logistic"` | Binary outcome | Odds ratio (OR) |
+| `"linear"` | Continuous outcome | Mean difference |
+
+Two backends are available. `backend = "rms"` uses `rms::rcs()` and is the
+recommended option for manuscript-style RCS analysis. `backend = "ns"` uses
+`splines::ns()` as a lightweight fallback that requires no additional RCS
+package dependency.
+
+### Cox RCS for time-to-event outcomes
+
+The example below evaluates the nonlinear association between NO2 and incident
+arrhythmia using a Cox model. The y-axis is the hazard ratio relative to the
+reference NO2 value, usually the median.
+
+```{r rcs-cox, eval=FALSE}
+rcs_no2 <- run_rcs(
+  data = analysis_data,
+  exposure = "no2_main",
+  covariates = c("age", "sex", "tdi", "ethnicity", "education", "smoking", "drinking"),
+  model_type = "cox",
+  endpoint = c("outcome_surv_time", "outcome_status"),
+  backend = "rms",
+  knots = 4
+)
+
+rcs_no2$p_overall
+rcs_no2$p_nonlinear
+
+plot_rcs(
+  rcs_no2,
+  xlab = "NO2",
+  ylab = "HR for incident arrhythmia"
+)
+```
+
+![](assets/rcs-cox-no2-arrhythmia-rms.png){fig-alt="Restricted cubic spline curve for NO2 and incident arrhythmia using a Cox model."}
+
+The solid curve is the estimated HR, and the shaded band is the 95% confidence
+interval. The dashed horizontal line indicates HR = 1. `P-overall` tests whether
+the exposure is associated with the outcome, while `P-nonlinear` tests whether
+the exposure-response shape deviates from linearity.
+
+### Logistic RCS for binary outcomes
+
+For a binary endpoint, set `model_type = "logistic"` and provide `outcome`.
+The y-axis is an odds ratio relative to the reference exposure value.
+
+```{r rcs-logistic, eval=FALSE}
+rcs_pm25 <- run_rcs(
+  data = analysis_data,
+  exposure = "pm25",
+  covariates = c("age", "sex", "tdi"),
+  model_type = "logistic",
+  outcome = "outcome_status",
+  backend = "ns",
+  knots = 4
+)
+
+plot_rcs(
+  rcs_pm25,
+  distribution = "density",
+  xlab = "PM2.5",
+  ylab = "OR for incident arrhythmia"
+)
+```
+
+![](assets/rcs-logistic-pm25-arrhythmia.png){fig-alt="Restricted cubic spline curve for PM2.5 and binary arrhythmia status using logistic regression."}
+
+This model ignores follow-up time and treats the outcome as a binary status, so
+it is best suited to cross-sectional or fixed-window binary outcomes.
+
+### Linear RCS for continuous outcomes
+
+For continuous outcomes, set `model_type = "linear"`. The curve shows the
+difference in the outcome relative to the reference exposure value.
+
+```{r rcs-linear, eval=FALSE}
+rcs_nox_bmi <- run_rcs(
+  data = analysis_data,
+  exposure = "nox",
+  covariates = c("age", "sex", "tdi"),
+  model_type = "linear",
+  outcome = "bmi",
+  backend = "ns",
+  knots = 4
+)
+
+plot_rcs(
+  rcs_nox_bmi,
+  distribution = "rug",
+  xlab = "NOx",
+  ylab = "Difference in BMI"
+)
+```
+
+![](assets/rcs-linear-nox-bmi.png){fig-alt="Restricted cubic spline curve for NOx and BMI using linear regression."}
+
+When the curve stays close to zero and the nonlinear P value is not significant,
+there is little evidence for a nonlinear exposure-response relationship.
+
+### Practical notes for RCS
+
+- Prefer continuous exposures on their original scale unless a transformation is
+  clinically meaningful.
+- Avoid interpreting unstable tails when few participants are exposed at the
+  extremes; `trim_quantiles = c(0.01, 0.99)` is used by default.
+- Report the reference value, knot count, overall P value, nonlinear P value,
+  adjustment covariates, and model family.
+- Use `backend = "rms"` for formal manuscript analyses when the `rms` package is
+  available; use `backend = "ns"` for lightweight examples and smoke tests.
 
 ## Subgroup analysis {#subgroup}
 

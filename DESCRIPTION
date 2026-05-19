@@ -40,6 +40,7 @@ Imports:
     igraph
 Suggests:
     testthat,
+    rms,
     gbm,
     cobalt,
     survminer,

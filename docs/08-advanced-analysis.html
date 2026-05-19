@@ -530,7 +530,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./case-study.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span></a>
+ <span class="menu-text">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span></a>
   </div>
 </li>
       </ul>
@@ -548,6 +548,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#advanced-analysis" id="toc-advanced-analysis" class="nav-link active" data-scroll-target="#advanced-analysis">Advanced analysis</a>
   <ul class="collapse">
   <li><a href="#module-overview" id="toc-module-overview" class="nav-link" data-scroll-target="#module-overview">Module overview</a></li>
+  <li><a href="#rcs" id="toc-rcs" class="nav-link" data-scroll-target="#rcs">Restricted cubic spline analysis</a>
+  <ul class="collapse">
+  <li><a href="#cox-rcs-for-time-to-event-outcomes" id="toc-cox-rcs-for-time-to-event-outcomes" class="nav-link" data-scroll-target="#cox-rcs-for-time-to-event-outcomes">Cox RCS for time-to-event outcomes</a></li>
+  <li><a href="#logistic-rcs-for-binary-outcomes" id="toc-logistic-rcs-for-binary-outcomes" class="nav-link" data-scroll-target="#logistic-rcs-for-binary-outcomes">Logistic RCS for binary outcomes</a></li>
+  <li><a href="#linear-rcs-for-continuous-outcomes" id="toc-linear-rcs-for-continuous-outcomes" class="nav-link" data-scroll-target="#linear-rcs-for-continuous-outcomes">Linear RCS for continuous outcomes</a></li>
+  <li><a href="#practical-notes-for-rcs" id="toc-practical-notes-for-rcs" class="nav-link" data-scroll-target="#practical-notes-for-rcs">Practical notes for RCS</a></li>
+  </ul></li>
   <li><a href="#subgroup" id="toc-subgroup" class="nav-link" data-scroll-target="#subgroup">Subgroup analysis</a>
   <ul class="collapse">
   <li><a href="#time-to-event-outcome" id="toc-time-to-event-outcome" class="nav-link" data-scroll-target="#time-to-event-outcome">Time-to-event outcome</a></li>
@@ -571,7 +578,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="advanced-analysis" class="level1">
 <h1>Advanced analysis</h1>
-<p>This chapter summarizes the advanced statistical modules in <strong>UKBAnalytica</strong>. These functions are intended for common epidemiological extensions after the main regression analyses: subgroup analysis, propensity score analysis, and causal mediation analysis.</p>
+<p>This chapter summarizes the advanced statistical modules in <strong>UKBAnalytica</strong>. These functions are intended for common epidemiological extensions after the main regression analyses: restricted cubic spline analysis, subgroup analysis, propensity score analysis, and causal mediation analysis.</p>
 <section id="module-overview" class="level2">
 <h2 class="anchored" data-anchor-id="module-overview">Module overview</h2>
 <table class="caption-top table">
@@ -589,16 +596,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td>Restricted cubic spline analysis</td>
+<td><code>run_rcs()</code>, <code>plot_rcs()</code></td>
+<td>Visualize nonlinear dose-response relationships for continuous exposures</td>
+</tr>
+<tr class="even">
 <td>Subgroup analysis</td>
 <td><code>run_subgroup_analysis()</code>, <code>run_multi_subgroup()</code></td>
 <td>Estimate effects within strata and report interaction p-values</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Propensity score analysis</td>
 <td><code>estimate_propensity_score()</code>, <code>match_propensity()</code>, <code>calculate_weights()</code>, <code>run_weighted_analysis()</code></td>
 <td>Reduce confounding in observational treatment or exposure comparisons</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Mediation analysis</td>
 <td><code>run_mediation()</code>, <code>run_multi_mediator()</code></td>
 <td>Decompose total effects into direct and indirect pathways</td>
@@ -606,6 +618,126 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 <p>For multiple imputation workflows, see the <a href="./06-imputation.html">Multiple imputation</a> chapter.</p>
+</section>
+<section id="rcs" class="level2">
+<h2 class="anchored" data-anchor-id="rcs">Restricted cubic spline analysis</h2>
+<p>Restricted cubic spline (RCS) analysis is used to inspect whether a continuous exposure has a linear, threshold-like, U-shaped, or otherwise nonlinear association with an outcome. This is useful for air pollutants, biomarkers, proteins, metabolites, and clinical measurements where categorizing the exposure would discard information.</p>
+<p>UKBAnalytica provides two functions:</p>
+<ul>
+<li><code>run_rcs()</code> fits the spline model and returns prediction data, 95% confidence intervals, the reference value, the knot count, the overall P value, and the nonlinear P value.</li>
+<li><code>plot_rcs()</code> visualizes the curve with a confidence ribbon, null reference line, reference point, optional exposure distribution, and P-value annotation.</li>
+</ul>
+<p>The function supports three model families:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th><code>model_type</code></th>
+<th>Outcome type</th>
+<th>Effect scale</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"cox"</code></td>
+<td>Time-to-event outcome</td>
+<td>Hazard ratio (HR)</td>
+</tr>
+<tr class="even">
+<td><code>"logistic"</code></td>
+<td>Binary outcome</td>
+<td>Odds ratio (OR)</td>
+</tr>
+<tr class="odd">
+<td><code>"linear"</code></td>
+<td>Continuous outcome</td>
+<td>Mean difference</td>
+</tr>
+</tbody>
+</table>
+<p>Two backends are available. <code>backend = "rms"</code> uses <code>rms::rcs()</code> and is the recommended option for manuscript-style RCS analysis. <code>backend = "ns"</code> uses <code>splines::ns()</code> as a lightweight fallback that requires no additional RCS package dependency.</p>
+<section id="cox-rcs-for-time-to-event-outcomes" class="level3">
+<h3 class="anchored" data-anchor-id="cox-rcs-for-time-to-event-outcomes">Cox RCS for time-to-event outcomes</h3>
+<p>The example below evaluates the nonlinear association between NO2 and incident arrhythmia using a Cox model. The y-axis is the hazard ratio relative to the reference NO2 value, usually the median.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>rcs_no2 <span class="ot">&lt;-</span> <span class="fu">run_rcs</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"no2_main"</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"tdi"</span>, <span class="st">"ethnicity"</span>, <span class="st">"education"</span>, <span class="st">"smoking"</span>, <span class="st">"drinking"</span>),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"outcome_surv_time"</span>, <span class="st">"outcome_status"</span>),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">backend =</span> <span class="st">"rms"</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">knots =</span> <span class="dv">4</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>rcs_no2<span class="sc">$</span>p_overall</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>rcs_no2<span class="sc">$</span>p_nonlinear</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_rcs</span>(</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  rcs_no2,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"NO2"</span>,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">ylab =</span> <span class="st">"HR for incident arrhythmia"</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/rcs-cox-no2-arrhythmia-rms.png" class="img-fluid" alt="Restricted cubic spline curve for NO2 and incident arrhythmia using a Cox model."></p>
+<p>The solid curve is the estimated HR, and the shaded band is the 95% confidence interval. The dashed horizontal line indicates HR = 1. <code>P-overall</code> tests whether the exposure is associated with the outcome, while <code>P-nonlinear</code> tests whether the exposure-response shape deviates from linearity.</p>
+</section>
+<section id="logistic-rcs-for-binary-outcomes" class="level3">
+<h3 class="anchored" data-anchor-id="logistic-rcs-for-binary-outcomes">Logistic RCS for binary outcomes</h3>
+<p>For a binary endpoint, set <code>model_type = "logistic"</code> and provide <code>outcome</code>. The y-axis is an odds ratio relative to the reference exposure value.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>rcs_pm25 <span class="ot">&lt;-</span> <span class="fu">run_rcs</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"pm25"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"tdi"</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"logistic"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"outcome_status"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">backend =</span> <span class="st">"ns"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">knots =</span> <span class="dv">4</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_rcs</span>(</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  rcs_pm25,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution =</span> <span class="st">"density"</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"PM2.5"</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">ylab =</span> <span class="st">"OR for incident arrhythmia"</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/rcs-logistic-pm25-arrhythmia.png" class="img-fluid" alt="Restricted cubic spline curve for PM2.5 and binary arrhythmia status using logistic regression."></p>
+<p>This model ignores follow-up time and treats the outcome as a binary status, so it is best suited to cross-sectional or fixed-window binary outcomes.</p>
+</section>
+<section id="linear-rcs-for-continuous-outcomes" class="level3">
+<h3 class="anchored" data-anchor-id="linear-rcs-for-continuous-outcomes">Linear RCS for continuous outcomes</h3>
+<p>For continuous outcomes, set <code>model_type = "linear"</code>. The curve shows the difference in the outcome relative to the reference exposure value.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>rcs_nox_bmi <span class="ot">&lt;-</span> <span class="fu">run_rcs</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"nox"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"tdi"</span>),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"linear"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"bmi"</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">backend =</span> <span class="st">"ns"</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">knots =</span> <span class="dv">4</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_rcs</span>(</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  rcs_nox_bmi,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">distribution =</span> <span class="st">"rug"</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"NOx"</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">ylab =</span> <span class="st">"Difference in BMI"</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/rcs-linear-nox-bmi.png" class="img-fluid" alt="Restricted cubic spline curve for NOx and BMI using linear regression."></p>
+<p>When the curve stays close to zero and the nonlinear P value is not significant, there is little evidence for a nonlinear exposure-response relationship.</p>
+</section>
+<section id="practical-notes-for-rcs" class="level3">
+<h3 class="anchored" data-anchor-id="practical-notes-for-rcs">Practical notes for RCS</h3>
+<ul>
+<li>Prefer continuous exposures on their original scale unless a transformation is clinically meaningful.</li>
+<li>Avoid interpreting unstable tails when few participants are exposed at the extremes; <code>trim_quantiles = c(0.01, 0.99)</code> is used by default.</li>
+<li>Report the reference value, knot count, overall P value, nonlinear P value, adjustment covariates, and model family.</li>
+<li>Use <code>backend = "rms"</code> for formal manuscript analyses when the <code>rms</code> package is available; use <code>backend = "ns"</code> for lightweight examples and smoke tests.</li>
+</ul>
+</section>
 </section>
 <section id="subgroup" class="level2">
 <h2 class="anchored" data-anchor-id="subgroup">Subgroup analysis</h2>
@@ -655,66 +787,66 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="time-to-event-outcome" class="level3">
 <h3 class="anchored" data-anchor-id="time-to-event-outcome">Time-to-event outcome</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>subgroup_res <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> survival_data,</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure   =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint   =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>subgroup_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>subgroup_res <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data       =</span> survival_data,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure   =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint   =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>subgroup_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="count-outcome-poisson-glm" class="level3">
 <h3 class="anchored" data-anchor-id="count-outcome-poisson-glm">Count outcome (Poisson GLM)</h3>
 <p>Use <code>model_type = "glm"</code> with <code>family = "poisson"</code> for count outcomes. The <code>estimate</code> column returns the incidence rate ratio (<code>exp(beta)</code>) when the family uses a log link.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>subgroup_glm <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome      =</span> <span class="st">"hospitalisation_count"</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"glm"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">family       =</span> <span class="st">"poisson"</span>,</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>subgroup_glm <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome      =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"glm"</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">family       =</span> <span class="st">"poisson"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>For overdispersed count outcomes, substitute <code>model_type = "negbin"</code> (no <code>family</code> argument required).</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>subgroup_nb <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome      =</span> <span class="st">"hospitalisation_count"</span>,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"negbin"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate column = IRR = exp(beta); theta (dispersion) is reported per model</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>subgroup_nb <span class="ot">&lt;-</span> <span class="fu">run_subgroup_analysis</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome      =</span> <span class="st">"hospitalisation_count"</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_var =</span> <span class="st">"sex"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"negbin"</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># estimate column = IRR = exp(beta); theta (dispersion) is reported per model</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="multiple-subgroup-variables" class="level3">
 <h3 class="anchored" data-anchor-id="multiple-subgroup-variables">Multiple subgroup variables</h3>
 <p>For multiple subgroup variables, use <code>run_multi_subgroup()</code> and visualize the result with <code>plot_forest()</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>subgroup_all <span class="ot">&lt;-</span> <span class="fu">run_multi_subgroup</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_vars =</span> <span class="fu">c</span>(<span class="st">"sex"</span>, <span class="st">"age_group"</span>, <span class="st">"bmi_group"</span>),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"cox"</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint     =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_forest</span>(</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  subgroup_all,</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">estimate_col =</span> <span class="st">"estimate"</span>,</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">lower_col    =</span> <span class="st">"lower95"</span>,</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">upper_col    =</span> <span class="st">"upper95"</span>,</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">null_value   =</span> <span class="dv">1</span>,</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">log_scale    =</span> <span class="cn">TRUE</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>subgroup_all <span class="ot">&lt;-</span> <span class="fu">run_multi_subgroup</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data         =</span> analysis_data,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure     =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup_vars =</span> <span class="fu">c</span>(<span class="st">"sex"</span>, <span class="st">"age_group"</span>, <span class="st">"bmi_group"</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type   =</span> <span class="st">"cox"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint     =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates   =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_forest</span>(</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  subgroup_all,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">estimate_col =</span> <span class="st">"estimate"</span>,</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">lower_col    =</span> <span class="st">"lower95"</span>,</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">upper_col    =</span> <span class="st">"upper95"</span>,</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">null_value   =</span> <span class="dv">1</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">log_scale    =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The same <code>model_type</code> and <code>family</code> arguments apply to <code>run_multi_subgroup()</code>.</p>
 </section>
@@ -731,75 +863,75 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="propensity">Propensity score analysis</h2>
 <p>Propensity score methods can be used when comparing an exposure or treatment group in observational data. The workflow is: estimate propensity scores, perform matching or weighting, then fit the outcome model.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>ps_data <span class="ot">&lt;-</span> <span class="fu">estimate_propensity_score</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"ethnic"</span>),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"logistic"</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>matched_data <span class="ot">&lt;-</span> <span class="fu">match_propensity</span>(</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ps_data,</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">ps_col =</span> <span class="st">"ps"</span>,</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">ratio =</span> <span class="dv">1</span>,</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">caliper =</span> <span class="fl">0.20</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ps_data <span class="ot">&lt;-</span> <span class="fu">estimate_propensity_score</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"bmi"</span>, <span class="st">"smoking_status"</span>, <span class="st">"ethnic"</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"logistic"</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>matched_data <span class="ot">&lt;-</span> <span class="fu">match_propensity</span>(</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ps_data,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">ps_col =</span> <span class="st">"ps"</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">ratio =</span> <span class="dv">1</span>,</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">caliper =</span> <span class="fl">0.20</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>For IPTW analyses, use <code>calculate_weights()</code> followed by <code>run_weighted_analysis()</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>weighted_data <span class="ot">&lt;-</span> <span class="fu">calculate_weights</span>(</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ps_data,</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">ps_col =</span> <span class="st">"ps"</span>,</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">weight_type =</span> <span class="st">"ATE"</span>,</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">stabilized =</span> <span class="cn">TRUE</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>weighted_res <span class="ot">&lt;-</span> <span class="fu">run_weighted_analysis</span>(</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> weighted_data,</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"exposure_group"</span>,</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">weight_col =</span> <span class="st">"weight"</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>weighted_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>weighted_data <span class="ot">&lt;-</span> <span class="fu">calculate_weights</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> ps_data,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="st">"exposure_group"</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">ps_col =</span> <span class="st">"ps"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">weight_type =</span> <span class="st">"ATE"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">stabilized =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>weighted_res <span class="ot">&lt;-</span> <span class="fu">run_weighted_analysis</span>(</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> weighted_data,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"exposure_group"</span>,</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">weight_col =</span> <span class="st">"weight"</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>weighted_res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="mediation" class="level2">
 <h2 class="anchored" data-anchor-id="mediation">Mediation analysis</h2>
 <p><code>run_mediation()</code> wraps regression-based mediation analysis and supports linear, logistic, and Cox outcomes. It is useful when testing whether an exposure effect is partly explained through an intermediate variable.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>med_res <span class="ot">&lt;-</span> <span class="fu">run_mediation</span>(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediator =</span> <span class="st">"inflammatory_marker"</span>,</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"follow_up_time"</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_type =</span> <span class="st">"cox"</span>,</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediator_type =</span> <span class="st">"continuous"</span>,</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>),</span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure_levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">boot =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">boot_n =</span> <span class="dv">1000</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(med_res)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>med_res <span class="ot">&lt;-</span> <span class="fu">run_mediation</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediator =</span> <span class="st">"inflammatory_marker"</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"follow_up_time"</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediator_type =</span> <span class="st">"continuous"</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"bmi"</span>, <span class="st">"ethnic"</span>),</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure_levels =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>),</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">boot =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">boot_n =</span> <span class="dv">1000</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(med_res)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>For screening several candidate mediators, use <code>run_multi_mediator()</code>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>multi_med <span class="ot">&lt;-</span> <span class="fu">run_multi_mediator</span>(</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"smoking_status"</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediators =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"crp"</span>, <span class="st">"hba1c"</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"follow_up_time"</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_type =</span> <span class="st">"cox"</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>multi_med</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>multi_med <span class="ot">&lt;-</span> <span class="fu">run_multi_mediator</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"smoking_status"</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">mediators =</span> <span class="fu">c</span>(<span class="st">"bmi"</span>, <span class="st">"crp"</span>, <span class="st">"hba1c"</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome =</span> <span class="st">"follow_up_time"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"follow_up_time"</span>, <span class="st">"incident_status"</span>),</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"ethnic"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>multi_med</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="practical-notes" class="level2">
