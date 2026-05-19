@@ -16,6 +16,7 @@
 ^docs$
 ^quarto-site$
 ^data-raw$
+^data-raw/
 ^\.github$
 ^_site$
 ^dist$

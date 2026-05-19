@@ -47,3 +47,4 @@ git-filter-repo
 out_test/data/outcome_test.rda
 out_test/
 data/outcome_test.rda
+data-raw/

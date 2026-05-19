@@ -15,6 +15,7 @@ project:
     - bioinformatics-omics.qmd
     - 11-ukbanalytica-skills.qmd
     - 12-skill-creator.qmd
+    - case-study.qmd
 
 website:
   title: "UKBAnalytica"
@@ -60,6 +61,8 @@ website:
             href: 11-ukbanalytica-skills.qmd
           - text: "Skill Creator"
             href: 12-skill-creator.qmd
+      - text: "Case study"
+        href: case-study.qmd
     right:
       - text: "GitHub"
         href: "https://github.com/Hinna0818/UKBAnalytica_v2"
@@ -88,6 +91,9 @@ website:
         contents:
           - 11-ukbanalytica-skills.qmd
           - 12-skill-creator.qmd
+      - section: "Case study"
+        contents:
+          - case-study.qmd
   page-footer:
     left: "UKBAnalytica"
     right: "Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects."

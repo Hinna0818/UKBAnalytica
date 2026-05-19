@@ -1,0 +1,292 @@
+---
+title: "Air pollution and incident arrhythmia: a UKBAnalytica demo case study"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+execute:
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+  freeze: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+This document demonstrates an end-to-end UKBAnalytica workflow using
+`ukb_demo()` as a RAP-style raw table. The case study evaluates associations
+between air pollution exposure and incident cardiac arrhythmia. The workflow
+covers raw field extraction, phenotype definition, baseline preprocessing,
+participant flow, baseline table generation, Cox regression, and sensitivity
+analyses.
+
+The demo data are synthetic and do not contain UK Biobank participant-level
+source records. Results are for workflow illustration only.
+
+## Load demo data
+
+```{r load-packages}
+if (requireNamespace("pkgload", quietly = TRUE) && dir.exists("../R")) {
+  pkgload::load_all("..", quiet = TRUE)
+}
+library(UKBAnalytica)
+library(data.table)
+
+demo_raw <- ukb_demo()
+dim(demo_raw)
+names(demo_raw)[1:12]
+```
+
+## Specify variables from raw UKB field IDs
+
+The analysis uses the following raw UKB fields:
+
+- NO2: `p24016`, `p24018`, and `p24017`; `p24003` is used for the 2010-exposure
+  sensitivity analysis.
+- NOx: `p24004`.
+- PM2.5: `p24006`.
+- PM10: `p24019`; `p24005` is used for the 2010-exposure sensitivity analysis.
+- Covariates: sex (`p31`), baseline date (`p53_i0`), age (`p21022`), BMI
+  (`p21001_i0`), smoking (`p20116_i0`), drinking (`p20117_i0`), Townsend
+  deprivation index (`p189`), ethnicity (`p21000_i0`), and education
+  (`p6138_i0`).
+
+## Define incident arrhythmia
+
+The predefined `Arrhythmia` phenotype in UKBAnalytica captures broad cardiac
+arrhythmia using ICD-10 codes `I44-I49` and procedure codes including `K57.6`,
+`K59-K62`, `K64.1`, and `K72-K74` where available. Baseline history and
+prospective incident events are handled separately.
+
+```{r arrhythmia-definition}
+disease_catalog <- get_predefined_diseases()
+arrhythmia_def <- disease_catalog["Arrhythmia"]
+arrhythmia_def
+
+demo_surv <- build_survival_dataset(
+  dt = demo_raw,
+  disease_definitions = arrhythmia_def,
+  prevalent_sources = c("ICD10", "OPCS4"),
+  outcome_sources = c("ICD10"),
+  baseline_col = "p53_i0",
+  primary_disease = "Arrhythmia",
+  censor_date = as.Date("2023-10-31"),
+  show_flow = TRUE
+)
+
+table(demo_surv$outcome_status, useNA = "ifany")
+participant_flow <- attr(demo_surv, "participant_flow")
+participant_flow
+```
+
+`outcome_status = 1` indicates incident arrhythmia, `outcome_status = 0`
+indicates censoring, and `NA` indicates baseline prevalent arrhythmia.
+
+## Preprocess exposures and covariates
+
+`preprocess_baseline()` maps raw UKB field names to standardized analysis
+variables. Townsend deprivation index is added through `custom_mapping` because
+it is not part of the default baseline variable set.
+
+```{r preprocess}
+exposure_vars <- c(
+  "no2_2005", "no2_2006", "no2_2007", "no2_2010",
+  "nox", "pm25", "pm10_2007", "pm10_2010"
+)
+
+covariates <- c("age", "sex", "tdi", "ethnicity", "education", "smoking", "drinking")
+
+custom_mapping <- list(
+  tdi = list(
+    ukb_col = "p189",
+    description = "Townsend deprivation index at recruitment"
+  )
+)
+
+demo_prepared <- preprocess_baseline(
+  df = demo_surv,
+  variables = c(exposure_vars, covariates),
+  custom_mapping = custom_mapping,
+  missing_action = "keep"
+)
+
+demo_prepared[, c(exposure_vars, covariates), with = FALSE][1:6]
+```
+
+NO2 is summarized as the mean of 2005, 2006, and 2007 estimates for the main
+analysis. The main PM10 exposure uses 2007 estimates. The 2010 NO2 and PM10
+fields are retained for sensitivity analysis.
+
+```{r derive-exposures}
+demo_prepared[, no2_main := rowMeans(
+  cbind(no2_2005, no2_2006, no2_2007),
+  na.rm = TRUE
+)]
+demo_prepared[is.nan(no2_main), no2_main := NA_real_]
+
+main_exposures <- c("no2_main", "nox", "pm25", "pm10_2007")
+sensitivity_exposures_2010 <- c("no2_2010", "nox", "pm25", "pm10_2010")
+
+main_exposures_z <- paste0(main_exposures, "_z")
+sensitivity_exposures_2010_z <- paste0(sensitivity_exposures_2010, "_z")
+
+for (var in unique(c(main_exposures, sensitivity_exposures_2010))) {
+  demo_prepared[, (paste0(var, "_z")) := as.numeric(scale(get(var)))]
+}
+
+demo_prepared[, c(main_exposures, main_exposures_z), with = FALSE][1:6]
+```
+
+## Assemble the analytic cohort
+
+The prospective cohort excludes participants with baseline prevalent arrhythmia,
+missing outcome status, invalid follow-up time, or missing values in the main
+exposures and adjustment covariates. The stepwise complete-case flow is retained
+for reporting.
+
+```{r cohort-assembly}
+analysis_data <- demo_prepared[
+  !is.na(outcome_status) &
+    !is.na(outcome_surv_time) &
+    outcome_surv_time > 0
+]
+
+complete_case_vars <- c(main_exposures_z, covariates)
+
+analysis_data <- sensitivity_exclude_missing_covariates(
+  data = analysis_data,
+  covariates = complete_case_vars,
+  stepwise = TRUE,
+  verbose = TRUE
+)
+
+complete_case_flow <- attr(analysis_data, "complete_case_flow")
+complete_case_flow
+
+table(analysis_data$outcome_status)
+```
+
+## Baseline characteristics
+
+Baseline characteristics are summarized by incident arrhythmia status. Air
+pollutants are shown on their original scales, while Cox models use standardized
+exposure variables.
+
+```{r tableone}
+table1 <- create_baseline_table(
+  data = analysis_data,
+  case_col = "outcome_status",
+  factor_cols = c("sex", "ethnicity", "education", "smoking", "drinking"),
+  continuous_cols = c("age", "tdi", main_exposures),
+  test = TRUE
+)
+
+print(table1, quote = FALSE, noSpaces = TRUE)
+```
+
+## Cox regression
+
+Each pollutant is evaluated in a separate Cox proportional hazards model,
+adjusted for age, sex, Townsend deprivation index, ethnicity, education,
+smoking, and drinking. Hazard ratios are interpreted per one-standard-deviation
+increase in exposure.
+
+```{r cox}
+pollutant_labels <- data.frame(
+  variable = main_exposures_z,
+  pollutant = c("NO2", "NOx", "PM2.5", "PM10"),
+  stringsAsFactors = FALSE
+)
+
+cox_results <- runmulti_cox(
+  data = analysis_data,
+  main_var = main_exposures_z,
+  covariates = covariates,
+  endpoint = c("outcome_surv_time", "outcome_status")
+)
+
+cox_results <- merge(cox_results, pollutant_labels, by = "variable", all.x = TRUE)
+cox_results$p_bh <- p.adjust(cox_results$pvalue, method = "BH")
+cox_results$p_bonferroni <- p.adjust(cox_results$pvalue, method = "bonferroni")
+cox_results[order(cox_results$pvalue), ]
+```
+
+## Sensitivity analysis 1: exclude early events
+
+To reduce potential reverse causation, early incident arrhythmia events are
+excluded at 1-, 2-, and 4-year lag windows, and the adjusted Cox models are
+refitted.
+
+```{r sensitivity-lag}
+fit_pollution_cox <- function(data, exposures, labels, lag_years = 0) {
+  out <- runmulti_cox(
+    data = data,
+    main_var = exposures,
+    covariates = covariates,
+    endpoint = c("outcome_surv_time", "outcome_status")
+  )
+  out$lag_years <- lag_years
+  merge(out, labels, by = "variable", all.x = TRUE)
+}
+
+lag_results <- lapply(c(0, 1, 2, 4), function(lag) {
+  lag_data <- if (lag == 0) {
+    analysis_data
+  } else {
+    sensitivity_exclude_early_events(
+      data = analysis_data,
+      endpoint = c("outcome_surv_time", "outcome_status"),
+      n_years = lag,
+      verbose = TRUE
+    )
+  }
+  fit_pollution_cox(lag_data, main_exposures_z, pollutant_labels, lag_years = lag)
+})
+
+lag_results <- data.table::rbindlist(lag_results, use.names = TRUE)
+lag_results[, p_bh := p.adjust(pvalue, method = "BH"), by = lag_years]
+as.data.frame(lag_results[order(pollutant, lag_years)])
+```
+
+## Sensitivity analysis 2: 2010 exposure definition
+
+NO2 and PM10 are redefined using 2010 exposure fields (`p24003` and `p24005`),
+while NOx and PM2.5 are kept unchanged.
+
+```{r sensitivity-2010-exposure}
+pollutant_labels_2010 <- data.frame(
+  variable = sensitivity_exposures_2010_z,
+  pollutant = c("NO2_2010", "NOx", "PM2.5", "PM10_2010"),
+  stringsAsFactors = FALSE
+)
+
+analysis_data_2010 <- sensitivity_exclude_missing_covariates(
+  data = demo_prepared[
+    !is.na(outcome_status) &
+      !is.na(outcome_surv_time) &
+      outcome_surv_time > 0
+  ],
+  covariates = c(sensitivity_exposures_2010_z, covariates),
+  stepwise = FALSE,
+  verbose = TRUE
+)
+
+cox_results_2010 <- fit_pollution_cox(
+  data = analysis_data_2010,
+  exposures = sensitivity_exposures_2010_z,
+  labels = pollutant_labels_2010,
+  lag_years = 0
+)
+cox_results_2010$p_bh <- p.adjust(cox_results_2010$pvalue, method = "BH")
+cox_results_2010
+```
