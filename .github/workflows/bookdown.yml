@@ -32,7 +32,9 @@ jobs:
 
       - name: Install R dependencies
         run: |
-          Rscript -e 'install.packages(c("rmarkdown", "knitr"))'
+          Rscript -e 'install.packages(c("rmarkdown", "knitr", "remotes"))'
+          Rscript -e 'remotes::install_deps(dependencies = c("Depends", "Imports"), upgrade = "never")'
+          R CMD INSTALL .
 
       - name: Render Quarto website
         run: |
