@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>skill-creator – UKBAnalytica</title>
+<title>visualization – UKBAnalytica</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -23,6 +23,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -32,8 +67,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./case-study.html" rel="next">
-<link href="./11-ukbanalytica-skills.html" rel="prev">
+<link href="./bioinformatics-omics.html" rel="next">
+<link href="./09-machine-learning.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -353,7 +388,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./11-ukbanalytica-skills.html">AI Agent Skills</a></li><li class="breadcrumb-item"><a href="./12-skill-creator.html">Skill Creator</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./06-imputation.html">Analysis modules</a></li><li class="breadcrumb-item"><a href="./10-visualization.html">Visualization</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -458,7 +493,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./10-visualization.html" class="sidebar-item-text sidebar-link">
+  <a href="./10-visualization.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Visualization</span></a>
   </div>
 </li>
@@ -487,7 +522,7 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./12-skill-creator.html" class="sidebar-item-text sidebar-link active">
+  <a href="./12-skill-creator.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Skill Creator</span></a>
   </div>
 </li>
@@ -520,27 +555,269 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#skill-creator" id="toc-skill-creator" class="nav-link active" data-scroll-target="#skill-creator">Skill Creator</a>
+  <li><a href="#visualization" id="toc-visualization" class="nav-link active" data-scroll-target="#visualization">Visualization</a>
   <ul class="collapse">
-  <li><a href="#programmatic-skill-generation" id="toc-programmatic-skill-generation" class="nav-link" data-scroll-target="#programmatic-skill-generation">Programmatic Skill Generation</a></li>
+  <li><a href="#module-overview" id="toc-module-overview" class="nav-link" data-scroll-target="#module-overview">Module overview</a></li>
+  <li><a href="#forest-plot" id="toc-forest-plot" class="nav-link" data-scroll-target="#forest-plot">Forest plot</a></li>
+  <li><a href="#restricted-cubic-spline-curve" id="toc-restricted-cubic-spline-curve" class="nav-link" data-scroll-target="#restricted-cubic-spline-curve">Restricted cubic spline curve</a></li>
+  <li><a href="#kaplan-meier-curve" id="toc-kaplan-meier-curve" class="nav-link" data-scroll-target="#kaplan-meier-curve">Kaplan-Meier curve</a></li>
+  <li><a href="#roc-curve-comparison" id="toc-roc-curve-comparison" class="nav-link" data-scroll-target="#roc-curve-comparison">ROC curve comparison</a></li>
+  <li><a href="#precision-recall-curve" id="toc-precision-recall-curve" class="nav-link" data-scroll-target="#precision-recall-curve">Precision-recall curve</a></li>
+  <li><a href="#calibration-curve" id="toc-calibration-curve" class="nav-link" data-scroll-target="#calibration-curve">Calibration curve</a></li>
+  <li><a href="#decision-curve-analysis" id="toc-decision-curve-analysis" class="nav-link" data-scroll-target="#decision-curve-analysis">Decision curve analysis</a></li>
+  <li><a href="#shap-beeswarm-plot" id="toc-shap-beeswarm-plot" class="nav-link" data-scroll-target="#shap-beeswarm-plot">SHAP beeswarm plot</a></li>
+  <li><a href="#regression-volcano-plot" id="toc-regression-volcano-plot" class="nav-link" data-scroll-target="#regression-volcano-plot">Regression volcano plot</a></li>
+  <li><a href="#practical-notes" id="toc-practical-notes" class="nav-link" data-scroll-target="#practical-notes">Practical notes</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/12-skill-creator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/10-visualization.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./11-ukbanalytica-skills.html">AI Agent Skills</a></li><li class="breadcrumb-item"><a href="./12-skill-creator.html">Skill Creator</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./06-imputation.html">Analysis modules</a></li><li class="breadcrumb-item"><a href="./10-visualization.html">Visualization</a></li></ol></nav></header>
 
 
 
 
 
-<section id="skill-creator" class="level1">
-<h1>Skill Creator</h1>
-<p>The <code>skill-creator</code> folder contains a toolkit and agent instructions for generating and evaluating new custom skills.</p>
-<section id="programmatic-skill-generation" class="level2">
-<h2 class="anchored" data-anchor-id="programmatic-skill-generation">Programmatic Skill Generation</h2>
-<p>The skill creator provides instructions and evaluation templates (e.g., <code>smoke_test_core.R</code>) allowing developers to programmatically create and validate new AI agent skills based on the UKBAnalytica standard.</p>
-<p>By utilizing these templates, you can extend the built-in capabilities and ensure new custom skills accurately conform to data privacy guidelines, UK Biobank workflow requirements, and the correct API designs for <code>UKBAnalytica</code>.</p>
+<section id="visualization" class="level1">
+<h1>Visualization</h1>
+<p>UKBAnalytica includes plotting helpers for common reporting tasks in UK Biobank analyses. These functions return <code>ggplot2</code> objects, so users can further modify themes, labels, scales, and export settings with standard <code>ggplot2</code> workflows.</p>
+<p>The examples below use small simulated datasets only. They are intended to show function interfaces and expected outputs, not scientific results.</p>
+<section id="module-overview" class="level2">
+<h2 class="anchored" data-anchor-id="module-overview">Module overview</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Visualization task</th>
+<th>Main function</th>
+<th>Typical input</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Forest plot</td>
+<td><code>plot_forest()</code></td>
+<td>Subgroup or regression summary table</td>
+</tr>
+<tr class="even">
+<td>Restricted cubic spline curve</td>
+<td><code>run_rcs()</code>, <code>plot_rcs()</code></td>
+<td>Continuous exposure and adjusted model specification</td>
+</tr>
+<tr class="odd">
+<td>Kaplan-Meier curve</td>
+<td><code>plot_km_curve()</code></td>
+<td>Time, event status, and optional group column</td>
+</tr>
+<tr class="even">
+<td>ROC comparison</td>
+<td><code>ukb_ml_roc_data()</code>, <code>plot_ml_roc_compare()</code></td>
+<td>Binary outcome and predicted probabilities</td>
+</tr>
+<tr class="odd">
+<td>PR curve</td>
+<td><code>plot_ml_pr()</code></td>
+<td>Precision-recall object from model predictions</td>
+</tr>
+<tr class="even">
+<td>Calibration curve</td>
+<td><code>plot_ml_calibration()</code></td>
+<td>Decile-level predicted and observed risks</td>
+</tr>
+<tr class="odd">
+<td>Decision curve analysis</td>
+<td><code>plot_ml_dca()</code></td>
+<td>Threshold-specific net benefit table</td>
+</tr>
+<tr class="even">
+<td>SHAP beeswarm</td>
+<td><code>plot_shap_beeswarm()</code></td>
+<td><code>ukb_shap</code> object</td>
+</tr>
+<tr class="odd">
+<td>Regression volcano plot</td>
+<td><code>plot_regression_volcano()</code></td>
+<td>Cox/logistic/linear summary table</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="forest-plot" class="level2">
+<h2 class="anchored" data-anchor-id="forest-plot">Forest plot</h2>
+<p>Forest plots are useful for subgroup analyses, sensitivity analyses, or compact summaries of multiple effect estimates.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>forest_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">subgroup =</span> <span class="fu">c</span>(<span class="st">"Overall"</span>, <span class="st">"Female"</span>, <span class="st">"Male"</span>, <span class="st">"Age &lt; 60"</span>, <span class="st">"Age &gt;= 60"</span>),</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">estimate =</span> <span class="fu">c</span>(<span class="fl">1.18</span>, <span class="fl">1.05</span>, <span class="fl">1.32</span>, <span class="fl">0.96</span>, <span class="fl">1.41</span>),</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lower95 =</span> <span class="fu">c</span>(<span class="fl">1.03</span>, <span class="fl">0.86</span>, <span class="fl">1.08</span>, <span class="fl">0.78</span>, <span class="fl">1.12</span>),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">upper95 =</span> <span class="fu">c</span>(<span class="fl">1.35</span>, <span class="fl">1.28</span>, <span class="fl">1.62</span>, <span class="fl">1.18</span>, <span class="fl">1.78</span>),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">n =</span> <span class="fu">c</span>(<span class="dv">240</span>, <span class="dv">122</span>, <span class="dv">118</span>, <span class="dv">104</span>, <span class="dv">136</span>),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_event =</span> <span class="fu">c</span>(<span class="dv">91</span>, <span class="dv">43</span>, <span class="dv">48</span>, <span class="dv">34</span>, <span class="dv">57</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_forest</span>(</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  forest_df,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> <span class="cn">NULL</span>,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"Hazard ratio (95% CI)"</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-forest.png" class="img-fluid" style="width:62.0%" alt="Example forest plot generated from simulated effect estimates."></p>
+</section>
+<section id="restricted-cubic-spline-curve" class="level2">
+<h2 class="anchored" data-anchor-id="restricted-cubic-spline-curve">Restricted cubic spline curve</h2>
+<p>Restricted cubic spline (RCS) curves help inspect nonlinear dose-response relationships for continuous exposures. <code>run_rcs()</code> fits the model, and <code>plot_rcs()</code> draws the curve.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>rcs_fit <span class="ot">&lt;-</span> <span class="fu">run_rcs</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> analysis_data,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">exposure =</span> <span class="st">"no2_main"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>, <span class="st">"tdi"</span>, <span class="st">"smoking"</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_type =</span> <span class="st">"cox"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">endpoint =</span> <span class="fu">c</span>(<span class="st">"outcome_surv_time"</span>, <span class="st">"outcome_status"</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">backend =</span> <span class="st">"ns"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">knots =</span> <span class="dv">4</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_rcs</span>(</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  rcs_fit,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"NO2"</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">ylab =</span> <span class="st">"HR for incident arrhythmia"</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-rcs.png" class="img-fluid" style="width:62.0%" alt="Example restricted cubic spline curve for a continuous exposure and time-to-event outcome."></p>
+<p>The solid line is the estimated effect, the ribbon is the 95% confidence interval, and the dashed horizontal line is the null effect.</p>
+</section>
+<section id="kaplan-meier-curve" class="level2">
+<h2 class="anchored" data-anchor-id="kaplan-meier-curve">Kaplan-Meier curve</h2>
+<p><code>plot_km_curve()</code> creates survival curves from follow-up time and event status. It can also add confidence intervals, censor marks, log-rank P values, and a risk table.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_km_curve</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> sim_survival,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">time_col =</span> <span class="st">"time"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">status_col =</span> <span class="st">"status"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">group_col =</span> <span class="st">"group"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">risk_table =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">conf_int =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">censor_marks =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">median_line =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">pvalue =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">palette =</span> <span class="fu">c</span>(<span class="st">"#2F6FA3"</span>, <span class="st">"#33A6A6"</span>, <span class="st">"#C74732"</span>),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> <span class="cn">NULL</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">"Follow-up time"</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">ylab =</span> <span class="st">"Survival probability"</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-km.png" class="img-fluid" style="width:62.0%" alt="Example Kaplan-Meier survival curve generated from simulated follow-up data."></p>
+</section>
+<section id="roc-curve-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="roc-curve-comparison">ROC curve comparison</h2>
+<p>Machine-learning predictions can be converted to tidy ROC data using <code>ukb_ml_roc_data()</code>. Multiple ROC tables can then be compared with <code>plot_ml_roc_compare()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>roc1 <span class="ot">&lt;-</span> <span class="fu">ukb_ml_roc_data</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">truth =</span> y,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">prob =</span> prob_model_1,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_id =</span> <span class="st">"model_a"</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_label =</span> <span class="st">"Clinical + biomarker"</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>roc2 <span class="ot">&lt;-</span> <span class="fu">ukb_ml_roc_data</span>(</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">truth =</span> y,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">prob =</span> prob_model_2,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_id =</span> <span class="st">"model_b"</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">model_label =</span> <span class="st">"Clinical only"</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ml_roc_compare</span>(</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(roc1, roc2),</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> <span class="cn">NULL</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-roc.png" class="img-fluid" style="width:62.0%" alt="Example ROC comparison plot generated from simulated binary predictions."></p>
+</section>
+<section id="precision-recall-curve" class="level2">
+<h2 class="anchored" data-anchor-id="precision-recall-curve">Precision-recall curve</h2>
+<p>PR curves are useful when the outcome is uncommon or when positive predictive value is more clinically relevant than specificity.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pr_obj <span class="ot">&lt;-</span> <span class="fu">ukb_ml_pr</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  ml_model,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">newdata =</span> validation_data</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ml_pr</span>(pr_obj, <span class="at">title =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-pr.png" class="img-fluid" style="width:62.0%" alt="Example precision-recall curve generated from simulated binary predictions."></p>
+</section>
+<section id="calibration-curve" class="level2">
+<h2 class="anchored" data-anchor-id="calibration-curve">Calibration curve</h2>
+<p>Calibration curves compare predicted risks with observed event proportions. They are useful for checking whether a model’s probabilities are numerically interpretable, beyond ranking performance.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cal_obj <span class="ot">&lt;-</span> <span class="fu">ukb_ml_calibration</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  ml_model,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">newdata =</span> validation_data,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_bins =</span> <span class="dv">10</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ml_calibration</span>(cal_obj, <span class="at">title =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-calibration.png" class="img-fluid" style="width:62.0%" alt="Example calibration curve comparing predicted and observed risks across deciles."></p>
+</section>
+<section id="decision-curve-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="decision-curve-analysis">Decision curve analysis</h2>
+<p>Decision curve analysis summarizes net benefit across threshold probabilities and compares model-guided decisions against treat-all and treat-none strategies.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>dca_obj <span class="ot">&lt;-</span> <span class="fu">ukb_ml_dca</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  ml_model,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">newdata =</span> validation_data,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">thresholds =</span> <span class="fu">seq</span>(<span class="fl">0.01</span>, <span class="fl">0.50</span>, <span class="at">by =</span> <span class="fl">0.01</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ml_dca</span>(dca_obj, <span class="at">title =</span> <span class="cn">NULL</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-dca.png" class="img-fluid" style="width:62.0%" alt="Example decision curve analysis generated from simulated binary predictions."></p>
+</section>
+<section id="shap-beeswarm-plot" class="level2">
+<h2 class="anchored" data-anchor-id="shap-beeswarm-plot">SHAP beeswarm plot</h2>
+<p><code>plot_shap_beeswarm()</code> visualizes SHAP values from a <code>ukb_shap</code> object. Features are ranked by mean absolute SHAP value, and point color represents the normalized feature value.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_shap_beeswarm</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  shap_object,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">max_features =</span> <span class="dv">8</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">title =</span> <span class="cn">NULL</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-shap-beeswarm.png" class="img-fluid" style="width:68.0%" alt="Example SHAP beeswarm plot generated from simulated SHAP values."></p>
+</section>
+<section id="regression-volcano-plot" class="level2">
+<h2 class="anchored" data-anchor-id="regression-volcano-plot">Regression volcano plot</h2>
+<p>Volcano plots are useful for high-dimensional regression summaries, such as protein-outcome or metabolite-outcome association scans. The x-axis is the effect estimate, and the y-axis is <code>-log10(P)</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>cox_res<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_res<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_regression_volcano</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  cox_res,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">effect_col =</span> <span class="st">"HR"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">p_col =</span> <span class="st">"pvalue"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">adjusted_p_col =</span> <span class="st">"p_bh"</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">label_col =</span> <span class="st">"variable"</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">significance_cutoff =</span> <span class="fl">0.05</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">x_lab =</span> <span class="st">"Hazard ratio"</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">y_lab =</span> <span class="fu">expression</span>(<span class="sc">-</span>log[<span class="dv">10</span>](<span class="fu">italic</span>(P)))</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><img src="assets/viz-volcano.png" class="img-fluid" style="width:62.0%" alt="Example regression volcano plot generated from simulated high-dimensional association results."></p>
+</section>
+<section id="practical-notes" class="level2">
+<h2 class="anchored" data-anchor-id="practical-notes">Practical notes</h2>
+<ul>
+<li>All plotting functions return <code>ggplot2</code> objects.</li>
+<li>Most functions accept <code>title = NULL</code>, which is useful for manuscript panels where titles are added in figure legends.</li>
+<li>Keep raw participant-level data inside RAP. These plots should be generated from RAP-side analysis tables or aggregate model outputs.</li>
+<li>For publication figures, save with explicit dimensions and resolution, for example <code>ggplot2::ggsave("figure.png", plot, width = 3.2, height = 2.4, dpi = 300)</code>.</li>
+</ul>
 
 
 </section>
@@ -967,13 +1244,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./11-ukbanalytica-skills.html" class="pagination-link" aria-label="UKBAnalytica Skills">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">UKBAnalytica Skills</span>
+      <a href="./09-machine-learning.html" class="pagination-link" aria-label="Machine Learning Workflow">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Machine Learning Workflow</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./case-study.html" class="pagination-link" aria-label="Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study">
-        <span class="nav-page-text">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./bioinformatics-omics.html" class="pagination-link" aria-label="Bioinformatics and omics analyses">
+        <span class="nav-page-text">Bioinformatics and omics analyses</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
@@ -985,7 +1262,7 @@ ul.task-list li input[type="checkbox"] {
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/12-skill-creator.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/10-visualization.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p>Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects.</p>
 </div>

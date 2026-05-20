@@ -12,6 +12,7 @@ project:
     - 07-main-analysis.qmd
     - 08-advanced-analysis.qmd
     - 09-machine-learning.qmd
+    - 10-visualization.qmd
     - bioinformatics-omics.qmd
     - 11-ukbanalytica-skills.qmd
     - 12-skill-creator.qmd
@@ -61,6 +62,8 @@ website:
             href: 11-ukbanalytica-skills.qmd
           - text: "Skill Creator"
             href: 12-skill-creator.qmd
+      - text: "Visualization"
+        href: 10-visualization.qmd
       - text: "Case study"
         href: case-study.qmd
     right:
@@ -86,6 +89,7 @@ website:
           - 07-main-analysis.qmd
           - 08-advanced-analysis.qmd
           - 09-machine-learning.qmd
+          - 10-visualization.qmd
           - bioinformatics-omics.qmd
       - section: "AI Agent Skills"
         contents:

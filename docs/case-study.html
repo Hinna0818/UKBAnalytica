@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Air pollution and incident arrhythmia: a UKBAnalytica demo case study – UKBAnalytica</title>
+<title>Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study – UKBAnalytica</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -357,6 +357,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </ul>
   </li>
   <li class="nav-item">
+    <a class="nav-link" href="./10-visualization.html"> 
+<span class="menu-text">Visualization</span></a>
+  </li>  
+  <li class="nav-item">
     <a class="nav-link" href="./case-study.html"> 
 <span class="menu-text">Case study</span></a>
   </li>  
@@ -383,7 +387,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./case-study.html">Case study</a></li><li class="breadcrumb-item"><a href="./case-study.html">Air pollution and incident arrhythmia: a UKBAnalytica demo case study</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./case-study.html">Case study</a></li><li class="breadcrumb-item"><a href="./case-study.html">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -488,6 +492,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./10-visualization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Visualization</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Bioinformatics and omics analyses</span></a>
   </div>
@@ -529,7 +539,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./case-study.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span></a>
+ <span class="menu-text">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span></a>
   </div>
 </li>
       </ul>
@@ -560,9 +570,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./case-study.html">Case study</a></li><li class="breadcrumb-item"><a href="./case-study.html">Air pollution and incident arrhythmia: a UKBAnalytica demo case study</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./case-study.html">Case study</a></li><li class="breadcrumb-item"><a href="./case-study.html">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Air pollution and incident arrhythmia: a UKBAnalytica demo case study</h1>
+<h1 class="title">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</h1>
 </div>
 
 
@@ -580,7 +590,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <p>This document demonstrates an end-to-end UKBAnalytica workflow using <code>ukb_demo()</code> as a RAP-style raw table. The case study evaluates associations between air pollution exposure and incident cardiac arrhythmia. The workflow covers raw field extraction, phenotype definition, baseline preprocessing, participant flow, baseline table generation, Cox regression, and sensitivity analyses.</p>
-<p>The demo data are synthetic and do not contain UK Biobank participant-level source records. Results are for workflow illustration only.</p>
+<p>The demo data are <strong>synthetic and do not contain UK Biobank participant-level source records. Results are for workflow illustration only.</strong></p>
 <section id="load-demo-data" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="load-demo-data"><span class="header-section-number">1</span> Load demo data</h2>
 <div class="cell">
