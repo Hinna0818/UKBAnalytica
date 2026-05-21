@@ -1,4 +1,4 @@
-#' @importFrom stats as.formula coef vcov quantile model.matrix predict
+#' @importFrom stats AIC as.formula coef vcov quantile model.matrix predict
 #'   delete.response terms anova qnorm model.frame
 #' @importFrom ggplot2 ggplot aes geom_ribbon geom_line geom_hline geom_vline
 #'   geom_point geom_rect geom_rug annotate labs theme_classic theme element_text
@@ -92,17 +92,12 @@ NULL
 .rms_datadist_setup <- function(model_data, exposure, ref_value) {
   dd <- rms::datadist(model_data)
   dd[["limits"]]["Adjust to", exposure] <- ref_value
-  tmp <- paste0(".ukbrcs_dd_", Sys.getpid())
-  assign(tmp, dd, envir = .GlobalEnv)
   old_opt <- getOption("datadist")
-  list(tmp_name = tmp, old_opt = old_opt)
+  list(datadist = dd, old_opt = old_opt)
 }
 
 .rms_datadist_teardown <- function(setup) {
   options(datadist = setup$old_opt)
-  if (exists(setup$tmp_name, envir = .GlobalEnv)) {
-    rm(list = setup$tmp_name, envir = .GlobalEnv)
-  }
 }
 
 .ukb_rcs_aic_rms <- function(model_data, exposure, covariates, model_type,
@@ -147,7 +142,7 @@ NULL
 
   # Set up datadist
   dd_setup <- .rms_datadist_setup(model_data, exposure, ref_value)
-  options(datadist = dd_setup$tmp_name)
+  options(datadist = dd_setup$datadist)
   on.exit(.rms_datadist_teardown(dd_setup), add = TRUE)
 
   # Fit final model

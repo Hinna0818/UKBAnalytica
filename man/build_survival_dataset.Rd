@@ -68,8 +68,8 @@ function call, and restores the previous thread setting on exit.}
 A data.table with columns:
 \describe{
 \item{eid}{Participant identifier}
-\item{\if{html}{\out{<Disease>}}_history}{1 if prevalent case (from prevalent_sources), 0 otherwise}
-\item{\if{html}{\out{<Disease>}}_incident}{1 if incident case (from outcome_sources), 0 otherwise}
+\item{\code{<Disease>_history}}{1 if prevalent case (from prevalent_sources), 0 otherwise}
+\item{\code{<Disease>_incident}}{1 if incident case (from outcome_sources), 0 otherwise}
 \item{outcome_status}{Event indicator for primary disease (1=event, 0=censored, NA=prevalent case)}
 \item{outcome_surv_time}{Follow-up time in years for primary disease (NA for prevalent cases)}
 }

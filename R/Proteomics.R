@@ -433,7 +433,7 @@ subset_protein_ppi <- function(ppi,
                                rm_isolates = TRUE) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::ppi_subset(
+  .get_exported_fun("TCMDATA", "ppi_subset")(
     ppi_obj = graph,
     n = n,
     score_cutoff = score_cutoff,
@@ -470,7 +470,7 @@ compute_protein_ppi_metrics <- function(ppi,
                                         seed = 42) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::compute_nodeinfo(
+  .get_exported_fun("TCMDATA", "compute_nodeinfo")(
     g = graph,
     weight_attr = weight_attr,
     normalize = normalize,
@@ -520,7 +520,7 @@ rank_protein_ppi_nodes <- function(ppi,
                                    na_rm = TRUE) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::rank_ppi_nodes(
+  .get_exported_fun("TCMDATA", "rank_ppi_nodes")(
     g = graph,
     metrics = metrics,
     weights = weights,
@@ -553,7 +553,7 @@ run_protein_ppi_louvain <- function(ppi,
                                     weights = NULL) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::run_louvain(
+  .get_exported_fun("TCMDATA", "run_louvain")(
     g = graph,
     resolution = resolution,
     weights = weights
@@ -669,7 +669,7 @@ run_protein_ppi_mcode <- function(ppi,
                                   max_depth = 100) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::run_mcode(
+  .get_exported_fun("TCMDATA", "run_mcode")(
     g = graph,
     vwp = vwp,
     degree_cutoff = degree_cutoff,
@@ -703,7 +703,7 @@ run_protein_ppi_mcode <- function(ppi,
 get_protein_mcode_res <- function(ppi, only_clusters = FALSE) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::get_mcode_res(g = graph, only_clusters = only_clusters)
+  .get_exported_fun("TCMDATA", "get_mcode_res")(g = graph, only_clusters = only_clusters)
 }
 
 
@@ -735,7 +735,7 @@ run_protein_ppi_mcl <- function(ppi,
                                 allow1 = FALSE) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::run_MCL(
+  .get_exported_fun("TCMDATA", "run_MCL")(
     g = graph,
     inflation = inflation,
     max_iter = max_iter,
@@ -768,7 +768,7 @@ score_protein_ppi_clusters <- function(ppi,
                                        min_size = 3) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
-  TCMDATA::add_cluster_score(
+  .get_exported_fun("TCMDATA", "add_cluster_score")(
     g = graph,
     cluster_attr = cluster_attr,
     min_size = min_size
@@ -845,7 +845,7 @@ run_protein_ppi_robustness <- function(ppi,
     stop("No target gene symbols remained after protein-to-symbol conversion.")
   }
 
-  robustness <- TCMDATA::ppi_knock(
+  robustness <- .get_exported_fun("TCMDATA", "ppi_knock")(
     g = graph,
     targets = target_symbols,
     n_perm = n_perm,
@@ -887,7 +887,7 @@ run_protein_ppi_robustness <- function(ppi,
 plot_go_ora_bar <- function(x, ...) {
   .require_package("TCMDATA")
   enrich_obj <- .extract_enrichment_result(x)
-  TCMDATA::go_barplot(enrich_obj, ...)
+  .get_exported_fun("TCMDATA", "go_barplot")(enrich_obj, ...)
 }
 
 
@@ -916,7 +916,7 @@ plot_go_ora_bar <- function(x, ...) {
 plot_enrichment_lollipop <- function(x, ...) {
   .require_package("TCMDATA")
   enrich_obj <- .extract_enrichment_result(x)
-  TCMDATA::gglollipop(enrich_obj, ...)
+  .get_exported_fun("TCMDATA", "gglollipop")(enrich_obj, ...)
 }
 
 
@@ -1172,4 +1172,10 @@ plot_enrichment_lollipop <- function(x, ...) {
       call. = FALSE
     )
   }
+}
+
+
+.get_exported_fun <- function(pkg, fun) {
+  .require_package(pkg)
+  getExportedValue(pkg, fun)
 }

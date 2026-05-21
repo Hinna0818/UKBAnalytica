@@ -59,11 +59,8 @@ Suggests:
     clusterProfiler,
     AnnotationDbi,
     org.Hs.eg.db,
-    MetaboAnalystR,
-    qs,
-    qs2,
-    TCMDATA
+    qs2
 Config/testthat/edition: 3
 Config/Needs/bioc: TRUE
 Depends: 
-    R (>= 3.5)
+    R (>= 4.0)

@@ -473,7 +473,7 @@ plot_metabolite_ora_barplot <- function(x,
                                          library,
                                          p_adjust_method,
                                          run_subprocess) {
-  if (!requireNamespace("MetaboAnalystR", quietly = TRUE)) {
+  if (!.metab_pkg_available("MetaboAnalystR")) {
     stop(
       "Package 'MetaboAnalystR' is required for `backend = \"metaboanalyst\"`. ",
       "Install it from the xia-lab/MetaboAnalystR repository, then rerun."
@@ -502,7 +502,7 @@ setwd(%s)
     utils::download.file(url, file, method = "libcurl", quiet = TRUE)
   }
   ok <- tryCatch({
-    qs::qread(file)
+    getExportedValue("qs", "qread")(file)
     TRUE
   }, error = function(e) FALSE)
   if (!ok) {
@@ -510,7 +510,10 @@ setwd(%s)
       stop("MetaboAnalystR downloaded a qs2-format library file. Install qs2 and rerun.")
     }
     obj <- qs2::qs_read(file)
-    qs::qsave(obj, file)
+    if (!.metab_pkg_available("qs")) {
+      stop("MetaboAnalystR downloaded a qs2-format library file. Install qs and rerun.")
+    }
+    getExportedValue("qs", "qsave")(obj, file)
   }
   invisible(file)
 }
@@ -588,7 +591,7 @@ if (!is.null(mSet$analSet$ora.mat)) {
     utils::download.file(url, file, method = "libcurl", quiet = TRUE)
   }
   ok <- tryCatch({
-    qs::qread(file)
+    getExportedValue("qs", "qread")(file)
     TRUE
   }, error = function(e) FALSE)
   if (!ok) {
@@ -596,9 +599,16 @@ if (!is.null(mSet$analSet$ora.mat)) {
       stop("MetaboAnalystR downloaded a qs2-format library file. Install qs2 and rerun.")
     }
     obj <- qs2::qs_read(file)
-    qs::qsave(obj, file)
+    if (!.metab_pkg_available("qs")) {
+      stop("MetaboAnalystR downloaded a qs2-format library file. Install qs and rerun.")
+    }
+    getExportedValue("qs", "qsave")(obj, file)
   }
   invisible(file)
+}
+
+.metab_pkg_available <- function(pkg) {
+  nzchar(system.file(package = pkg))
 }
 
 .metab_standardize_metaboanalyst_result <- function(out, p_adjust_method) {
