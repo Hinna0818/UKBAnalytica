@@ -158,6 +158,20 @@ create_disease_definition <- function(name = NULL,
 #' Returns a list of commonly used cardiovascular and metabolic disease
 #' definitions with validated ICD-10, ICD-9, and self-report code mappings.
 #'
+#' @param source Definition source. `"curated"` returns the original manually
+#'   curated UKBAnalytica definitions. `"pomegranate"` returns definitions
+#'   converted from the built-in Pomegranate-derived disease catalog. `"both"`
+#'   returns diseases that can be matched between both sources, with standardized
+#'   curated names and either intersected or unioned source definitions depending
+#'   on `merge_type`.
+#' @param merge_type Merge strategy for `source = "both"`. `"intersection"`
+#'   keeps codes supported by both curated and Pomegranate definitions. `"union"`
+#'   combines codes from both definitions.
+#' @param disease Optional disease key or name pattern used to subset the
+#'   returned definition list.
+#' @param supported_only Logical. For Pomegranate-derived definitions, keep only
+#'   code systems currently supported by UKBAnalytica parsers.
+#'
 #' @return A named list of disease definition objects.
 #'
 #' @details
@@ -191,11 +205,23 @@ create_disease_definition <- function(name = NULL,
 #' \dontrun{
 #' diseases <- get_predefined_diseases()
 #' my_diseases <- diseases[c("AA", "Hypertension", "Diabetes")]
+#' pom <- get_predefined_diseases(source = "pomegranate")
+#' shared <- get_predefined_diseases(source = "both")
+#' expanded <- get_predefined_diseases(source = "both", merge_type = "union")
+#' copd_expanded <- get_predefined_diseases(
+#'   source = "both", merge_type = "union", disease = "COPD"
+#' )
 #' }
 #'
 #' @export
-get_predefined_diseases <- function() {
-  list(
+get_predefined_diseases <- function(source = c("curated", "pomegranate", "both"),
+                                    merge_type = c("intersection", "union"),
+                                    disease = NULL,
+                                    supported_only = TRUE) {
+  source <- match.arg(source)
+  merge_type <- match.arg(merge_type)
+
+  curated <- list(
     # Aortic diseases
     AA = create_disease_definition(
       name = "Aortic Aneurysm",
@@ -704,6 +730,21 @@ get_predefined_diseases <- function() {
       cancer_behaviour = 3L
     )
   )
+
+  if (identical(source, "curated")) {
+    return(.filter_disease_definition_list(curated, disease))
+  }
+
+  pomegranate <- get_pomegranate_diseases(
+    disease = if (identical(source, "pomegranate")) disease else NULL,
+    supported_only = supported_only
+  )
+  if (identical(source, "pomegranate")) {
+    return(pomegranate)
+  }
+
+  out <- .merge_predefined_diseases(curated, pomegranate, merge_type = merge_type)
+  .filter_disease_definition_list(out, disease)
 }
 
 

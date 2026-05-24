@@ -4,7 +4,30 @@
 \alias{get_predefined_diseases}
 \title{Get Predefined Disease Definitions}
 \usage{
-get_predefined_diseases()
+get_predefined_diseases(
+  source = c("curated", "pomegranate", "both"),
+  merge_type = c("intersection", "union"),
+  disease = NULL,
+  supported_only = TRUE
+)
+}
+\arguments{
+\item{source}{Definition source. \code{"curated"} returns the original manually
+curated UKBAnalytica definitions. \code{"pomegranate"} returns definitions
+converted from the built-in Pomegranate-derived disease catalog. \code{"both"}
+returns diseases that can be matched between both sources, with standardized
+curated names and either intersected or unioned source definitions depending
+on \code{merge_type}.}
+
+\item{merge_type}{Merge strategy for \code{source = "both"}. \code{"intersection"}
+keeps codes supported by both curated and Pomegranate definitions. \code{"union"}
+combines codes from both definitions.}
+
+\item{disease}{Optional disease key or name pattern used to subset the
+returned definition list.}
+
+\item{supported_only}{Logical. For Pomegranate-derived definitions, keep only
+code systems currently supported by UKBAnalytica parsers.}
 }
 \value{
 A named list of disease definition objects.
@@ -44,6 +67,12 @@ cancer endpoints used in UKB epidemiology workflows}
 \dontrun{
 diseases <- get_predefined_diseases()
 my_diseases <- diseases[c("AA", "Hypertension", "Diabetes")]
+pom <- get_predefined_diseases(source = "pomegranate")
+shared <- get_predefined_diseases(source = "both")
+expanded <- get_predefined_diseases(source = "both", merge_type = "union")
+copd_expanded <- get_predefined_diseases(
+  source = "both", merge_type = "union", disease = "COPD"
+)
 }
 
 }

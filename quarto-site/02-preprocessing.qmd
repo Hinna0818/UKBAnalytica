@@ -128,6 +128,28 @@ This will create columns `sbp` and `dbp` from whichever readings are present
 
 ## Medication use
 
+UKBAnalytica supports two medication workflows:
+
+1. simple baseline medication indicators from the touchscreen fields used in
+   common covariate adjustment;
+2. field `20003` treatment/medication code matching using the built-in
+   medication catalog.
+
+The medication catalog can be searched before deriving medication indicators:
+
+```r
+get_medication_catalog("metformin")
+get_medication_catalog(medication_class = "insulin")
+get_medication_catalog("1140874686")
+```
+
+The catalog includes curated medication groups used by UKBAnalytica and the
+UK Biobank official coding 4 entries for field `20003`. The returned table
+contains medication IDs, names, classes, field IDs, medication codes, code
+labels, matching rules, and validation status.
+
+### Baseline medication indicators
+
 Extract binary indicators for medication use at baseline:
 
 ```r
@@ -139,6 +161,8 @@ processed <- extract_medications(
 
 The resulting columns are named `med_cholesterol`, `med_blood_pressure`, and `med_insulin`
 (1 = taking medication, 0 = not).
+
+### Field 20003 medication code matching
 
 For field 20003 treatment/medication codes, use the predefined medication
 definitions and the bundled UKB coding 4 reference:
@@ -152,6 +176,21 @@ processed <- extract_self_report_medications(
   medications = c("Blood_Pressure_Medication", "Diabetes_Medication")
 )
 ```
+
+Common predefined medication groups include:
+
+```r
+names(get_predefined_medications())
+```
+
+Typical groups include blood-pressure medication, diabetes medication, ACE
+inhibitors, angiotensin receptor blockers, beta blockers, calcium-channel
+blockers, thiazide diuretics, insulin, metformin, sulfonylureas, TZDs, and
+related glucose-lowering classes.
+
+The output variables are binary participant-level indicators. For example,
+`med20003_Blood_Pressure_Medication = 1` means at least one matching field
+`20003` code was found for that participant.
 
 ## Air pollution exposure
 

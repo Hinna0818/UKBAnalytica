@@ -15,8 +15,17 @@ UKBAnalytica identifies disease cases from up to eight data sources:
 
 ## Predefined diseases
 
-The package ships a curated library of definitions for common cardiovascular
-and metabolic conditions. Retrieve them with `get_predefined_diseases()`:
+The package now provides two disease-definition layers:
+
+- **Curated definitions**: 78 manually maintained UKBAnalytica definitions for
+  commonly used endpoints.
+- **Pomegranate-derived definitions**: 313 definitions converted from the
+  public Pomegranate GitHub YAML algorithms and stored in the built-in disease
+  catalog. The Pomegranate portal long-form table is retained in `extdata` for
+  audit and traceability.
+
+The default behavior is unchanged: `get_predefined_diseases()` returns the
+curated definitions.
 
 ```r
 library(UKBAnalytica)
@@ -33,6 +42,74 @@ Select a subset by name:
 my_diseases <- get_predefined_diseases()[
   c("AA", "Arrhythmia", "Atrial_Fibrillation")
 ]
+```
+
+To inspect the raw disease-code catalog before defining an endpoint, use
+`get_disease_catalog()`:
+
+```r
+get_disease_catalog(disease = "COPD")
+get_disease_catalog(disease = "asthma", source = "pomegranate")
+get_disease_catalog(disease = "diabetes", code_system = "ICD-10")
+get_pomegranate_source_manifest()
+portal_codes <- load_pomegranate_portal_coding()
+```
+
+The catalog is a code-level table with columns such as `definition_id`,
+`disease_name`, `source`, `code_system`, `field_id`, `code`, `code_label`,
+`match_rule`, and `validation_status`. It is useful for checking exactly which
+ICD-10, self-report, OPCS4, cancer-registry, or other source codes support a
+target disease. By default, `source = "pomegranate"` uses the GitHub YAML
+catalog pinned in the source manifest; the portal CSV is provided only as a
+reference table.
+
+## Choosing a definition source
+
+`get_predefined_diseases()` can return different definition sets:
+
+```r
+# 78 manually curated definitions
+curated <- get_predefined_diseases(source = "curated")
+
+# 313 Pomegranate-derived definitions that can be converted to UKBAnalytica
+# disease-definition objects using currently supported parsers
+pomegranate <- get_predefined_diseases(source = "pomegranate")
+
+# 53 diseases matched between curated and Pomegranate; code-level intersection
+both_intersection <- get_predefined_diseases(
+  source = "both",
+  merge_type = "intersection"
+)
+
+# 326 diseases in the union library:
+# matched diseases use curated names with unioned codes;
+# unmatched curated and unmatched Pomegranate definitions are retained
+both_union <- get_predefined_diseases(
+  source = "both",
+  merge_type = "union"
+)
+```
+
+The `source = "both"` mode standardizes matched disease names to the curated
+UKBAnalytica keys. For example, COPD remains `COPD`, asthma remains `Asthma`,
+and type 2 diabetes remains `T2DM`. This keeps the output compatible with
+`build_survival_dataset()`.
+
+The merge strategy controls the code set for matched diseases:
+
+| `merge_type` | Disease-level behavior | Code-level behavior | Typical use |
+|:--|:--|:--|:--|
+| `"intersection"` | Keep diseases matched between curated and Pomegranate | Keep overlapping codes only | Conservative sensitivity analysis |
+| `"union"` | Keep matched diseases plus unmatched diseases from both sources | Combine curated and Pomegranate codes for matched diseases | Expanded endpoint discovery |
+
+You can also filter during retrieval:
+
+```r
+copd_expanded <- get_predefined_diseases(
+  source = "both",
+  merge_type = "union",
+  disease = "COPD"
+)
 ```
 
 Each definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS-4
