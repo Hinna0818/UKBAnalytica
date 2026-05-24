@@ -95,6 +95,48 @@ arrhythmia_def <- create_disease_definition(
 )
 ```
 
+## Code matching rules
+
+ICD-10, ICD-9, OPCS4, death-cause, and cancer-registry code fields are matched
+with regular expressions. Internally, UKBAnalytica parses each code into a
+long-format table and keeps rows where `grepl(pattern, code, perl = TRUE)` is
+true.
+
+UKB hospital ICD and OPCS codes are usually stored without decimal points. For
+example, ICD-10 `I47.2` should be written as `I472`, and OPCS4 `K57.6` should
+be written as `K576`.
+
+Use different regular-expression styles depending on how broad the endpoint
+should be:
+
+| Goal | Example pattern | What it matches |
+|---|---|---|
+| Broad 3-character ICD block | `"^I47"` | `I47`, `I470`, `I471`, `I472`, ... |
+| Specific 4-character ICD codes only | `"^(I470|I472)$"` | only `I470` or `I472` |
+| Several exact ICD codes | `"^(I470|I472|I490|I493)$"` | only the listed ICD codes |
+| Broad OPCS4 family | `"^K62"` | all `K62*` procedure codes |
+| Specific OPCS4 procedure codes only | `"^(K576|K641)$"` | only `K576` or `K641` |
+
+The start anchor `^` avoids matching a code fragment in the middle of a string.
+The end anchor `$` avoids overmatching child codes. For example, `^I49` is
+appropriate for a broad I49 arrhythmia endpoint, but `^I493$` is safer when the
+intended endpoint is premature depolarization only.
+
+For ventricular arrhythmia, a narrow ICD-10 + OPCS4 definition can be written
+as:
+
+```r
+ventricular_arrhythmia_def <- create_disease_definition(
+  name = "Ventricular Arrhythmia",
+  icd10_pattern = "^(I470|I472|I490|I493)$",
+  opcs4_pattern = "^(K576|K641)$"
+)
+```
+
+This definition matches the requested ICD-10 codes `I47.0`, `I47.2`, `I49.0`,
+and `I49.3`, plus OPCS4 procedure codes `K57.6` and `K64.1`. It does not match
+other `I47*`, `I49*`, `K57*`, or `K64*` codes.
+
 For diseases with UKB algorithm-defined outcomes (Category 42), you can also
 add algorithm date/source fields:
 

@@ -137,8 +137,21 @@ processed <- extract_medications(
 )
 ```
 
-The resulting columns are named `anti_cho`, `antihypertensive`, and `insulin`
+The resulting columns are named `med_cholesterol`, `med_blood_pressure`, and `med_insulin`
 (1 = taking medication, 0 = not).
+
+For field 20003 treatment/medication codes, use the predefined medication
+definitions and the bundled UKB coding 4 reference:
+
+```r
+coding4 <- load_ukb_medication_coding()
+names(get_predefined_medications())
+
+processed <- extract_self_report_medications(
+  processed,
+  medications = c("Blood_Pressure_Medication", "Diabetes_Medication")
+)
+```
 
 ## Air pollution exposure
 

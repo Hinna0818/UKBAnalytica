@@ -11,10 +11,13 @@ test_that("predefined diseases include expanded chronic and cancer definitions",
     "Dyspepsia", "Inflammatory_Bowel_Disease", "Diverticular_Disease",
     "Thyroid_Disorders", "Migraine", "Bronchiectasis", "Multiple_Sclerosis",
     "Glaucoma", "Cataract", "AMD", "Breast_Cancer", "Prostate_Cancer",
-    "Colorectal_Cancer", "Stomach_Cancer"
+    "Colorectal_Cancer", "Stomach_Cancer", "Hyperglycaemia", "PCOS"
   )
   expect_true(all(expected %in% names(defs)))
   expect_match(defs$Atrial_Fibrillation$icd10_pattern, "I48", fixed = TRUE)
   expect_false(grepl("J48", defs$Atrial_Fibrillation$icd10_pattern, fixed = TRUE))
   expect_equal(defs$Breast_Cancer$cancer_behaviour, 3L)
+  expect_true(all(c(1276, 1468, 1607) %in% defs$Diabetes$sr_codes))
+  expect_match(defs$Hyperglycaemia$icd10_pattern, "R73", fixed = TRUE)
+  expect_equal(defs$PCOS$sr_codes, 1350)
 })

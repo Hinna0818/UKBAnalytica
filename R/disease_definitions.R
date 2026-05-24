@@ -219,14 +219,20 @@ get_predefined_diseases <- function() {
       name = "Cardiovascular Disease",
       icd10_pattern = "^(I21|I22|I23|I24|I25)",
       icd9_pattern = "^(410|411|412|413|414)",
-      sr_codes = c(1066, 1067),
+      sr_codes = c(
+        1066, 1067, 1074, 1075, 1076, 1077, 1078, 1079,
+        1081, 1082, 1086, 1087, 1425, 1426, 1471, 1479,
+        1483, 1484, 1485, 1486, 1487, 1488, 1489, 1490,
+        1491, 1492, 1583, 1584, 1585, 1586, 1587, 1588,
+        1589, 1590, 1591
+      ),
       first_occurrence_fields = c(131298, 131300, 131302, 131304, 131306)
     ),
     MI = create_disease_definition(
       name = "Myocardial Infarction",
       icd10_pattern = "^(I21|I22)",
       icd9_pattern = "^410",
-      sr_codes = c(1066),
+      sr_codes = c(1066, 1075),
       first_occurrence_fields = c(131298, 131300),
       algo_date_field = 42000,
       algo_source_field = 42001
@@ -277,14 +283,14 @@ get_predefined_diseases <- function() {
       name = "Hypertension",
       icd10_pattern = "^(I10|I11|I12|I13|I14|I15)",
       icd9_pattern = "^(401|402|403|404|405)",
-      sr_codes = c(1065),
+      sr_codes = c(1065, 1072),
       first_occurrence_fields = c(131286, 131288, 131290, 131292, 131294)
     ),
     Diabetes = create_disease_definition(
       name = "Diabetes Mellitus",
-      icd10_pattern = "^(E10|E11|E12|E13|E14)",
-      icd9_pattern = "^250",
-      sr_codes = c(1220, 1221, 1222, 1223),
+      icd10_pattern = "^(E10|E11|E12|E13|E14|G590|G632|H280|H360|M142|N083|O24|P702|T383|Y423)",
+      icd9_pattern = "^(249|250|3572|3620|6480|7751|9623)",
+      sr_codes = c(1220, 1221, 1222, 1223, 1276, 1468, 1607),
       first_occurrence_fields = c(130706, 130708, 130710, 130712, 130714)
     ),
     T1DM = create_disease_definition(
@@ -298,6 +304,15 @@ get_predefined_diseases <- function() {
       icd10_pattern = "^E11",
       sr_codes = c(1223),
       first_occurrence_fields = 130708
+    ),
+    Hyperglycaemia = create_disease_definition(
+      name = "Hyperglycaemia",
+      icd10_pattern = "^R73",
+      icd9_pattern = "^7902"
+    ),
+    PCOS = create_disease_definition(
+      name = "Polycystic Ovary Syndrome",
+      sr_codes = c(1350)
     ),
 
     # Vascular diseases
