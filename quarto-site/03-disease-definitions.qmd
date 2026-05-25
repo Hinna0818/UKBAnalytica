@@ -17,8 +17,9 @@ UKBAnalytica identifies disease cases from up to eight data sources:
 
 The package now provides two disease-definition layers:
 
-- **Curated definitions**: 78 manually maintained UKBAnalytica definitions for
-  commonly used endpoints.
+- **Curated definitions**: 86 manually maintained UKBAnalytica definitions for
+  commonly used endpoints, including literature-checked subtype and composite
+  endpoints.
 - **Pomegranate-derived definitions**: 313 definitions converted from the
   public Pomegranate GitHub YAML algorithms and stored in the built-in disease
   catalog. The Pomegranate portal long-form table is retained in `extdata` for
@@ -68,20 +69,20 @@ reference table.
 `get_predefined_diseases()` can return different definition sets:
 
 ```r
-# 78 manually curated definitions
+# 86 manually curated definitions
 curated <- get_predefined_diseases(source = "curated")
 
 # 313 Pomegranate-derived definitions that can be converted to UKBAnalytica
 # disease-definition objects using currently supported parsers
 pomegranate <- get_predefined_diseases(source = "pomegranate")
 
-# 53 diseases matched between curated and Pomegranate; code-level intersection
+# 56 diseases matched between curated and Pomegranate; code-level intersection
 both_intersection <- get_predefined_diseases(
   source = "both",
   merge_type = "intersection"
 )
 
-# 326 diseases in the union library:
+# 331 diseases in the union library:
 # matched diseases use curated names with unioned codes;
 # unmatched curated and unmatched Pomegranate definitions are retained
 both_union <- get_predefined_diseases(

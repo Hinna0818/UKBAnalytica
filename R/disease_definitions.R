@@ -694,6 +694,20 @@ get_predefined_diseases <- function(source = c("curated", "pomegranate", "both")
       cancer_icd10_pattern = "^(C18|C19|C20)",
       cancer_behaviour = 3L
     ),
+    Colon_Cancer = create_disease_definition(
+      name = "Colon Cancer",
+      icd10_pattern = "^C18",
+      death_icd10 = "^C18",
+      cancer_icd10_pattern = "^C18",
+      cancer_behaviour = 3L
+    ),
+    Rectal_Cancer = create_disease_definition(
+      name = "Rectal Cancer",
+      icd10_pattern = "^(C19|C20)",
+      death_icd10 = "^(C19|C20)",
+      cancer_icd10_pattern = "^(C19|C20)",
+      cancer_behaviour = 3L
+    ),
     Melanoma = create_disease_definition(
       name = "Melanoma",
       icd10_pattern = "^C43",
@@ -715,6 +729,13 @@ get_predefined_diseases <- function(source = c("curated", "pomegranate", "both")
       cancer_icd10_pattern = "^C56",
       cancer_behaviour = 3L
     ),
+    Uterus_Cancer = create_disease_definition(
+      name = "Uterus Cancer",
+      icd10_pattern = "^C54",
+      death_icd10 = "^C54",
+      cancer_icd10_pattern = "^C54",
+      cancer_behaviour = 3L
+    ),
     Oesophageal_Cancer = create_disease_definition(
       name = "Oesophageal Cancer",
       icd10_pattern = "^C15",
@@ -728,6 +749,30 @@ get_predefined_diseases <- function(source = c("curated", "pomegranate", "both")
       death_icd10 = "^C16",
       cancer_icd10_pattern = "^C16",
       cancer_behaviour = 3L
+    ),
+    Erectile_Dysfunction = create_disease_definition(
+      name = "Erectile Dysfunction",
+      icd10_pattern = "^(F52|N48)"
+    ),
+    MACE = create_disease_definition(
+      name = "Major Adverse Cardiovascular Events",
+      icd10_pattern = "^(G45|I21|I22|I23|I24|I25|I63|I64)"
+    ),
+    Renal_Disease = create_disease_definition(
+      name = "Renal Disease",
+      icd10_pattern = paste0(
+        "^(N00|N01|N02|N03|N04|N05|N06|N07|N08|N09|",
+        "N10|N11|N12|N13|N14|N15|N16|N17|N18|N19|",
+        "N25|N26|N27|N28|N29)"
+      )
+    ),
+    Severe_Mental_Illness = create_disease_definition(
+      name = "Severe Mental Illness",
+      icd10_pattern = "^(F20|F25|F30|F31|F32|F33|F44)"
+    ),
+    Systemic_Lupus_Erythematosus = create_disease_definition(
+      name = "Systemic Lupus Erythematosus",
+      icd10_pattern = "^M32"
     )
   )
 

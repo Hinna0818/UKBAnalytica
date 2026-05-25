@@ -11,7 +11,9 @@ test_that("predefined diseases include expanded chronic and cancer definitions",
     "Dyspepsia", "Inflammatory_Bowel_Disease", "Diverticular_Disease",
     "Thyroid_Disorders", "Migraine", "Bronchiectasis", "Multiple_Sclerosis",
     "Glaucoma", "Cataract", "AMD", "Breast_Cancer", "Prostate_Cancer",
-    "Colorectal_Cancer", "Stomach_Cancer", "Hyperglycaemia", "PCOS"
+    "Colorectal_Cancer", "Colon_Cancer", "Rectal_Cancer", "Stomach_Cancer",
+    "Uterus_Cancer", "MACE", "Hyperglycaemia", "PCOS",
+    "Systemic_Lupus_Erythematosus"
   )
   expect_true(all(expected %in% names(defs)))
   expect_match(defs$Atrial_Fibrillation$icd10_pattern, "I48", fixed = TRUE)
@@ -20,4 +22,5 @@ test_that("predefined diseases include expanded chronic and cancer definitions",
   expect_true(all(c(1276, 1468, 1607) %in% defs$Diabetes$sr_codes))
   expect_match(defs$Hyperglycaemia$icd10_pattern, "R73", fixed = TRUE)
   expect_equal(defs$PCOS$sr_codes, 1350)
+  expect_match(defs$Systemic_Lupus_Erythematosus$icd10_pattern, "M32", fixed = TRUE)
 })
