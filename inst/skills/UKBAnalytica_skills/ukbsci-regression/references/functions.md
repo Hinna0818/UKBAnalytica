@@ -1,7 +1,7 @@
 # `ukbsci-regression` — function reference
 
-All signatures verbatim from `UKBAnalytica` ≥ 0.6.2.2 (`R/regression.R` +
-`R/regression_extensions.R`).
+All signatures reflect `UKBAnalytica` 1.0.0 (`R/regression.R`,
+`R/regression_extensions.R`, and `R/rcs.R`).
 
 ---
 
@@ -54,6 +54,52 @@ runmulti_cox(data, main_var, covariates = NULL,
 **Returns:** `variable, coef, se, z, HR, lower95, upper95, pvalue, n, n_event`.
 
 Requires the `survival` package.
+
+---
+
+## `runmulti_glm()`
+
+```r
+runmulti_glm(data, main_var, covariates = NULL,
+             outcome, family = "gaussian", ...)
+```
+
+Fits one generalized linear model per exposure.
+
+| Arg | Meaning |
+|-----|---------|
+| `family` | character, family function, or family object |
+
+**Returns:** `variable, family, link, beta, lower95, upper95, pvalue, n`.
+For log-link families, exponentiate estimates for ratio measures.
+
+---
+
+## `runmulti_negbin()`
+
+```r
+runmulti_negbin(data, main_var, covariates = NULL, outcome, ...)
+```
+
+Fits one negative-binomial model per exposure for overdispersed count
+outcomes.
+
+**Returns:** `variable, IRR, lower95, upper95, pvalue, theta, n`.
+
+---
+
+## `runmulti_gam()`
+
+```r
+runmulti_gam(data, main_var, covariates = NULL, outcome,
+             family = "gaussian", smooth = TRUE, k = 10, ...)
+```
+
+Fits one GAM per exposure. With `smooth = TRUE`, the exposure enters as
+`s(exposure, k = k)`; with `smooth = FALSE`, it enters as a parametric term.
+
+**Returns:** for smooth terms, `variable, edf, ref_df, stat, stat_type,
+pvalue, family, link, n`; for parametric terms, coefficient-style columns.
 
 ---
 
@@ -158,11 +204,55 @@ Run PH diagnostics on a single fitted `coxph` model.
 
 ---
 
+## `run_rcs()`
+
+```r
+run_rcs(data, exposure, covariates = NULL,
+        model_type = c("cox", "logistic", "linear"),
+        endpoint = NULL, outcome = NULL,
+        knots = NULL, knot_range = 3:5,
+        ref_value = NULL, conf_level = 0.95,
+        grid_size = 100, trim_quantiles = c(0.01, 0.99),
+        backend = c("ns", "rms"))
+```
+
+Fits an exposure-response restricted cubic spline for a single exposure.
+
+| Arg | Meaning |
+|-----|---------|
+| `model_type` | `"cox"`, `"logistic"`, or `"linear"` |
+| `endpoint` | required for Cox: `c(time_col, status_col)` |
+| `outcome` | required for logistic/linear |
+| `knots` | fixed knot count; if `NULL`, choose from `knot_range` |
+| `backend` | `"ns"` is lightweight; `"rms"` uses `rms::rcs` if installed |
+
+**Returns:** class `ukb_rcs` list with `model`, `prediction`, `p_overall`,
+`p_nonlinear`, `knots`, `ref`, `n`, and model metadata.
+
+---
+
+## `plot_rcs()`
+
+```r
+plot_rcs(x, xlab = NULL, ylab = NULL,
+         show_distribution = TRUE,
+         distribution = c("histogram", "density", "rug"),
+         show_p = TRUE)
+```
+
+Plots a `ukb_rcs` object as an exposure-response curve with 95% CI and optional
+exposure distribution. Safe output is the aggregate figure or prediction grid
+without participant identifiers.
+
+---
+
 ## Dependencies
 
 | Need | Suggests-package |
 |------|------------------|
 | Cox / Fine-Gray | `survival` |
+| RCS with rms backend | `rms` |
+| RCS plotting | `ggplot2` |
 | Robust SE (downstream of `run_weighted_analysis`) | `sandwich`, `lmtest` |
 
 No participant-level data leaves the project — outputs are aggregate

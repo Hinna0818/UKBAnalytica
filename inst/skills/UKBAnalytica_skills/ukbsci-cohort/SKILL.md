@@ -3,8 +3,9 @@ name: ukbsci-cohort
 description: >
   Build a UK Biobank disease cohort from a phenotype table extracted on the
   Research Analysis Platform (RAP), using the UKBAnalytica R package.
-  Covers disease-definition construction (create_disease_definition,
-  get_predefined_diseases, combine_disease_definitions), source parsers
+  Covers disease-definition construction and catalog lookup
+  (get_predefined_diseases, get_disease_catalog, get_pomegranate_diseases,
+  create_disease_definition, combine_disease_definitions), source parsers
   (parse_icd10_diagnoses, parse_icd9_diagnoses, parse_opcs4_procedures,
   parse_cancer_registry, parse_death_records, parse_self_reported_illnesses),
   multi-source case extraction (extract_cases_by_source, extract_disease_history,
@@ -12,8 +13,9 @@ description: >
   Cox-ready dataset builder build_survival_dataset() with prevalent vs incident
   separation and follow-up time computation, plus select_incident_by_years()
   for time-window stratification. Use this skill when the user asks to define a
-  UKB disease phenotype, separate prevalent from incident cases, build a
-  survival dataset, compare diagnostic sources, or compute follow-up time.
+  UKB disease phenotype, inspect curated/Pomegranate diagnostic codes,
+  separate prevalent from incident cases, build a survival dataset, compare
+  diagnostic sources, or compute follow-up time.
   Triggers: UKB cohort, UKB disease definition, prevalent vs incident,
   survival dataset, build_survival_dataset, ICD10 phenotyping, UKB 队列,
   病例定义, 生存数据集, /ukbsci-cohort. Hard rule: local agents must not read or inspect real UKB RAP participant-level data; generate scripts for RAP execution and interpret aggregate outputs only.
@@ -105,7 +107,10 @@ stopifnot("p53_i0" %in% colnames(dt))   # baseline date
 
 ### Phase 1 — Pick or build disease definitions
 
-Start with the curated catalogue:
+Start with the curated catalogue. In UKBAnalytica 1.0.0, the default curated
+library contains **86** analysis-ready disease definitions. The source-aware
+catalog additionally exposes **313** Pomegranate-derived definitions; the
+combined raw catalog contains **381** unique definition IDs.
 
 ```r
 defs_all <- get_predefined_diseases()
@@ -116,6 +121,34 @@ names(defs_all)
 # Subset to your study endpoints
 diseases <- defs_all[c("AA", "Hypertension", "Diabetes")]
 ```
+
+Inspect exact code evidence before committing to an endpoint:
+
+```r
+# Code-level table: source, code_system, field_id, code, validation_status
+get_disease_catalog(disease = "COPD")
+get_disease_catalog(disease = "diabetes", code_system = "ICD-10")
+
+# Pomegranate-derived disease definitions that current parsers can use
+pom_defs <- get_predefined_diseases(source = "pomegranate")
+
+# Matched curated + Pomegranate definitions.
+# "intersection" is conservative; "union" expands matched code sets and
+# retains unmatched definitions from both sources.
+shared_defs <- get_predefined_diseases(
+  source = "both",
+  merge_type = "intersection"
+)
+expanded_defs <- get_predefined_diseases(
+  source = "both",
+  merge_type = "union"
+)
+```
+
+Use `source = "curated"` for protocol-driven analyses where stable manual
+definitions are preferred. Use `source = "both", merge_type = "union"` for
+endpoint discovery or sensitivity analysis. When the exact source matters,
+write the selected source and merge strategy into the analysis script.
 
 Define a custom phenotype:
 
@@ -321,8 +354,10 @@ taking values `"within_5_years"` / `"after_5_years"`.
 
 Pause and ask before generating code if any of these is ambiguous:
 
-1. **Which disease(s)?** Check `names(get_predefined_diseases())` first;
-   only build custom definitions if the user names something not in there.
+1. **Which disease(s)?** Check `get_disease_catalog(disease = "<term>")`
+   and `names(get_predefined_diseases())` first. Only build custom definitions
+   if the requested endpoint is absent or the protocol requires different
+   source/code rules.
 2. **`primary_disease`?** Required for `outcome_status` / `outcome_surv_time`.
    Default to the first disease, but confirm.
 3. **`prevalent_sources` vs `outcome_sources`?** Defaults are:
@@ -346,6 +381,10 @@ Pause and ask before generating code if any of these is ambiguous:
 | Function | Purpose | Returns |
 |----------|---------|---------|
 | `get_predefined_diseases()` | Catalogue of curated disease definitions | named list |
+| `get_disease_catalog(source, disease, code_system)` | Source-aware code evidence table | data.frame |
+| `get_pomegranate_diseases(disease)` | Convert Pomegranate catalog rows to disease definitions | named list |
+| `get_pomegranate_source_manifest()` | Provenance for Pomegranate YAML and portal audit sources | data.frame |
+| `load_pomegranate_portal_coding()` | Load retained portal CSV audit table | data.frame |
 | `create_disease_definition()` | Build a custom definition | list |
 | `combine_disease_definitions(..., name)` | Composite endpoint (union) | list |
 | `parse_icd10_diagnoses(dt)` | ICD-10 long table | data.table |

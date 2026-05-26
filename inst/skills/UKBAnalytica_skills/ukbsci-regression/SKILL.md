@@ -1,21 +1,23 @@
 ---
 name: ukbsci-regression
 description: >
-  Fit linear, logistic, Cox, GLM, negative-binomial, and GAM regression models
-  (including extensions for proportional-hazards diagnostics, lagged sensitivity,
-  competing risks, and trend tests) on UK Biobank Research Analysis Platform (RAP)
-  cohorts built with UKBAnalytica. Wraps runmulti_lm, runmulti_logit, runmulti_cox,
-  runmulti_glm, runmulti_negbin, runmulti_gam, run_regression (unified interface),
-  runmulti_cox_lag, runmulti_cox_zph, runmulti_competing, runmulti_trend, and
-  ukb_cox_diagnostics. Use this skill when the user asks to fit any regression model
+  Fit linear, logistic, Cox, GLM, negative-binomial, GAM, Fine-Gray competing-risk,
+  lagged Cox, trend, PH-diagnostic, and restricted cubic spline models
+  on UK Biobank Research Analysis Platform (RAP) cohorts built with UKBAnalytica.
+  Wraps runmulti_lm, runmulti_logit, runmulti_cox, runmulti_glm,
+  runmulti_negbin, runmulti_gam, run_regression, runmulti_cox_lag,
+  runmulti_cox_zph, runmulti_competing, runmulti_trend, ukb_cox_diagnostics,
+  run_rcs, and plot_rcs. Use this skill when the user asks to fit any regression model
   on the cohort, run batch regressions across multiple exposures, fit count/rate
   outcomes with Poisson/quasi-Poisson/Gamma GLM, fit negative-binomial for
   overdispersed counts, screen for non-linearity with GAM, check proportional-hazards
   assumptions, run a lagged sensitivity analysis, perform competing-risks Fine-Gray
-  modeling, or test a dose-response trend. Triggers: UKB regression, Cox model,
+  modeling, test a dose-response trend, or draw an exposure-response RCS curve.
+  Triggers: UKB regression, Cox model,
   logistic regression, GLM, Poisson, negative binomial, GAM, batch regression,
-  proportional hazards, competing risks, Fine-Gray, p_trend, UKB 回归, Cox 模型,
-  广义线性模型, 广义加性模型, /ukbsci-regression. Hard rule: local agents must not
+  proportional hazards, competing risks, Fine-Gray, p_trend, restricted cubic spline,
+  RCS, 非线性, UKB 回归, Cox 模型, 广义线性模型, 广义加性模型, /ukbsci-regression.
+  Hard rule: local agents must not
   read or inspect real UKB RAP participant-level data; generate scripts for RAP
   execution and interpret aggregate outputs only.
 ---
@@ -53,6 +55,7 @@ for QC.
 - Overdispersed count outcomes (negative-binomial as a principled alternative to
   quasi-Poisson).
 - Screen for non-linear dose-response associations with GAM splines.
+- Fit and visualize restricted cubic spline exposure-response curves.
 - Check the proportional-hazards assumption for Cox models.
 - Run a lagged sensitivity analysis (drop events in the first N years).
 - Fine-Gray competing-risks modeling.
@@ -103,6 +106,7 @@ encoded as 0 = censored, 1 = primary event, 2 = competing event.
 | Cox with PH diagnostics | `runmulti_cox_zph()` | same as Cox |
 | Cox with early-event exclusion | `runmulti_cox_lag()` | same as Cox |
 | Ordered exposure trend | `runmulti_trend()` | depends on `model_type` |
+| Restricted cubic spline | `run_rcs()` + `plot_rcs()` | Cox, logistic, or linear |
 
 **Unified interface:** `run_regression(type = c("lm","logit","cox","glm","negbin","gam"))` wraps
 all six base model families — use it when the model type is determined programmatically or you
@@ -182,6 +186,43 @@ gam_res <- runmulti_gam(
 fwrite(cox_res,     "/mnt/project/<area>/04-results/02-cox_main.csv")
 fwrite(negbin_res,  "/mnt/project/<area>/04-results/02-negbin_main.csv")
 ```
+
+#### Restricted cubic spline exposure-response
+
+Use RCS when the user asks for an interpretable nonlinear exposure-response
+curve, especially for continuous environmental, biomarker, or omics exposures.
+For quick screening across many exposures, `runmulti_gam()` is lighter; for a
+publication-ready single-exposure curve, use `run_rcs()` and `plot_rcs()`.
+
+```r
+rcs_fit <- run_rcs(
+  data       = cohort,
+  exposure   = "pm25",
+  covariates = covars,
+  model_type = "cox",
+  endpoint   = c("outcome_surv_time", "outcome_status"),
+  knots      = 4,
+  ref_value  = median(cohort$pm25, na.rm = TRUE),
+  backend    = "ns"
+)
+
+rcs_plot <- plot_rcs(
+  rcs_fit,
+  xlab = "PM2.5",
+  ylab = "HR (95% CI)",
+  show_p = TRUE,
+  distribution = "rug"
+)
+ggplot2::ggsave(
+  "/mnt/project/<area>/04-results/02-rcs_pm25.pdf",
+  rcs_plot, width = 5.2, height = 4.2
+)
+```
+
+Interpretation: `p_overall` tests whether the exposure is associated with the
+outcome; `p_nonlinear` tests whether the spline improves over a linear term.
+Do not export prediction grids with participant IDs; aggregate curve data and
+figures are safe to share.
 
 #### Unified interface
 
@@ -322,11 +363,13 @@ diag$global_pvalue
    overdispersion.
 7. **GAM non-linearity interpretation.** `edf` close to 1 does not prove linearity — it
    reflects the penalised fit. Visual inspection of the smooth is also recommended.
-8. **Competing-risks status coding.** Value `1` = primary event, `2` = competing event.
+8. **RCS overfitting.** Use sensible knot counts (usually 3–5), prespecify or
+   report the reference value, and avoid interpreting unstable tails with sparse data.
+9. **Competing-risks status coding.** Value `1` = primary event, `2` = competing event.
    Confirm with the user; mis-coding inverts the result.
-9. **`runmulti_cox_lag()` drops events with `surv_time ≤ lag_years`.** Does not shift
+10. **`runmulti_cox_lag()` drops events with `surv_time ≤ lag_years`.** Does not shift
    the time origin.
-10. **`runmulti_trend()` requires factor exposures.** Quartile-categorise first if continuous.
+11. **`runmulti_trend()` requires factor exposures.** Quartile-categorise first if continuous.
 
 ---
 
@@ -346,6 +389,8 @@ diag$global_pvalue
 | `runmulti_competing(data, main_var, time_col, event_col, compete_col, event_value, compete_value)` | data.frame | `SHR, lower95, upper95, pvalue, n_compete` |
 | `runmulti_trend(..., model_type, score_method, custom_scores)` | data.frame | per-level + `p_trend, trend_estimate` |
 | `ukb_cox_diagnostics(model, transform, alpha)` | list | `table, global_pvalue, cox_zph` |
+| `run_rcs(data, exposure, covariates, model_type, endpoint, outcome, knots, backend)` | `ukb_rcs` list | `prediction, p_overall, p_nonlinear, knots, ref` |
+| `plot_rcs(x, ...)` | ggplot | RCS curve with 95% CI and optional exposure distribution |
 
 **`runmulti_glm()` family notes:**
 - Accepts character (`"poisson"`, `"quasipoisson"`, `"gaussian"`, `"binomial"`, `"Gamma"`…),

@@ -100,3 +100,43 @@ diag <- ukb_cox_diagnostics(fit, transform = "km", alpha = 0.05)
 diag$table         # per-term zph
 diag$global_pvalue # global PH test
 ```
+
+## F. Count outcome with negative-binomial regression
+
+```r
+count_res <- runmulti_negbin(
+  data       = cohort,
+  main_var   = exposures,
+  outcome    = "hospitalisation_count",
+  covariates = covars
+)
+fwrite(count_res, "/mnt/project/<area>/04-results/02-negbin_counts.csv")
+```
+
+## G. Restricted cubic spline curve
+
+```r
+rcs_fit <- run_rcs(
+  data       = cohort,
+  exposure   = "pm25",
+  covariates = covars,
+  model_type = "cox",
+  endpoint   = c("outcome_surv_time", "outcome_status"),
+  knots      = 4,
+  backend    = "ns"
+)
+
+rcs_plot <- plot_rcs(
+  rcs_fit,
+  xlab = "PM2.5",
+  ylab = "HR (95% CI)",
+  show_p = TRUE,
+  distribution = "rug"
+)
+ggplot2::ggsave(
+  "/mnt/project/<area>/04-results/02-rcs_pm25.pdf",
+  rcs_plot,
+  width = 5.2,
+  height = 4.2
+)
+```

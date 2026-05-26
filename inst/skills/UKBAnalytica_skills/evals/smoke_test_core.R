@@ -46,7 +46,14 @@ toy[1:3, `:=`(p41270 = "['J44']", p41280_a0 = p53_i0 - 365)]
 toy[4:15, `:=`(p41270 = "['J44']", p41280_a0 = p53_i0 + 365)]
 
 diseases <- get_predefined_diseases()
-stopifnot(length(diseases) >= 70, "COPD" %in% names(diseases))
+stopifnot(
+  length(diseases) >= 86,
+  "COPD" %in% names(diseases),
+  "MACE" %in% names(diseases),
+  length(get_predefined_diseases(source = "pomegranate")) >= 300,
+  length(get_predefined_diseases(source = "both", merge_type = "union")) >= 330
+)
+stopifnot(nrow(get_disease_catalog(disease = "COPD")) > 0)
 pass("predefined disease catalog")
 
 cohort <- build_survival_dataset(
@@ -83,6 +90,20 @@ cox_res <- runmulti_cox(
 )
 stopifnot(nrow(cox_res) == 2, all(c("HR", "pvalue") %in% names(cox_res)))
 pass("multi-Cox regression")
+
+rcs_fit <- run_rcs(
+  data = reg_dt,
+  exposure = "x1",
+  covariates = c("age", "sex"),
+  model_type = "cox",
+  endpoint = c("time", "status"),
+  knots = 4,
+  backend = "ns",
+  grid_size = 40
+)
+rcs_plot <- plot_rcs(rcs_fit, show_distribution = FALSE, distribution = "rug")
+stopifnot(inherits(rcs_fit, "ukb_rcs"), inherits(rcs_plot, "ggplot"))
+pass("RCS regression and plot")
 
 split <- ukb_ml_split_data(
   df = toy[, .(outcome, x1, x2, x3)],

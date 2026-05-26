@@ -1,6 +1,6 @@
 # `ukbsci-cohort` — function reference
 
-All signatures verbatim from `UKBAnalytica` ≥ 0.6.2.2.
+All signatures reflect `UKBAnalytica` 1.0.0.
 
 ---
 
@@ -54,10 +54,17 @@ must equal `first_occurrence_fields`.
 ## 2. `get_predefined_diseases()`
 
 ```r
-get_predefined_diseases()
+get_predefined_diseases(source = c("curated", "pomegranate", "both"),
+                        merge_type = c("intersection", "union"),
+                        disease = NULL,
+                        supported_only = TRUE)
 ```
 
-Returns a **named list** of 76 curated disease definitions, covering:
+Returns a **named list** of disease definitions. Defaults to 86 curated
+UKBAnalytica definitions. `source = "pomegranate"` returns 313
+Pomegranate-derived definitions that current parsers can use.
+`source = "both", merge_type = "union"` returns a 331-definition expanded
+library with matched definitions merged under curated keys.
 
 | Group | Members |
 |-------|---------|
@@ -65,19 +72,36 @@ Returns a **named list** of 76 curated disease definitions, covering:
 | Cardio | `CVD`, `MI`, `STEMI`, `NSTEMI`, `HF`, `Angina`, `Stroke`, `Ischaemic_Stroke`, `Intracerebral_Haemorrhage`, `Subarachnoid_Haemorrhage`, `Stroke_TIA`, `Hypertension`, `Vascular_Disease`, `Arrhythmia`, `Atrial_Fibrillation`, `Ventricular_Arrhythmia`, `AV_Block`, `Intraventricular_Block`, `SVT`, `PAD`, `VTE` |
 | Endocrine / Metabolic | `Diabetes`, `T1DM`, `T2DM`, `Hyperlipidemia`, `Thyroid_Disorders` |
 | Respiratory | `Asthma`, `COPD`, `Bronchiectasis` |
-| Renal | `CKD`, `ESRD` |
-| Cancer | `Lung_Cancer`, `Breast_Cancer`, `Prostate_Cancer`, `Colorectal_Cancer`, `Melanoma`, `Non_Melanoma_Skin_Cancer`, `Ovarian_Cancer`, `Oesophageal_Cancer`, `Stomach_Cancer` |
-| Neuro / Mental | `Parkinsons`, `Parkinsonism`, `Progressive_Supranuclear_Palsy`, `Multiple_System_Atrophy`, `Dementia`, `Alzheimers_Disease`, `Vascular_Dementia`, `Frontotemporal_Dementia`, `Motor_Neurone_Disease`, `Multiple_Sclerosis`, `Epilepsy`, `Migraine`, `Depression`, `Anxiety`, `Schizophrenia_Bipolar`, `Alcohol_Use_Disorder`, `Substance_Use_Disorder` |
+| Renal | `CKD`, `ESRD`, `Renal_Disease` |
+| Cancer | `Lung_Cancer`, `Breast_Cancer`, `Prostate_Cancer`, `Colorectal_Cancer`, `Colon_Cancer`, `Rectal_Cancer`, `Melanoma`, `Non_Melanoma_Skin_Cancer`, `Ovarian_Cancer`, `Uterus_Cancer`, `Oesophageal_Cancer`, `Stomach_Cancer` |
+| Neuro / Mental | `Parkinsons`, `Parkinsonism`, `Progressive_Supranuclear_Palsy`, `Multiple_System_Atrophy`, `Dementia`, `Alzheimers_Disease`, `Vascular_Dementia`, `Frontotemporal_Dementia`, `Motor_Neurone_Disease`, `Multiple_Sclerosis`, `Epilepsy`, `Migraine`, `Depression`, `Anxiety`, `Schizophrenia_Bipolar`, `Severe_Mental_Illness`, `Alcohol_Use_Disorder`, `Substance_Use_Disorder` |
 | GI | `Dyspepsia`, `Irritable_Bowel_Syndrome`, `Inflammatory_Bowel_Disease`, `Diverticular_Disease`, `Treated_Constipation`, `Chronic_Liver_Disease` |
-| Musculo / Bone | `Osteoarthritis`, `Rheumatoid_Arthritis`, `Fracture` |
+| Musculo / Bone | `Osteoarthritis`, `Rheumatoid_Arthritis`, `Systemic_Lupus_Erythematosus`, `Fracture` |
 | ENT / Eye | `Menieres_Disease`, `Glaucoma`, `Cataract`, `AMD` |
-| Other | `Pernicious_Anaemia`, `Psoriasis_Eczema`, `Prostate_Disorders` |
+| Other | `Pernicious_Anaemia`, `Psoriasis_Eczema`, `Prostate_Disorders`, `Erectile_Dysfunction`, `MACE` |
 
 Use `names(get_predefined_diseases())` to enumerate at runtime.
 
 ---
 
-## 3. `combine_disease_definitions(..., name = "Combined")`
+## 3. Catalog inspection helpers
+
+```r
+get_disease_catalog(source = c("all", "curated", "pomegranate"),
+                    disease = NULL, code_system = NULL,
+                    supported_only = FALSE)
+get_pomegranate_diseases(disease = NULL, supported_only = TRUE)
+get_pomegranate_source_manifest()
+load_pomegranate_portal_coding(path = NULL)
+```
+
+Use `get_disease_catalog()` to inspect code-level evidence before building a
+cohort. It returns `definition_id`, `disease_name`, `source`, `code_system`,
+`field_id`, `code`, `match_rule`, `validation_status`, and provenance fields.
+
+---
+
+## 4. `combine_disease_definitions(..., name = "Combined")`
 
 ```r
 combine_disease_definitions(..., name = "Combined")
@@ -88,7 +112,7 @@ Patterns concatenated with `|`, code vectors unioned.
 
 ---
 
-## 4. Parsers (one row per diagnosis event)
+## 5. Parsers (one row per diagnosis event)
 
 | Function | Required `dt` columns | Output columns |
 |----------|-----------------------|----------------|
@@ -106,7 +130,7 @@ omission. The agent must check `nrow()` before relying on a parser result.
 
 ---
 
-## 5. `extract_cases_by_source()` — flexible primitive
+## 6. `extract_cases_by_source()` — flexible primitive
 
 ```r
 extract_cases_by_source(

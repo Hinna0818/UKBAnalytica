@@ -7,8 +7,37 @@ package versions.
 
 ```r
 defs <- get_predefined_diseases()
-names(defs)           # see all 76 keys
+names(defs)           # see all 86 curated keys
 str(defs$COPD)        # inspect any definition
+```
+
+## Current source layers
+
+Use these counts as the current package-level orientation; always verify in
+the live R session for manuscript text.
+
+```r
+length(get_predefined_diseases())                                      # 86
+length(get_predefined_diseases(source = "pomegranate"))                # 313
+length(get_predefined_diseases(source = "both", merge_type = "union")) # 331
+length(unique(get_disease_catalog()$definition_id))                    # 381
+```
+
+`get_predefined_diseases(source = "curated")` returns the manually maintained
+analysis-ready definitions. `source = "pomegranate"` converts public
+Pomegranate-derived catalog rows into UKBAnalytica definition objects when the
+code system is supported by current parsers. `source = "both"` standardizes
+matched disease names to curated keys. `merge_type = "intersection"` keeps
+overlapping codes; `merge_type = "union"` combines codes and retains unmatched
+definitions from both layers.
+
+Before using any endpoint in a protocol, inspect the code evidence:
+
+```r
+get_disease_catalog(disease = "COPD")
+get_disease_catalog(disease = "asthma", source = "pomegranate")
+get_disease_catalog(disease = "diabetes", code_system = "ICD-10")
+get_pomegranate_source_manifest()
 ```
 
 ---
@@ -99,6 +128,7 @@ inspect the live object for exact patterns.
 |-----|------|----------------------|
 | `CKD` | Chronic kidney disease | ICD-10/9 |
 | `ESRD` | End-stage renal disease | ICD-10/9 |
+| `Renal_Disease` | Broad renal disease | ICD-10 |
 
 ## 8. Cancer
 
@@ -113,9 +143,12 @@ as complementary sources depending on the scientific question.
 | `Breast_Cancer` | Breast cancer | ICD-10, CR |
 | `Prostate_Cancer` | Prostate cancer | ICD-10, CR |
 | `Colorectal_Cancer` | Colorectal cancer | ICD-10, CR |
+| `Colon_Cancer` | Colon cancer | ICD-10, CR |
+| `Rectal_Cancer` | Rectal cancer | ICD-10, CR |
 | `Melanoma` | Melanoma | ICD-10, CR |
 | `Non_Melanoma_Skin_Cancer` | Non-melanoma skin cancer | ICD-10, CR |
 | `Ovarian_Cancer` | Ovarian cancer | ICD-10, CR |
+| `Uterus_Cancer` | Uterus cancer | ICD-10, CR |
 | `Oesophageal_Cancer` | Oesophageal cancer | ICD-10, CR |
 | `Stomach_Cancer` | Gastric cancer | ICD-10, CR |
 
@@ -157,6 +190,7 @@ studies. Histology codes follow ICD-O-3 morphology (UKB Field 40011).
 | `Depression` | Depression | ICD-10/9, SR |
 | `Anxiety` | Anxiety disorders | ICD-10/9, SR |
 | `Schizophrenia_Bipolar` | Schizophrenia / bipolar | ICD-10/9 |
+| `Severe_Mental_Illness` | Severe mental illness | ICD-10 |
 | `Alcohol_Use_Disorder` | Alcohol use disorder | ICD-10/9 |
 | `Substance_Use_Disorder` | Substance use disorder | ICD-10/9 |
 
@@ -177,6 +211,7 @@ studies. Histology codes follow ICD-O-3 morphology (UKB Field 40011).
 |-----|------|----------------------|
 | `Osteoarthritis` | Osteoarthritis | ICD-10/9, SR |
 | `Rheumatoid_Arthritis` | Rheumatoid arthritis | ICD-10/9, SR |
+| `Systemic_Lupus_Erythematosus` | Systemic lupus erythematosus | ICD-10 |
 | `Fracture` | Fracture | ICD-10/9, OPCS4 |
 
 ## 13. Sensory and ophthalmological
@@ -195,6 +230,8 @@ studies. Histology codes follow ICD-O-3 morphology (UKB Field 40011).
 | `Pernicious_Anaemia` | Pernicious anaemia | ICD-10/9, SR |
 | `Psoriasis_Eczema` | Psoriasis / eczema | ICD-10/9, SR |
 | `Prostate_Disorders` | Prostate disorders | ICD-10/9, SR |
+| `Erectile_Dysfunction` | Erectile dysfunction | ICD-10 |
+| `MACE` | Major adverse cardiovascular events | ICD-10 |
 
 ---
 
