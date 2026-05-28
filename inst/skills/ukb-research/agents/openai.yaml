@@ -1,0 +1,4 @@
+interface:
+  display_name: "UKB Research"
+  short_description: "Scope UK Biobank research topics and study designs."
+  default_prompt: "Use $ukb-research to assess my UK Biobank research idea, review related literature, identify gaps, and draft a feasible study plan."

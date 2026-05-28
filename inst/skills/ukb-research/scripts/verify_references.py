@@ -13,6 +13,9 @@ Parse only, without network:
 
 Validate with PubMed/Crossref:
     python3 verify_references.py report.md --output reference_audit.json
+
+Validate and export lightweight reference-manager files:
+    python3 verify_references.py report.md --bibtex references.bib --ris references.ris
 """
 
 from __future__ import annotations
@@ -162,6 +165,72 @@ def audit_markdown(path: Path, offline: bool, timeout: int, sleep: float) -> dic
     }
 
 
+def clean_key(record: dict, index: int) -> str:
+    base = record.get("identifier") or f"ref{index}"
+    base = re.sub(r"^https?://", "", base, flags=re.IGNORECASE)
+    base = re.sub(r"[^A-Za-z0-9]+", "_", base).strip("_")
+    if not base:
+        base = f"ref{index}"
+    return f"ref_{base[:48]}_{index}"
+
+
+def bibtex_escape(value: str | None) -> str:
+    if not value:
+        return ""
+    return value.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+
+
+def records_to_bibtex(records: list[dict]) -> str:
+    entries: list[str] = []
+    for i, record in enumerate(records, start=1):
+        if record.get("kind") not in {"PMID", "DOI"}:
+            continue
+        key = clean_key(record, i)
+        title = bibtex_escape(record.get("title") or record.get("identifier"))
+        year = bibtex_escape(record.get("year"))
+        journal = bibtex_escape(record.get("source"))
+        doi = record.get("identifier") if record.get("kind") == "DOI" else ""
+        url = record.get("url") or ""
+        fields = [
+            f"  title = {{{title}}}",
+        ]
+        if journal:
+            fields.append(f"  journal = {{{journal}}}")
+        if year:
+            fields.append(f"  year = {{{year}}}")
+        if doi:
+            fields.append(f"  doi = {{{bibtex_escape(doi)}}}")
+        if url:
+            fields.append(f"  url = {{{bibtex_escape(url)}}}")
+        fields.append(f"  note = {{{record.get('kind')} {bibtex_escape(record.get('identifier'))}; status: {record.get('status')}}}")
+        entries.append("@article{" + key + ",\n" + ",\n".join(fields) + "\n}")
+    return "\n\n".join(entries) + ("\n" if entries else "")
+
+
+def records_to_ris(records: list[dict]) -> str:
+    lines: list[str] = []
+    for record in records:
+        if record.get("kind") not in {"PMID", "DOI"}:
+            continue
+        lines.append("TY  - JOUR")
+        if record.get("title"):
+            lines.append(f"TI  - {record['title']}")
+        if record.get("source"):
+            lines.append(f"JO  - {record['source']}")
+        if record.get("year"):
+            lines.append(f"PY  - {record['year']}")
+        if record.get("kind") == "DOI":
+            lines.append(f"DO  - {record['identifier']}")
+        if record.get("kind") == "PMID":
+            lines.append(f"AN  - PMID:{record['identifier']}")
+        if record.get("url"):
+            lines.append(f"UR  - {record['url']}")
+        lines.append(f"N1  - verification_status: {record.get('status')}")
+        lines.append("ER  -")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("markdown", type=Path, help="Markdown file to audit")
@@ -169,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--offline", action="store_true", help="Only parse references; do not call PubMed/Crossref")
     parser.add_argument("--timeout", type=int, default=20, help="HTTP timeout in seconds")
     parser.add_argument("--sleep", type=float, default=0.34, help="Delay between API calls")
+    parser.add_argument("--bibtex", type=Path, default=None, help="Optional BibTeX output path")
+    parser.add_argument("--ris", type=Path, default=None, help="Optional RIS output path")
     args = parser.parse_args(argv)
 
     if not args.markdown.exists():
@@ -180,6 +251,12 @@ def main(argv: list[str] | None = None) -> int:
         args.output.write_text(output + "\n", encoding="utf-8")
     else:
         print(output)
+
+    records = audit["records"]
+    if args.bibtex:
+        args.bibtex.write_text(records_to_bibtex(records), encoding="utf-8")
+    if args.ris:
+        args.ris.write_text(records_to_ris(records), encoding="utf-8")
 
     bad = [
         rec for rec in audit["records"]

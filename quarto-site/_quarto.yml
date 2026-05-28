@@ -16,6 +16,7 @@ project:
     - bioinformatics-omics.qmd
     - 11-ukbanalytica-skills.qmd
     - 12-skill-creator.qmd
+    - 13-ukb-research-skill.qmd
     - case-study.qmd
 
 website:
@@ -62,6 +63,8 @@ website:
             href: 11-ukbanalytica-skills.qmd
           - text: "Skill Creator"
             href: 12-skill-creator.qmd
+          - text: "UKB Research Skill"
+            href: 13-ukb-research-skill.qmd
       - text: "Visualization"
         href: 10-visualization.qmd
       - text: "Case study"
@@ -95,6 +98,7 @@ website:
         contents:
           - 11-ukbanalytica-skills.qmd
           - 12-skill-creator.qmd
+          - 13-ukb-research-skill.qmd
       - section: "Case study"
         contents:
           - case-study.qmd

@@ -77,6 +77,11 @@ For each search:
   opportunities;
 - cite sources with PMID/DOI/URL when available.
 
+For reusable search patterns, read
+[`references/search-strategies.md`](references/search-strategies.md). Use it
+when the user gives only broad keywords or when the topic spans omics,
+prediction, mediation, GWAS, or MR.
+
 ## 4. Existing-work and gap analysis
 
 Every report must move beyond a generic literature summary. For the user's
@@ -115,7 +120,15 @@ python3 inst/skills/ukb-research/scripts/verify_references.py report.md \
 ```
 
 Use the audit to catch malformed or invented PMIDs/DOIs. Do not fabricate
-references. Prefer PubMed IDs and DOIs over vague author-year citations.
+references. Prefer PubMed IDs and DOIs over vague author-year citations. If
+the user needs reference-manager files, export BibTeX or RIS:
+
+```bash
+python3 inst/skills/ukb-research/scripts/verify_references.py report.md \
+  --output reference_audit.json \
+  --bibtex references.bib \
+  --ris references.ris
+```
 
 ## 6. Feasibility assessment
 
@@ -208,6 +221,12 @@ Quality bar:
 - no unsupported claims of novelty;
 - no participant-level data exposure;
 - actionable next steps.
+
+Before modifying the verifier script, run its offline smoke test:
+
+```bash
+python3 inst/skills/ukb-research/scripts/smoke_test_reference_verifier.py
+```
 
 ## 10. Handoff to other skills
 

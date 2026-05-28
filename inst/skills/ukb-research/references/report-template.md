@@ -176,6 +176,15 @@ python3 inst/skills/ukb-research/scripts/verify_references.py <report>.md \
   --output reference_audit.json
 ```
 
+Optional reference-manager exports:
+
+```bash
+python3 inst/skills/ukb-research/scripts/verify_references.py <report>.md \
+  --output reference_audit.json \
+  --bibtex references.bib \
+  --ris references.ris
+```
+
 Summary:
 
 - PMIDs checked:
