@@ -54,7 +54,6 @@ Suggests:
     rpart,
     Boruta,
     rBayesianOptimization,
-    fastshap,
     randomForestSRC,
     clusterProfiler,
     AnnotationDbi,

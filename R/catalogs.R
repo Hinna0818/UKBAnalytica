@@ -100,28 +100,32 @@ get_medication_catalog <- function(medication = NULL,
 #' Load the Pomegranate portal coding evidence table
 #'
 #' @description
-#' Loads the long-form Pomegranate portal extraction retained in package
-#' `extdata` for audit and traceability. The canonical Pomegranate disease
-#' catalog used by `get_disease_catalog(source = "pomegranate")` is built from
-#' the public GitHub YAML algorithms; this portal table is provided as a
-#' reference layer and is not used by default for endpoint construction.
+#' Loads a long-form Pomegranate portal extraction from a user-supplied local
+#' CSV or CSV.GZ file for audit and traceability. The canonical Pomegranate
+#' disease catalog used by `get_disease_catalog(source = "pomegranate")` is
+#' built into the package from the public GitHub YAML algorithms; the portal
+#' audit table is not required for endpoint construction and is not shipped in
+#' the CRAN build.
 #'
-#' @param path Optional path to a local Pomegranate portal CSV file. If NULL,
-#'   the package copy in `inst/extdata/ukb_pomegranate_portal_coding_evidence.csv`
-#'   is used.
+#' @param path Path to a local Pomegranate portal CSV or CSV.GZ file.
 #'
 #' @return A data.frame.
 #' @export
 #'
 #' @examples
-#' portal_codes <- load_pomegranate_portal_coding()
+#' \dontrun{
+#' portal_codes <- load_pomegranate_portal_coding(
+#'   "ukb_pomegranate_portal_coding_evidence.csv"
+#' )
 #' head(portal_codes)
+#' }
 load_pomegranate_portal_coding <- function(path = NULL) {
   if (is.null(path)) {
-    path <- system.file(
-      "extdata",
-      "ukb_pomegranate_portal_coding_evidence.csv",
-      package = "UKBAnalytica"
+    stop(
+      "`path` is required. The portal audit table is not shipped with the ",
+      "package build; use get_disease_catalog(source = 'pomegranate') for the ",
+      "built-in canonical catalog.",
+      call. = FALSE
     )
   }
   if (!is.character(path) || length(path) != 1 || is.na(path) || !nzchar(path)) {
@@ -130,7 +134,13 @@ load_pomegranate_portal_coding <- function(path = NULL) {
   if (!file.exists(path)) {
     stop("Pomegranate portal coding file was not found: ", path, call. = FALSE)
   }
-  utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+  con <- if (grepl("\\.gz$", path, ignore.case = TRUE)) {
+    gzfile(path, open = "rt")
+  } else {
+    file(path, open = "rt")
+  }
+  on.exit(close(con), add = TRUE)
+  utils::read.csv(con, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 #' Get the Pomegranate source manifest

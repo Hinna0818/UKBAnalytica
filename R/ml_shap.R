@@ -29,7 +29,8 @@ NULL
 #' @param class_level Optional class to explain for multiclass
 #'   \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.
 #' @param method SHAP backend. \code{"auto"} uses the native XGBoost
-#'   contribution backend for XGBoost models and \code{fastshap} otherwise.
+#'   contribution backend for XGBoost models and an internal permutation
+#'   approximation otherwise.
 #' @param ... Additional arguments
 #'
 #' @return A ukb_shap object containing:
@@ -60,7 +61,7 @@ ukb_shap <- function(object,
                      seed = NULL,
                      verbose = TRUE,
                      class_level = NULL,
-                     method = c("auto", "fastshap", "xgboost"),
+                     method = c("auto", "permutation", "xgboost"),
                      ...) {
   method <- match.arg(method)
 
@@ -104,9 +105,6 @@ ukb_shap <- function(object,
   if (method == "xgboost") {
     stop("method = 'xgboost' is only available for ukb_ml_workflow or ukb_ml_final objects fitted with model = 'xgboost'.", call. = FALSE)
   }
-
-  .check_ml_package("fastshap")
-  
   if (!is.null(seed)) set.seed(seed)
   
   # Get data
@@ -133,8 +131,7 @@ ukb_shap <- function(object,
   # Create prediction wrapper
   pred_wrapper <- .create_shap_predict_wrapper(object)
   
-  # Compute SHAP values
-  shap_values <- fastshap::explain(
+  shap_values <- .ukb_permutation_shap(
     object = object$model,
     feature_names = object$predictors,
     X = X,
@@ -172,7 +169,7 @@ ukb_shap <- function(object,
                                   seed = NULL,
                                   verbose = TRUE,
                                   class_level = NULL,
-                                  method = c("auto", "fastshap", "xgboost"),
+                                  method = c("auto", "permutation", "xgboost"),
                                   ...) {
   if (!inherits(object, "ukb_ml_final")) {
     stop("`object` must be a ukb_ml_final object.", call. = FALSE)
@@ -195,8 +192,6 @@ ukb_shap <- function(object,
       verbose = verbose
     ))
   }
-
-  .check_ml_package("fastshap")
 
   features <- object$selected_features %||% object$predictors
   data <- as.data.frame(data)
@@ -240,7 +235,7 @@ ukb_shap <- function(object,
     message(sprintf("Computing SHAP values for %d observations (%s)...", nrow(X), target))
   }
 
-  shap_values <- fastshap::explain(
+  shap_values <- .ukb_permutation_shap(
     object = object,
     feature_names = features,
     X = X,
@@ -354,6 +349,48 @@ ukb_shap <- function(object,
   class(result) <- "ukb_shap"
   if (isTRUE(verbose)) message("SHAP computation complete")
   result
+}
+
+#' Internal permutation SHAP approximation
+#' @keywords internal
+#' @noRd
+.ukb_permutation_shap <- function(object,
+                                  feature_names,
+                                  X,
+                                  pred_wrapper,
+                                  nsim = 100,
+                                  ...) {
+  X <- as.data.frame(X)
+  feature_names <- as.character(feature_names)
+  if (length(feature_names) == 0L || nrow(X) == 0L) {
+    return(matrix(numeric(0), nrow = nrow(X), ncol = length(feature_names),
+                  dimnames = list(NULL, feature_names)))
+  }
+  if (!all(feature_names %in% names(X))) {
+    stop("All `feature_names` must be present in `X`.", call. = FALSE)
+  }
+  nsim <- as.integer(nsim)
+  if (is.na(nsim) || nsim < 1L) {
+    stop("`nsim` must be a positive integer.", call. = FALSE)
+  }
+
+  pred_original <- as.numeric(pred_wrapper(object, X))
+  shap_values <- matrix(
+    0,
+    nrow = nrow(X),
+    ncol = length(feature_names),
+    dimnames = list(NULL, feature_names)
+  )
+
+  for (s in seq_len(nsim)) {
+    for (j in seq_along(feature_names)) {
+      X_perm <- X
+      X_perm[[feature_names[[j]]]] <- sample(X_perm[[feature_names[[j]]]], nrow(X_perm), replace = FALSE)
+      pred_perm <- as.numeric(pred_wrapper(object, X_perm))
+      shap_values[, j] <- shap_values[, j] + (pred_original - pred_perm)
+    }
+  }
+  shap_values / nsim
 }
 
 #' Create prediction wrapper for SHAP

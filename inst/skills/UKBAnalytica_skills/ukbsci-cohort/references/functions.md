@@ -92,12 +92,15 @@ get_disease_catalog(source = c("all", "curated", "pomegranate"),
                     supported_only = FALSE)
 get_pomegranate_diseases(disease = NULL, supported_only = TRUE)
 get_pomegranate_source_manifest()
-load_pomegranate_portal_coding(path = NULL)
+load_pomegranate_portal_coding(path)
 ```
 
 Use `get_disease_catalog()` to inspect code-level evidence before building a
 cohort. It returns `definition_id`, `disease_name`, `source`, `code_system`,
 `field_id`, `code`, `match_rule`, `validation_status`, and provenance fields.
+The portal audit CSV is optional and must be supplied explicitly through
+`load_pomegranate_portal_coding(path = ...)`; it is not required for endpoint
+construction.
 
 ---
 

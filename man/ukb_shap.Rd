@@ -12,7 +12,7 @@ ukb_shap(
   seed = NULL,
   verbose = TRUE,
   class_level = NULL,
-  method = c("auto", "fastshap", "xgboost"),
+  method = c("auto", "permutation", "xgboost"),
   ...
 )
 }
@@ -37,7 +37,8 @@ Ignored when \code{method = "xgboost"}.}
 \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.}
 
 \item{method}{SHAP backend. \code{"auto"} uses the native XGBoost
-contribution backend for XGBoost models and \code{fastshap} otherwise.}
+contribution backend for XGBoost models and an internal permutation
+approximation otherwise.}
 
 \item{...}{Additional arguments}
 }

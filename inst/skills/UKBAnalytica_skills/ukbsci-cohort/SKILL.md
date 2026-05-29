@@ -384,7 +384,7 @@ Pause and ask before generating code if any of these is ambiguous:
 | `get_disease_catalog(source, disease, code_system)` | Source-aware code evidence table | data.frame |
 | `get_pomegranate_diseases(disease)` | Convert Pomegranate catalog rows to disease definitions | named list |
 | `get_pomegranate_source_manifest()` | Provenance for Pomegranate YAML and portal audit sources | data.frame |
-| `load_pomegranate_portal_coding()` | Load retained portal CSV audit table | data.frame |
+| `load_pomegranate_portal_coding(path)` | Load an optional local portal CSV audit table | data.frame |
 | `create_disease_definition()` | Build a custom definition | list |
 | `combine_disease_definitions(..., name)` | Composite endpoint (union) | list |
 | `parse_icd10_diagnoses(dt)` | ICD-10 long table | data.table |

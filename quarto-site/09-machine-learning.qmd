@@ -598,7 +598,6 @@ install.packages(c(
   "nnet",        # neural network / multinomial regression
   "rpart",       # decision tree
   "Boruta",      # Boruta feature selection
-  "fastshap",    # SHAP explanations
   "pROC",        # legacy ROC helpers
   "survival",    # Cox and survival metrics
   "gbm",         # boosted survival model

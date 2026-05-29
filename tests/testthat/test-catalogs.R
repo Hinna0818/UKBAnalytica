@@ -13,14 +13,11 @@ test_that("disease catalog exposes curated and pomegranate sources", {
 
 test_that("Pomegranate provenance and portal audit table are available", {
   manifest <- get_pomegranate_source_manifest()
-  portal <- load_pomegranate_portal_coding()
 
   expect_s3_class(manifest, "data.frame")
   expect_true(all(c("pomegranate_github_yaml", "pomegranate_portal_csv") %in% manifest$source))
   expect_true(any(manifest$role == "canonical_disease_catalog"))
-  expect_s3_class(portal, "data.frame")
-  expect_gt(nrow(portal), 26000)
-  expect_true(all(c("disease", "field_or_source", "codes", "phenotype_url") %in% names(portal)))
+  expect_error(load_pomegranate_portal_coding(), "`path` is required")
 })
 
 test_that("disease catalog can be searched and converted to pomegranate definitions", {

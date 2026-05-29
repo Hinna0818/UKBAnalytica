@@ -1345,8 +1345,6 @@ ukb_ml_survival_shap <- function(object,
                                  verbose = TRUE,
                                  ...) {
   
-  .check_ml_package("fastshap")
-  
   if (!is.null(seed)) set.seed(seed)
 
   if (inherits(object, "ukb_ml_survival_workflow")) {
@@ -1374,7 +1372,7 @@ ukb_ml_survival_shap <- function(object,
       .sml_predict_core(model, newdata = newdata, times = time_point, type = "survival")[, 1]
     }
 
-    shap_values <- fastshap::explain(
+    shap_values <- .ukb_permutation_shap(
       object = object,
       feature_names = colnames(X),
       X = X,
@@ -1426,8 +1424,7 @@ ukb_ml_survival_shap <- function(object,
     }
   }
   
-  # Compute SHAP
-  shap_values <- fastshap::explain(
+  shap_values <- .ukb_permutation_shap(
     object = object$model,
     feature_names = object$predictors,
     X = X,

@@ -7,21 +7,24 @@
 load_pomegranate_portal_coding(path = NULL)
 }
 \arguments{
-\item{path}{Optional path to a local Pomegranate portal CSV file. If NULL,
-the package copy in \code{inst/extdata/ukb_pomegranate_portal_coding_evidence.csv}
-is used.}
+\item{path}{Path to a local Pomegranate portal CSV or CSV.GZ file.}
 }
 \value{
 A data.frame.
 }
 \description{
-Loads the long-form Pomegranate portal extraction retained in package
-\code{extdata} for audit and traceability. The canonical Pomegranate disease
-catalog used by \code{get_disease_catalog(source = "pomegranate")} is built from
-the public GitHub YAML algorithms; this portal table is provided as a
-reference layer and is not used by default for endpoint construction.
+Loads a long-form Pomegranate portal extraction from a user-supplied local
+CSV or CSV.GZ file for audit and traceability. The canonical Pomegranate
+disease catalog used by \code{get_disease_catalog(source = "pomegranate")} is
+built into the package from the public GitHub YAML algorithms; the portal
+audit table is not required for endpoint construction and is not shipped in
+the CRAN build.
 }
 \examples{
-portal_codes <- load_pomegranate_portal_coding()
+\dontrun{
+portal_codes <- load_pomegranate_portal_coding(
+  "ukb_pomegranate_portal_coding_evidence.csv"
+)
 head(portal_codes)
+}
 }

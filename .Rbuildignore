@@ -31,3 +31,5 @@
 ^UKBAnalytica\.Rcheck$
 ^\.\.Rcheck$
 ^\.Rcheck$
+^inst/extdata/ukb_pomegranate_portal_coding_evidence\.csv$
+^inst/extdata/ukb_pomegranate_portal_coding_evidence\.csv\.gz$

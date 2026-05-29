@@ -172,8 +172,6 @@ test_that("new lightweight workflow models run only when selected", {
 })
 
 test_that("ukb_shap supports ukb_ml_workflow objects", {
-  testthat::skip_if_not_installed("fastshap")
-
   set.seed(7)
   n <- 60
   df <- data.frame(
