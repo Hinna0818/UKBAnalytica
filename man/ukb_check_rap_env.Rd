@@ -8,6 +8,7 @@ ukb_check_rap_env(
   output_dir = NULL,
   require_rap = FALSE,
   require_dx = FALSE,
+  check_auth = FALSE,
   check_write = FALSE,
   verbose = TRUE
 )
@@ -20,6 +21,10 @@ session does not appear to be running on RAP.}
 
 \item{require_dx}{Logical. If \code{TRUE}, mark the check as failed when the
 \code{dx} command-line tool is unavailable.}
+
+\item{check_auth}{Logical. If \code{TRUE}, call \verb{dx whoami} and \verb{dx env --bash}
+to check DNAnexus authentication and the active project context. This check
+does not inspect participant-level data.}
 
 \item{check_write}{Logical. If \code{TRUE} and \code{output_dir} is provided, test
 whether a small temporary file can be written and removed.}
@@ -34,8 +39,9 @@ and a check table.
 Inspect whether the current R session is running inside a UK Biobank
 Research Analysis Platform (RAP)-like environment and return reproducible
 diagnostics for RAP-aware workflows. The function only checks environment
-variables, local paths, and the availability of the \code{dx} command-line tool;
-it does not read or export participant-level data.
+variables, local paths, and the availability of the \code{dx} command-line tool
+unless \code{check_auth = TRUE}; it does not read or export participant-level
+data.
 }
 \examples{
 env <- ukb_check_rap_env(verbose = FALSE)

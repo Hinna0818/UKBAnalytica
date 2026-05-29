@@ -4,14 +4,18 @@
 #' Inspect whether the current R session is running inside a UK Biobank
 #' Research Analysis Platform (RAP)-like environment and return reproducible
 #' diagnostics for RAP-aware workflows. The function only checks environment
-#' variables, local paths, and the availability of the `dx` command-line tool;
-#' it does not read or export participant-level data.
+#' variables, local paths, and the availability of the `dx` command-line tool
+#' unless `check_auth = TRUE`; it does not read or export participant-level
+#' data.
 #'
 #' @param output_dir Optional output directory to assess.
 #' @param require_rap Logical. If `TRUE`, mark the check as failed when the
 #'   session does not appear to be running on RAP.
 #' @param require_dx Logical. If `TRUE`, mark the check as failed when the
 #'   `dx` command-line tool is unavailable.
+#' @param check_auth Logical. If `TRUE`, call `dx whoami` and `dx env --bash`
+#'   to check DNAnexus authentication and the active project context. This check
+#'   does not inspect participant-level data.
 #' @param check_write Logical. If `TRUE` and `output_dir` is provided, test
 #'   whether a small temporary file can be written and removed.
 #' @param verbose Logical. If `TRUE`, print a compact summary.
@@ -25,6 +29,7 @@
 ukb_check_rap_env <- function(output_dir = NULL,
                               require_rap = FALSE,
                               require_dx = FALSE,
+                              check_auth = FALSE,
                               check_write = FALSE,
                               verbose = TRUE) {
   if (!is.logical(require_rap) || length(require_rap) != 1 || is.na(require_rap)) {
@@ -32,6 +37,9 @@ ukb_check_rap_env <- function(output_dir = NULL,
   }
   if (!is.logical(require_dx) || length(require_dx) != 1 || is.na(require_dx)) {
     stop("`require_dx` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.logical(check_auth) || length(check_auth) != 1 || is.na(check_auth)) {
+    stop("`check_auth` must be TRUE or FALSE.", call. = FALSE)
   }
   if (!is.logical(check_write) || length(check_write) != 1 || is.na(check_write)) {
     stop("`check_write` must be TRUE or FALSE.", call. = FALSE)
@@ -41,12 +49,23 @@ ukb_check_rap_env <- function(output_dir = NULL,
   }
 
   env_vars <- Sys.getenv(
-    c("DX_PROJECT_CONTEXT_ID", "DX_WORKSPACE_ID", "DX_JOB_ID"),
+    c("DX_PROJECT_CONTEXT_ID", "DX_WORKSPACE_ID", "DX_JOB_ID", "DX_RUN_ID"),
     unset = NA_character_
   )
-  dx_available <- nzchar(Sys.which("dx"))
+  dx_path <- unname(Sys.which("dx"))
+  dx_available <- nzchar(dx_path)
+  dx_version <- if (dx_available) .ukb_dx_version(dx_path) else NA_character_
   rap_path_exists <- dir.exists("/mnt/project")
-  is_rap <- any(!is.na(env_vars) & nzchar(env_vars)) || rap_path_exists
+  is_rap <- .ukb_is_rap_env(env_vars = env_vars, project_mount = rap_path_exists)
+  rap_signals <- .ukb_rap_env_signals(env_vars = env_vars, project_mount = rap_path_exists)
+
+  auth <- list(
+    checked = isTRUE(check_auth),
+    ok = NA,
+    user = NA_character_,
+    project_context_id = unname(env_vars[["DX_PROJECT_CONTEXT_ID"]]),
+    message = if (isTRUE(check_auth)) NA_character_ else "Authentication was not checked."
+  )
 
   checks <- data.frame(
     check = character(),
@@ -54,12 +73,15 @@ ukb_check_rap_env <- function(output_dir = NULL,
     message = character(),
     stringsAsFactors = FALSE
   )
-  add_check <- function(check, ok, message) {
+  add_check <- function(check, ok, message, skipped = FALSE, status = NULL) {
+    if (is.null(status)) {
+      status <- if (isTRUE(skipped)) "skip" else if (isTRUE(ok)) "pass" else "fail"
+    }
     checks <<- rbind(
       checks,
       data.frame(
         check = check,
-        status = if (isTRUE(ok)) "pass" else "fail",
+        status = status,
         message = message,
         stringsAsFactors = FALSE
       )
@@ -69,13 +91,53 @@ ukb_check_rap_env <- function(output_dir = NULL,
   add_check(
     "RAP environment",
     is_rap || !isTRUE(require_rap),
-    if (is_rap) "RAP-like environment detected." else "RAP environment variables or /mnt/project were not detected."
+    if (is_rap) {
+      paste0("RAP-like environment detected via: ", paste(rap_signals, collapse = ", "), ".")
+    } else {
+      "RAP environment variables or /mnt/project were not detected."
+    },
+    status = if (is_rap) "pass" else if (isTRUE(require_rap)) "fail" else "warn"
   )
   add_check(
     "dx command",
     dx_available || !isTRUE(require_dx),
-    if (dx_available) "dx command-line tool is available." else "dx command-line tool is not available on PATH."
+    if (dx_available) {
+      paste0("dx command-line tool is available", if (.ukb_nzchar(dx_version)) paste0(" (", dx_version, ")") else "", ".")
+    } else {
+      "dx command-line tool is not available on PATH."
+    },
+    status = if (dx_available) "pass" else if (isTRUE(require_dx)) "fail" else "warn"
   )
+
+  if (isTRUE(check_auth)) {
+    if (!dx_available) {
+      auth$ok <- FALSE
+      auth$message <- "Authentication could not be checked because dx is unavailable."
+      add_check("DNAnexus authentication", FALSE, auth$message)
+    } else {
+      auth <- .ukb_dx_auth_status(dx_path, env_project = auth$project_context_id)
+      add_check(
+        "DNAnexus authentication",
+        isTRUE(auth$ok),
+        if (isTRUE(auth$ok)) {
+          paste0(
+            "Authenticated as ", auth$user,
+            if (.ukb_nzchar(auth$project_context_id)) paste0("; project ", auth$project_context_id) else "; no active project context",
+            "."
+          )
+        } else {
+          auth$message
+        }
+      )
+    }
+  } else {
+    add_check(
+      "DNAnexus authentication",
+      TRUE,
+      "Authentication was not checked; set check_auth = TRUE to call dx whoami.",
+      skipped = TRUE
+    )
+  }
 
   output_info <- NULL
   if (!is.null(output_dir)) {
@@ -116,10 +178,16 @@ ukb_check_rap_env <- function(output_dir = NULL,
 
   out <- list(
     is_rap = is_rap,
+    rap_signals = rap_signals,
+    project_mount_exists = rap_path_exists,
     dx_available = dx_available,
+    dx_path = if (dx_available) dx_path else NA_character_,
+    dx_version = dx_version,
+    auth = auth,
     project_context_id = unname(env_vars[["DX_PROJECT_CONTEXT_ID"]]),
     workspace_id = unname(env_vars[["DX_WORKSPACE_ID"]]),
     job_id = unname(env_vars[["DX_JOB_ID"]]),
+    run_id = unname(env_vars[["DX_RUN_ID"]]),
     output = output_info,
     checks = checks
   )
@@ -136,11 +204,141 @@ print.ukb_rap_env <- function(x, ...) {
   cat("UKB RAP environment check\n")
   cat("  RAP detected: ", if (isTRUE(x$is_rap)) "yes" else "no", "\n", sep = "")
   cat("  dx available: ", if (isTRUE(x$dx_available)) "yes" else "no", "\n", sep = "")
+  if (isTRUE(x$dx_available) && !is.na(x$dx_path)) {
+    cat("  dx path: ", x$dx_path, "\n", sep = "")
+  }
+  cat("  /mnt/project: ", if (isTRUE(x$project_mount_exists)) "yes" else "no", "\n", sep = "")
+  if (!is.null(x$auth) && isTRUE(x$auth$checked)) {
+    cat("  dx auth: ", if (isTRUE(x$auth$ok)) "yes" else "no", "\n", sep = "")
+  }
   if (!is.null(x$output)) {
     cat("  output path: ", x$output$path, "\n", sep = "")
   }
   print(x$checks, row.names = FALSE)
   invisible(x)
+}
+
+.ukb_is_rap_env <- function(env_vars = NULL, project_mount = dir.exists("/mnt/project")) {
+  if (is.null(env_vars)) {
+    env_vars <- Sys.getenv(
+      c("DX_PROJECT_CONTEXT_ID", "DX_WORKSPACE_ID", "DX_JOB_ID", "DX_RUN_ID"),
+      unset = NA_character_
+    )
+  }
+  any(!is.na(env_vars) & nzchar(env_vars)) || isTRUE(project_mount)
+}
+
+.ukb_nzchar <- function(x) {
+  length(x) == 1L && !is.na(x) && nzchar(x)
+}
+
+.ukb_rap_env_signals <- function(env_vars = NULL, project_mount = dir.exists("/mnt/project")) {
+  if (is.null(env_vars)) {
+    env_vars <- Sys.getenv(
+      c("DX_PROJECT_CONTEXT_ID", "DX_WORKSPACE_ID", "DX_JOB_ID", "DX_RUN_ID"),
+      unset = NA_character_
+    )
+  }
+  signals <- names(env_vars)[!is.na(env_vars) & nzchar(env_vars)]
+  if (isTRUE(project_mount)) {
+    signals <- c(signals, "/mnt/project")
+  }
+  unique(signals)
+}
+
+.ukb_assert_rap_env <- function(action = "This function") {
+  if (!.ukb_is_rap_env()) {
+    stop(
+      action,
+      " must be run inside a UK Biobank RAP environment. ",
+      "Run ukb_check_rap_env() for diagnostics.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.ukb_dx_version <- function(dx_path) {
+  res <- .ukb_system2_quiet(dx_path, "--version", timeout = 10)
+  out <- trimws(paste(c(res$stdout, res$stderr), collapse = " "))
+  if (!nzchar(out)) {
+    return(NA_character_)
+  }
+  out
+}
+
+.ukb_dx_auth_status <- function(dx_path, env_project = NA_character_) {
+  who <- .ukb_system2_quiet(dx_path, "whoami", timeout = 15)
+  if (!identical(who$status, 0L)) {
+    msg <- trimws(paste(c(who$stderr, who$stdout), collapse = " "))
+    if (!nzchar(msg)) {
+      msg <- "dx whoami failed; login status could not be verified."
+    }
+    return(list(
+      checked = TRUE,
+      ok = FALSE,
+      user = NA_character_,
+      project_context_id = env_project,
+      message = msg
+    ))
+  }
+
+  project <- env_project
+  dx_env <- .ukb_system2_quiet(dx_path, c("env", "--bash"), timeout = 15)
+  if (identical(dx_env$status, 0L)) {
+    parsed_project <- .ukb_parse_dx_project_context(dx_env$stdout)
+    if (!is.na(parsed_project) && nzchar(parsed_project)) {
+      project <- parsed_project
+    }
+  }
+
+  list(
+    checked = TRUE,
+    ok = TRUE,
+    user = trimws(who$stdout),
+    project_context_id = project,
+    message = "DNAnexus authentication verified with dx whoami."
+  )
+}
+
+.ukb_parse_dx_project_context <- function(stdout) {
+  hit <- regmatches(
+    stdout,
+    regexpr("(?<=DX_PROJECT_CONTEXT_ID=)[^\n]+", stdout, perl = TRUE)
+  )
+  if (length(hit) == 0 || !nzchar(hit[[1]])) {
+    return(NA_character_)
+  }
+  trimws(hit[[1]])
+}
+
+.ukb_system2_quiet <- function(command, args, timeout = 30) {
+  stdout_file <- tempfile("ukba_stdout_")
+  stderr_file <- tempfile("ukba_stderr_")
+  on.exit(unlink(c(stdout_file, stderr_file)), add = TRUE)
+
+  status <- tryCatch(
+    system2(command, args = args, stdout = stdout_file, stderr = stderr_file, timeout = timeout),
+    error = function(e) {
+      attr(e, "ukba_error") <- TRUE
+      e
+    }
+  )
+  if (inherits(status, "error")) {
+    return(list(
+      stdout = "",
+      stderr = conditionMessage(status),
+      status = 1L
+    ))
+  }
+  if (is.null(status)) {
+    status <- 0L
+  }
+  list(
+    stdout = if (file.exists(stdout_file)) paste(readLines(stdout_file, warn = FALSE), collapse = "\n") else "",
+    stderr = if (file.exists(stderr_file)) paste(readLines(stderr_file, warn = FALSE), collapse = "\n") else "",
+    status = as.integer(status)
+  )
 }
 
 #' Create a RAP extraction manifest

@@ -3,6 +3,7 @@ project:
   output-dir: ../docs
   render:
     - index.qmd
+    - 00-rap_env_check.qmd
     - 01-rap-download.qmd
     - 02-preprocessing.qmd
     - 03-disease-definitions.qmd
@@ -38,7 +39,11 @@ website:
       - text: "Overview"
         href: index.qmd
       - text: "RAP workflow"
-        href: 01-rap-download.qmd
+        menu:
+          - text: "RAP environment check"
+            href: 00-rap_env_check.qmd
+          - text: "RAP extraction"
+            href: 01-rap-download.qmd
       - text: "Phenotyping"
         href: 03-disease-definitions.qmd
       - text: "Analysis"
@@ -79,6 +84,7 @@ website:
       - section: "Start"
         contents:
           - index.qmd
+          - 00-rap_env_check.qmd
           - 01-rap-download.qmd
           - 02-preprocessing.qmd
       - section: "Cohort construction"

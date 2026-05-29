@@ -299,10 +299,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link active" href="./index.html" aria-current="page"> 
 <span class="menu-text">Overview</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./01-rap-download.html"> 
-<span class="menu-text">RAP workflow</span></a>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-rap-workflow" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">RAP workflow</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-rap-workflow">    
+        <li>
+    <a class="dropdown-item" href="./00-rap_env_check.html">
+ <span class="dropdown-text">RAP environment check</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./01-rap-download.html">
+ <span class="dropdown-text">RAP extraction</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="./03-disease-definitions.html"> 
 <span class="menu-text">Phenotyping</span></a>
@@ -354,6 +365,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="./12-skill-creator.html">
  <span class="dropdown-text">Skill Creator</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./13-ukb-research-skill.html">
+ <span class="dropdown-text">UKB Research Skill</span></a>
   </li>  
     </ul>
   </li>
@@ -413,6 +428,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">What the package covers</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./00-rap_env_check.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RAP environment check</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -526,6 +547,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Skill Creator</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./13-ukb-research-skill.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">UKB Research Skill</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -558,8 +585,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#disease-definitions" id="toc-disease-definitions" class="nav-link active" data-scroll-target="#disease-definitions">Disease Definitions</a>
   <ul class="collapse">
   <li><a href="#predefined-diseases" id="toc-predefined-diseases" class="nav-link" data-scroll-target="#predefined-diseases">Predefined diseases</a></li>
+  <li><a href="#choosing-a-definition-source" id="toc-choosing-a-definition-source" class="nav-link" data-scroll-target="#choosing-a-definition-source">Choosing a definition source</a></li>
   <li><a href="#inspecting-a-definition" id="toc-inspecting-a-definition" class="nav-link" data-scroll-target="#inspecting-a-definition">Inspecting a definition</a></li>
   <li><a href="#creating-custom-definitions" id="toc-creating-custom-definitions" class="nav-link" data-scroll-target="#creating-custom-definitions">Creating custom definitions</a></li>
+  <li><a href="#code-matching-rules" id="toc-code-matching-rules" class="nav-link" data-scroll-target="#code-matching-rules">Code matching rules</a></li>
   <li><a href="#arrhythmia-example-with-icd-10-opcs4" id="toc-arrhythmia-example-with-icd-10-opcs4" class="nav-link" data-scroll-target="#arrhythmia-example-with-icd-10-opcs4">Arrhythmia example with ICD-10 + OPCS4</a></li>
   <li><a href="#composite-endpoints" id="toc-composite-endpoints" class="nav-link" data-scroll-target="#composite-endpoints">Composite endpoints</a></li>
   <li><a href="#comparing-data-sources" id="toc-comparing-data-sources" class="nav-link" data-scroll-target="#comparing-data-sources">Comparing data sources</a></li>
@@ -635,7 +664,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="predefined-diseases" class="level2">
 <h2 class="anchored" data-anchor-id="predefined-diseases">Predefined diseases</h2>
-<p>The package ships a curated library of definitions for common cardiovascular and metabolic conditions. Retrieve them with <code>get_predefined_diseases()</code>:</p>
+<p>The package now provides two disease-definition layers:</p>
+<ul>
+<li><strong>Curated definitions</strong>: 86 manually maintained UKBAnalytica definitions for commonly used endpoints, including literature-checked subtype and composite endpoints.</li>
+<li><strong>Pomegranate-derived definitions</strong>: 313 definitions converted from the public Pomegranate GitHub YAML algorithms and stored in the built-in disease catalog. The Pomegranate portal long-form table is retained in <code>extdata</code> for audit and traceability.</li>
+</ul>
+<p>The default behavior is unchanged: <code>get_predefined_diseases()</code> returns the curated definitions.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()</span>
@@ -646,27 +680,96 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>my_diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()[</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">"AA"</span>, <span class="st">"Arrhythmia"</span>, <span class="st">"Atrial_Fibrillation"</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>To inspect the raw disease-code catalog before defining an endpoint, use <code>get_disease_catalog()</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"COPD"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"asthma"</span>, <span class="at">source =</span> <span class="st">"pomegranate"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"diabetes"</span>, <span class="at">code_system =</span> <span class="st">"ICD-10"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">get_pomegranate_source_manifest</span>()</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>portal_codes <span class="ot">&lt;-</span> <span class="fu">load_pomegranate_portal_coding</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The catalog is a code-level table with columns such as <code>definition_id</code>, <code>disease_name</code>, <code>source</code>, <code>code_system</code>, <code>field_id</code>, <code>code</code>, <code>code_label</code>, <code>match_rule</code>, and <code>validation_status</code>. It is useful for checking exactly which ICD-10, self-report, OPCS4, cancer-registry, or other source codes support a target disease. By default, <code>source = "pomegranate"</code> uses the GitHub YAML catalog pinned in the source manifest; the portal CSV is provided only as a reference table.</p>
+</section>
+<section id="choosing-a-definition-source" class="level2">
+<h2 class="anchored" data-anchor-id="choosing-a-definition-source">Choosing a definition source</h2>
+<p><code>get_predefined_diseases()</code> can return different definition sets:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 86 manually curated definitions</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>curated <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>(<span class="at">source =</span> <span class="st">"curated"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 313 Pomegranate-derived definitions that can be converted to UKBAnalytica</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># disease-definition objects using currently supported parsers</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>pomegranate <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>(<span class="at">source =</span> <span class="st">"pomegranate"</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 56 diseases matched between curated and Pomegranate; code-level intersection</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>both_intersection <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>(</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">source =</span> <span class="st">"both"</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">merge_type =</span> <span class="st">"intersection"</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 331 diseases in the union library:</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># matched diseases use curated names with unioned codes;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># unmatched curated and unmatched Pomegranate definitions are retained</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>both_union <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>(</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">source =</span> <span class="st">"both"</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">merge_type =</span> <span class="st">"union"</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The <code>source = "both"</code> mode standardizes matched disease names to the curated UKBAnalytica keys. For example, COPD remains <code>COPD</code>, asthma remains <code>Asthma</code>, and type 2 diabetes remains <code>T2DM</code>. This keeps the output compatible with <code>build_survival_dataset()</code>.</p>
+<p>The merge strategy controls the code set for matched diseases:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><code>merge_type</code></th>
+<th style="text-align: left;">Disease-level behavior</th>
+<th style="text-align: left;">Code-level behavior</th>
+<th style="text-align: left;">Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>"intersection"</code></td>
+<td style="text-align: left;">Keep diseases matched between curated and Pomegranate</td>
+<td style="text-align: left;">Keep overlapping codes only</td>
+<td style="text-align: left;">Conservative sensitivity analysis</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>"union"</code></td>
+<td style="text-align: left;">Keep matched diseases plus unmatched diseases from both sources</td>
+<td style="text-align: left;">Combine curated and Pomegranate codes for matched diseases</td>
+<td style="text-align: left;">Expanded endpoint discovery</td>
+</tr>
+</tbody>
+</table>
+<p>You can also filter during retrieval:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>copd_expanded <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">source =</span> <span class="st">"both"</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">merge_type =</span> <span class="st">"union"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"COPD"</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Each definition is a list specifying ICD-10 codes, ICD-9 codes, optional OPCS-4 procedure codes, self-report codes, death-cause codes, optional First Occurrence fields, optional cancer registry filters, and optional algorithm field IDs.</p>
 </section>
 <section id="inspecting-a-definition" class="level2">
 <h2 class="anchored" data-anchor-id="inspecting-a-definition">Inspecting a definition</h2>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">str</span>(diseases[[<span class="st">"COPD"</span>]])</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>List of <span class="dv">13</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> name                          <span class="sc">:</span> chr <span class="st">"Chronic Obstructive Pulmonary Disease"</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> icd10_pattern                 <span class="sc">:</span> chr <span class="st">"^(J40|J41|J42|J43|J44)"</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> icd9_pattern                  <span class="sc">:</span> chr <span class="st">"^(491|492|4932|496)"</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> sr_codes                      <span class="sc">:</span> num [<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>] <span class="dv">1112</span> <span class="dv">1113</span> <span class="dv">1472</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> death_icd10                   <span class="sc">:</span> chr <span class="st">"^(J40|J41|J42|J43|J44)"</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> opcs4_pattern                 <span class="sc">:</span> <span class="cn">NULL</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> first_occurrence_fields       <span class="sc">:</span> int [<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] <span class="dv">131484</span> <span class="dv">131486</span> <span class="dv">131488</span> <span class="dv">131490</span> <span class="dv">131492</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> first_occurrence_source_fields<span class="sc">:</span> <span class="cn">NULL</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_icd10_pattern          <span class="sc">:</span> <span class="cn">NULL</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_histology              <span class="sc">:</span> <span class="cn">NULL</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_behaviour              <span class="sc">:</span> <span class="cn">NULL</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> algo_date_field               <span class="sc">:</span> num <span class="dv">42016</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> algo_source_field             <span class="sc">:</span> num <span class="dv">42017</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">str</span>(diseases[[<span class="st">"COPD"</span>]])</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>List of <span class="dv">13</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> name                          <span class="sc">:</span> chr <span class="st">"Chronic Obstructive Pulmonary Disease"</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> icd10_pattern                 <span class="sc">:</span> chr <span class="st">"^(J40|J41|J42|J43|J44)"</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> icd9_pattern                  <span class="sc">:</span> chr <span class="st">"^(491|492|4932|496)"</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> sr_codes                      <span class="sc">:</span> num [<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>] <span class="dv">1112</span> <span class="dv">1113</span> <span class="dv">1472</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> death_icd10                   <span class="sc">:</span> chr <span class="st">"^(J40|J41|J42|J43|J44)"</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> opcs4_pattern                 <span class="sc">:</span> <span class="cn">NULL</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> first_occurrence_fields       <span class="sc">:</span> int [<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>] <span class="dv">131484</span> <span class="dv">131486</span> <span class="dv">131488</span> <span class="dv">131490</span> <span class="dv">131492</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> first_occurrence_source_fields<span class="sc">:</span> <span class="cn">NULL</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_icd10_pattern          <span class="sc">:</span> <span class="cn">NULL</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_histology              <span class="sc">:</span> <span class="cn">NULL</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> cancer_behaviour              <span class="sc">:</span> <span class="cn">NULL</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> algo_date_field               <span class="sc">:</span> num <span class="dv">42016</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a> <span class="sc">$</span> algo_source_field             <span class="sc">:</span> num <span class="dv">42017</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>A definition typically contains:</p>
 <ul>
 <li><code>icd10_pattern</code> – regular expression for ICD-10 codes.</li>
@@ -686,36 +789,91 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="creating-custom-definitions" class="level2">
 <h2 class="anchored" data-anchor-id="creating-custom-definitions">Creating custom definitions</h2>
 <p>Use <code>create_disease_definition()</code> to define a new disease. Surgical or procedure-defined phenotypes can add <code>opcs4_pattern</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>arrhythmia_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Cardiac Arrhythmia"</span>,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(I44|I45|I46|I47|I48|I49)"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">opcs4_pattern =</span> <span class="st">"^(K576|K59|K60|K61|K62|K641|K72|K73|K74)"</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>arrhythmia_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Cardiac Arrhythmia"</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(I44|I45|I46|I47|I48|I49)"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">opcs4_pattern =</span> <span class="st">"^(K576|K59|K60|K61|K62|K641|K72|K73|K74)"</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="code-matching-rules" class="level2">
+<h2 class="anchored" data-anchor-id="code-matching-rules">Code matching rules</h2>
+<p>ICD-10, ICD-9, OPCS4, death-cause, and cancer-registry code fields are matched with regular expressions. Internally, UKBAnalytica parses each code into a long-format table and keeps rows where <code>grepl(pattern, code, perl = TRUE)</code> is true.</p>
+<p>UKB hospital ICD and OPCS codes are usually stored without decimal points. For example, ICD-10 <code>I47.2</code> should be written as <code>I472</code>, and OPCS4 <code>K57.6</code> should be written as <code>K576</code>.</p>
+<p>Use different regular-expression styles depending on how broad the endpoint should be:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Goal</th>
+<th>Example pattern</th>
+<th>What it matches</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Broad 3-character ICD block</td>
+<td><code>"^I47"</code></td>
+<td><code>I47</code>, <code>I470</code>, <code>I471</code>, <code>I472</code>, …</td>
+</tr>
+<tr class="even">
+<td>Specific 4-character ICD codes only</td>
+<td><code>"^(I470|I472)$"</code></td>
+<td>only <code>I470</code> or <code>I472</code></td>
+</tr>
+<tr class="odd">
+<td>Several exact ICD codes</td>
+<td><code>"^(I470|I472|I490|I493)$"</code></td>
+<td>only the listed ICD codes</td>
+</tr>
+<tr class="even">
+<td>Broad OPCS4 family</td>
+<td><code>"^K62"</code></td>
+<td>all <code>K62*</code> procedure codes</td>
+</tr>
+<tr class="odd">
+<td>Specific OPCS4 procedure codes only</td>
+<td><code>"^(K576|K641)$"</code></td>
+<td>only <code>K576</code> or <code>K641</code></td>
+</tr>
+</tbody>
+</table>
+<p>The start anchor <code>^</code> avoids matching a code fragment in the middle of a string. The end anchor <code>$</code> avoids overmatching child codes. For example, <code>^I49</code> is appropriate for a broad I49 arrhythmia endpoint, but <code>^I493$</code> is safer when the intended endpoint is premature depolarization only.</p>
+<p>For ventricular arrhythmia, a narrow ICD-10 + OPCS4 definition can be written as:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ventricular_arrhythmia_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Ventricular Arrhythmia"</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(I470|I472|I490|I493)$"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">opcs4_pattern =</span> <span class="st">"^(K576|K641)$"</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This definition matches the requested ICD-10 codes <code>I47.0</code>, <code>I47.2</code>, <code>I49.0</code>, and <code>I49.3</code>, plus OPCS4 procedure codes <code>K57.6</code> and <code>K64.1</code>. It does not match other <code>I47*</code>, <code>I49*</code>, <code>K57*</code>, or <code>K64*</code> codes.</p>
 <p>For diseases with UKB algorithm-defined outcomes (Category 42), you can also add algorithm date/source fields:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>copd_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"COPD"</span>,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(J41|J42|J43|J44)"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd9_pattern =</span> <span class="st">"^(490|491|492|496)"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">sr_codes =</span> <span class="fu">c</span>(<span class="dv">1112</span>),</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">death_icd10 =</span> <span class="st">"^(J41|J42|J43|J44)"</span>,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">algo_date_field =</span> <span class="dv">42016</span>,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">algo_source_field =</span> <span class="dv">42017</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>copd_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"COPD"</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(J41|J42|J43|J44)"</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd9_pattern =</span> <span class="st">"^(490|491|492|496)"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">sr_codes =</span> <span class="fu">c</span>(<span class="dv">1112</span>),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">death_icd10 =</span> <span class="st">"^(J41|J42|J43|J44)"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">algo_date_field =</span> <span class="dv">42016</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">algo_source_field =</span> <span class="dv">42017</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>For diseases with UKB First Occurrence fields, add the date field IDs directly. The corresponding source fields are inferred automatically because UKB stores them as the next field ID:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>mi_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Myocardial Infarction"</span>,</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(I21|I22)"</span>,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">first_occurrence_fields =</span> <span class="fu">c</span>(<span class="dv">131298</span>, <span class="dv">131300</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>mi_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Myocardial Infarction"</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^(I21|I22)"</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">first_occurrence_fields =</span> <span class="fu">c</span>(<span class="dv">131298</span>, <span class="dv">131300</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>First Occurrence fields are 3-character ICD-10 outcomes. For example, <code>131298</code> is “Date I21 first reported”; <code>131299</code> is its source field. This means they are excellent for broad ICD-10 outcomes, but they should not be used to distinguish 4-character subtypes such as <code>I714</code> versus <code>I713</code>.</p>
 <p>For cancer endpoints, use the cancer registry source. UKB stores cancer type as ICD-10 in field <code>40006</code>, diagnosis date in <code>40005</code>, tumour histology in <code>40011</code>, and tumour behaviour in <code>40012</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>lung_cancer_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Lung Cancer"</span>,</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^C34"</span>,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">death_icd10 =</span> <span class="st">"^C34"</span>,</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cancer_icd10_pattern =</span> <span class="st">"^C34"</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">cancer_behaviour =</span> <span class="dv">3</span>L</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>lung_cancer_def <span class="ot">&lt;-</span> <span class="fu">create_disease_definition</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Lung Cancer"</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">icd10_pattern =</span> <span class="st">"^C34"</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">death_icd10 =</span> <span class="st">"^C34"</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">cancer_icd10_pattern =</span> <span class="st">"^C34"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">cancer_behaviour =</span> <span class="dv">3</span>L</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Deprecated aliases <code>icd10</code>, <code>icd9</code>, and <code>self_report</code> are still accepted for backward compatibility.</p>
 <p>If <code>opcs4_pattern</code> is not supplied, operative procedure data are ignored even if <code>OPCS4</code> is included in <code>sources</code>.</p>
 <p>When parsing algorithm and First Occurrence fields, both column naming styles are supported: <code>p{field}_i0</code> and <code>p{field}</code>.</p>
@@ -723,40 +881,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="arrhythmia-example-with-icd-10-opcs4" class="level2">
 <h2 class="anchored" data-anchor-id="arrhythmia-example-with-icd-10-opcs4">Arrhythmia example with ICD-10 + OPCS4</h2>
 <p>The predefined library now includes broad and subtype-specific arrhythmia endpoints such as <code>Arrhythmia</code>, <code>Atrial_Fibrillation</code>, <code>Ventricular_Arrhythmia</code>, <code>AV_Block</code>, <code>Intraventricular_Block</code>, and <code>SVT</code>.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>rhythm_defs <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()[</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">"Arrhythmia"</span>, <span class="st">"Atrial_Fibrillation"</span>, <span class="st">"Ventricular_Arrhythmia"</span>)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>arrhythmia_dt <span class="ot">&lt;-</span> <span class="fu">build_survival_dataset</span>(</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">dt =</span> ukb_data,</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease_definitions =</span> rhythm_defs,</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prevalent_sources =</span> <span class="fu">c</span>(<span class="st">"ICD10"</span>, <span class="st">"OPCS4"</span>),</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_sources =</span> <span class="fu">c</span>(<span class="st">"ICD10"</span>, <span class="st">"OPCS4"</span>),</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">primary_disease =</span> <span class="st">"Arrhythmia"</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>rhythm_defs <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()[</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">"Arrhythmia"</span>, <span class="st">"Atrial_Fibrillation"</span>, <span class="st">"Ventricular_Arrhythmia"</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>arrhythmia_dt <span class="ot">&lt;-</span> <span class="fu">build_survival_dataset</span>(</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">dt =</span> ukb_data,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease_definitions =</span> rhythm_defs,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prevalent_sources =</span> <span class="fu">c</span>(<span class="st">"ICD10"</span>, <span class="st">"OPCS4"</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">outcome_sources =</span> <span class="fu">c</span>(<span class="st">"ICD10"</span>, <span class="st">"OPCS4"</span>),</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">primary_disease =</span> <span class="st">"Arrhythmia"</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>You can combine it with predefined diseases:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>all_diseases <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"Hypertension"</span>, <span class="st">"Arrhythmia"</span>)],</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">CustomArrhythmia =</span> arrhythmia_def)</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>all_diseases <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"Hypertension"</span>, <span class="st">"Arrhythmia"</span>)],</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">CustomArrhythmia =</span> arrhythmia_def)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="composite-endpoints" class="level2">
 <h2 class="anchored" data-anchor-id="composite-endpoints">Composite endpoints</h2>
 <p>Create composite endpoints by merging multiple definitions:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>mace <span class="ot">&lt;-</span> <span class="fu">combine_disease_definitions</span>(</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"MI"</span>, <span class="st">"Stroke"</span>, <span class="st">"HF"</span>)]</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>mace <span class="ot">&lt;-</span> <span class="fu">combine_disease_definitions</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"MI"</span>, <span class="st">"Stroke"</span>, <span class="st">"HF"</span>)]</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This merges ICD-10, ICD-9, OPCS4, cancer registry, First Occurrence, self-report, and death codes from all input definitions into a single combined definition.</p>
 </section>
 <section id="comparing-data-sources" class="level2">
 <h2 class="anchored" data-anchor-id="comparing-data-sources">Comparing data sources</h2>
 <p>To check how many cases each source contributes, use <code>compare_data_sources()</code>:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>ukb_data <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">"population.csv"</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"AA"</span>, <span class="st">"Hypertension"</span>)]</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> <span class="fu">compare_data_sources</span>(ukb_data, diseases)</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>comparison</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>ukb_data <span class="ot">&lt;-</span> <span class="fu">fread</span>(<span class="st">"population.csv"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>diseases <span class="ot">&lt;-</span> <span class="fu">get_predefined_diseases</span>()[<span class="fu">c</span>(<span class="st">"AA"</span>, <span class="st">"Hypertension"</span>)]</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> <span class="fu">compare_data_sources</span>(ukb_data, diseases)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>comparison</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This returns a summary table showing case counts per source per disease, which is useful for justifying source selection in your manuscript.</p>
 
 

@@ -1,0 +1,105 @@
+---
+title: "RAP environment check"
+description: "Check whether UKBAnalytica is running in an approved UK Biobank RAP environment."
+---
+
+UKBAnalytica is designed for analyses conducted within approved UK Biobank Research Analysis Platform (RAP) projects. Participant-level UK Biobank source records should remain inside RAP. The package therefore provides a lightweight environment check and protects RAP-dependent extraction interfaces from being run in ordinary local sessions.
+
+::: {.callout-important title="Privacy boundary"}
+UKBAnalytica can help users write scripts, define phenotypes, assemble analysis workflows, and summarize derived results. It should not be used to move or expose UK Biobank participant-level source records outside approved RAP projects.
+:::
+
+## Check the current session
+
+Use `ukb_check_rap_env()` at the beginning of RAP scripts to inspect the current execution environment.
+
+```{r}
+library(UKBAnalytica)
+
+env <- ukb_check_rap_env()
+```
+
+The function returns an object with structured diagnostics:
+
+```{r}
+env <- ukb_check_rap_env(verbose = FALSE)
+
+env$is_rap
+env$rap_signals
+env$project_mount_exists
+env$dx_available
+env$dx_path
+env$dx_version
+env$auth
+env$checks
+```
+
+The main RAP signals are:
+
+- `DX_PROJECT_CONTEXT_ID`, `DX_WORKSPACE_ID`, `DX_JOB_ID`, or `DX_RUN_ID`
+- the RAP project mount path `/mnt/project`
+- the DNAnexus command-line tool `dx`, when available
+
+If at least one RAP environment signal is detected, `env$is_rap` is returned as `TRUE`. The `checks` table records each diagnostic item as `pass`, `warn`, `fail`, or `skip`.
+
+## Require RAP explicitly
+
+For scripts that should only run inside RAP, set strict checks:
+
+```{r}
+ukb_check_rap_env(
+  require_rap = TRUE,
+  require_dx = TRUE
+)
+```
+
+To also verify DNAnexus authentication:
+
+```{r}
+ukb_check_rap_env(
+  require_rap = TRUE,
+  require_dx = TRUE,
+  check_auth = TRUE
+)
+```
+
+`check_auth = TRUE` calls `dx whoami` and `dx env --bash` to verify the DNAnexus login and active project context. It does not read participant-level data.
+
+## Protected RAP functions
+
+Some UKBAnalytica functions are intentionally restricted because they interact with RAP datasets or RAP project storage. For example:
+
+```{r}
+rap_extract_pheno(field_id = c(31, 53, 21022))
+rap_submit_extract(field_id = c(31, 53, 21022), file = "baseline_core")
+```
+
+These functions now call an internal RAP assertion before running the actual extraction step. If they are executed outside a RAP-like environment, they stop with a diagnostic message and ask the user to run `ukb_check_rap_env()`.
+
+Dry-run planning remains available without extracting data:
+
+```{r}
+plan <- rap_submit_extract(
+  field_id = c(31, 53, 21022),
+  dataset = "appXXXX_YYYYMMDD.dataset",
+  dry_run = TRUE
+)
+```
+
+This allows users to review field selections and extraction plans without touching participant-level records.
+
+## Recommended script header
+
+A typical RAP analysis script can begin with:
+
+```{r}
+library(UKBAnalytica)
+
+rap_env <- ukb_check_rap_env(
+  require_rap = TRUE,
+  require_dx = TRUE,
+  check_auth = TRUE
+)
+```
+
+This makes the privacy boundary explicit and helps prevent accidental local execution of RAP-dependent workflows.

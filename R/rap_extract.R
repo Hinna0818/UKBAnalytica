@@ -584,6 +584,8 @@ rap_extract_pheno <- function(field_id = NULL,
     return(plan)
   }
 
+  .ukb_assert_rap_env("rap_extract_pheno()")
+
   output_is_temp <- is.null(output)
   if (output_is_temp) {
     output <- tempfile(fileext = ".csv")
@@ -698,6 +700,8 @@ rap_submit_extract <- function(field_id = NULL,
   if (isTRUE(dry_run)) {
     return(plan)
   }
+
+  .ukb_assert_rap_env("rap_submit_extract()")
 
   fields_file <- tempfile(fileext = ".txt")
   on.exit(unlink(fields_file), add = TRUE)

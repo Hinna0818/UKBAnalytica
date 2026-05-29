@@ -2,6 +2,24 @@ test_that("RAP environment check and extraction manifest are lightweight", {
   env <- ukb_check_rap_env(verbose = FALSE)
   expect_s3_class(env, "ukb_rap_env")
   expect_true(all(c("check", "status", "message") %in% names(env$checks)))
+  expect_true(all(c("is_rap", "dx_available", "project_mount_exists", "rap_signals") %in% names(env)))
+  expect_true("DNAnexus authentication" %in% env$checks$check)
+  expect_true(is.list(env$auth))
+
+  old_project <- Sys.getenv("DX_PROJECT_CONTEXT_ID", unset = NA_character_)
+  on.exit({
+    if (is.na(old_project)) {
+      Sys.unsetenv("DX_PROJECT_CONTEXT_ID")
+    } else {
+      Sys.setenv(DX_PROJECT_CONTEXT_ID = old_project)
+    }
+  }, add = TRUE)
+  Sys.setenv(DX_PROJECT_CONTEXT_ID = "project-test")
+  env_project <- ukb_check_rap_env(verbose = FALSE)
+  expect_true(env_project$is_rap)
+  expect_true("DX_PROJECT_CONTEXT_ID" %in% env_project$rap_signals)
+  expect_true(.ukb_is_rap_env(env_vars = c(DX_PROJECT_CONTEXT_ID = "project-test"), project_mount = FALSE))
+  expect_false(.ukb_is_rap_env(env_vars = c(DX_PROJECT_CONTEXT_ID = NA_character_), project_mount = FALSE))
 
   manifest <- ukb_create_extraction_manifest(
     field_id = c(31, 21022),
