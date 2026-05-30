@@ -12,7 +12,9 @@
 **UKBAnalytica** is a high-performance R package for working with UK Biobank
 Research Analysis Platform (RAP) data inside approved RAP projects. It focuses on standardized
 phenotyping, survival-ready datasets, scalable preprocessing, and downstream analysis.
-The package does not ship UK Biobank participant-level source records; examples
+
+**Attention**
+The package **does not ship UK Biobank participant-level source records**; examples
 use field IDs, simulated toy data, or user-provided tables that remain within
 RAP-controlled storage.
 
