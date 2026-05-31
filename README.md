@@ -1,4 +1,4 @@
-# UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for UK Biobank RAP Data
+# UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for UK Biobank RAP Data Analysis
 
 <!-- badges: start -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
