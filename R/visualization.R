@@ -42,7 +42,6 @@ NULL
 #' plot_forest(results)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_forest <- function(results,
                          estimate_col = "estimate",
@@ -184,7 +183,6 @@ plot_forest <- function(results,
 #' plot_km_curve(lung, time_col = "time", status_col = "status", group_col = "sex")
 #' }
 #'
-#' @import ggplot2
 #' @importFrom stats as.formula
 #' @export
 plot_km_curve <- function(data,
@@ -404,7 +402,6 @@ plot_km_curve <- function(data,
 #' plot_ps_distribution(ps_data, treatment = "treated", type = "mirror")
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_ps_distribution <- function(data,
                                    ps_col = "ps",
@@ -512,7 +509,6 @@ plot_ps_distribution <- function(data,
 #' plot_balance(balance_before, balance_after)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_balance <- function(balance_before,
                           balance_after,
@@ -591,7 +587,6 @@ plot_balance <- function(balance_before,
 #' plot_calibration(data, predicted = "pred_prob", observed = "outcome")
 #' }
 #'
-#' @import ggplot2
 #' @importFrom stats quantile binom.test
 #' @export
 plot_calibration <- function(data,
@@ -706,7 +701,6 @@ plot_calibration <- function(data,
 #' plot_mediation(med_result, type = "decomposition")
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_mediation <- function(mediation_result,
                             type = c("effects", "path", "decomposition"),
@@ -953,7 +947,6 @@ plot_mediation <- function(mediation_result,
 #' plot_mediation_forest(multi_results, effect_type = "tnie")
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_mediation_forest <- function(multi_mediation_result,
                                    effect_type = c("tnie", "pnde", "te", "pm"),
@@ -1085,7 +1078,6 @@ plot_mediation_forest <- function(multi_mediation_result,
 #' plot_mi_pooled(pooled, exponentiate = TRUE, show_fmi = TRUE)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_mi_pooled <- function(mi_result,
                             terms = NULL,
@@ -1237,7 +1229,6 @@ plot_mi_pooled <- function(mi_result,
 #' plot_mi_diagnostics(pooled, type = "fmi")
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_mi_diagnostics <- function(mi_result,
                                  type = c("fmi", "variance_ratio", "df"),
@@ -1411,7 +1402,6 @@ plot_mi_diagnostics <- function(mi_result,
 #' plot_ml_importance(ml, n_features = 15)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_ml_importance <- function(object,
                                n_features = 20,
@@ -1488,7 +1478,6 @@ plot_ml_importance <- function(object,
 #' plot(roc_result)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_ml_roc <- function(object,
                         ci_alpha = 0.2,
@@ -1551,7 +1540,7 @@ plot_ml_roc <- function(object,
 #' @param title Optional plot title. If \code{NULL}, no title is shown.
 #' @param xlab X-axis label.
 #' @param ylab Y-axis label.
-#' @param legend_position Legend position passed to \code{ggplot2::theme()}.
+#' @param legend_position Legend position passed to \code{theme()}.
 #' @param base_size Base font size.
 #' @param ... Additional arguments reserved for future use.
 #'
@@ -1646,7 +1635,6 @@ plot_ml_roc_compare <- function(roc_data,
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_calibration <- function(object,
                                 title = "Calibration Curve",
@@ -1694,7 +1682,6 @@ plot_ml_calibration <- function(object,
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_confusion <- function(object,
                               normalize = TRUE,
@@ -1756,7 +1743,6 @@ plot_ml_confusion <- function(object,
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_compare <- function(object,
                             metric = NULL,
@@ -2034,7 +2020,6 @@ plot_shap_beeswarm <- function(object,
 #' plot_shap_summary(shap)
 #' }
 #'
-#' @import ggplot2
 #' @export
 plot_shap_summary <- function(object,
                               max_features = 20,
@@ -2141,7 +2126,6 @@ plot_shap_summary <- function(object,
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_shap_dependence <- function(object,
                                  feature,
@@ -2207,7 +2191,6 @@ plot_shap_dependence <- function(object,
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_ks <- function(object, title = "KS Curve", ...) {
 
@@ -2274,7 +2257,6 @@ plot_ml_ks <- function(object, title = "KS Curve", ...) {
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_pr <- function(object, title = "PR Curve", ...) {
 
@@ -2323,7 +2305,6 @@ plot_ml_pr <- function(object, title = "PR Curve", ...) {
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_gain <- function(object, title = "Gain Curve", ...) {
 
@@ -2382,7 +2363,6 @@ plot_ml_gain <- function(object, title = "Gain Curve", ...) {
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_lift <- function(object, title = "Lift Curve", ...) {
 
@@ -2419,7 +2399,6 @@ plot_ml_lift <- function(object, title = "Lift Curve", ...) {
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_ml_dca <- function(object, title = "Decision Curve Analysis", ...) {
 
@@ -2487,7 +2466,6 @@ plot_ml_dca <- function(object, title = "Decision Curve Analysis", ...) {
 #'
 #' @return A ggplot2 object
 #'
-#' @import ggplot2
 #' @export
 plot_shap_force <- function(object,
                             row_id = 1,

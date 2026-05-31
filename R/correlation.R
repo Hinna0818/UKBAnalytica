@@ -178,9 +178,9 @@ plot_correlation <- function(corr_matrix,
       "black"
     )
     
-    p <- p + ggplot2::geom_text(
+    p <- p + geom_text(
       data = corr_df,
-      ggplot2::aes(label = .data$label),
+      aes(label = .data$label),
       color = corr_df$text_color,
       size = text_size,
       show.legend = FALSE

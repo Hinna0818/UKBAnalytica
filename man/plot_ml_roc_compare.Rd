@@ -30,7 +30,7 @@ row-bound data.frame of multiple ROC tables, or a list of such data.frames.}
 
 \item{ylab}{Y-axis label.}
 
-\item{legend_position}{Legend position passed to \code{ggplot2::theme()}.}
+\item{legend_position}{Legend position passed to \code{theme()}.}
 
 \item{base_size}{Base font size.}
 
