@@ -44,10 +44,10 @@
 #' @aliases UKBAnalytica-package
 #'
 #' @import data.table
-#' @importFrom ggplot2 aes annotate coord_cartesian coord_equal coord_fixed coord_flip element_blank element_line element_text expansion facet_wrap geom_abline geom_col geom_density geom_errorbar geom_errorbarh geom_histogram geom_hline geom_jitter geom_line geom_point geom_rect geom_ribbon geom_rug geom_segment geom_smooth geom_step geom_text geom_tile geom_vline ggplot guide_colorbar guide_legend guides labs margin position_jitter position_stack scale_color_gradientn scale_color_manual scale_color_viridis_c scale_colour_manual scale_fill_gradient scale_fill_gradient2 scale_fill_manual scale_linetype_manual scale_size_continuous scale_x_continuous scale_x_log10 scale_y_continuous scale_y_discrete sec_axis theme theme_classic theme_minimal theme_void vars
+#' @importFrom ggplot2 aes annotate coord_cartesian coord_equal coord_fixed coord_flip element_blank element_line element_text expansion facet_wrap geom_abline geom_boxplot geom_col geom_density geom_errorbar geom_errorbarh geom_histogram geom_hline geom_jitter geom_line geom_point geom_rect geom_ribbon geom_rug geom_segment geom_smooth geom_step geom_text geom_tile geom_violin geom_vline ggplot guide_colorbar guide_legend guides labs margin position_jitter position_stack scale_color_gradientn scale_color_manual scale_color_viridis_c scale_colour_manual scale_fill_gradient scale_fill_gradient2 scale_fill_manual scale_linetype_manual scale_size_continuous scale_x_continuous scale_x_log10 scale_y_continuous scale_y_discrete sec_axis theme theme_classic theme_minimal theme_void vars
 #' @importFrom rlang .data
 #' @importFrom stringi stri_extract_all_regex stri_trim_both
-#' @importFrom stats cor.test p.adjust quantile relevel sd terms model.matrix predict approx
+#' @importFrom stats ave cor.test p.adjust quantile relevel sd terms model.matrix predict approx
 #' @importFrom utils head modifyList
 #' @importFrom grid unit
 #' @importFrom survival Surv coxph survfit survdiff basehaz concordance finegray cox.zph
