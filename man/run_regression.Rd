@@ -11,6 +11,7 @@ run_regression(
   outcome = NULL,
   endpoint = c("time", "status"),
   covariates = NULL,
+  covariate_sets = NULL,
   family = NULL,
   smooth = TRUE,
   ...
@@ -31,6 +32,12 @@ the outcome column.}
 \code{c("time", "status")}.  Ignored for other types.}
 
 \item{covariates}{A character vector of covariate names. Default \code{NULL}.}
+
+\item{covariate_sets}{Optional named list of covariate sets for nested
+epidemiological models. Each element must be \code{NULL} or a character
+vector of covariate names. When supplied, \code{run_regression()} runs the
+same exposure-outcome model once per covariate set and returns one stacked
+table with a \code{model} column.}
 
 \item{family}{For \code{"glm"} and \code{"gam"}: the model family.  Accepts
 a character string, function, or family object.  Default \code{"poisson"}
@@ -71,6 +78,13 @@ run_regression(mtcars, main_var = c("hp", "wt"),
 mtcars$am_bin <- as.integer(mtcars$am == 1)
 run_regression(mtcars, main_var = c("hp", "wt"),
                type = "logit", outcome = "am_bin")
+
+run_regression(mtcars, main_var = "hp", type = "lm", outcome = "mpg",
+               covariate_sets = list(
+                 crude = NULL,
+                 model1 = c("cyl"),
+                 model2 = c("cyl", "wt")
+               ))
 
 mtcars$count <- round(mtcars$mpg)
 run_regression(mtcars, main_var = c("hp", "wt"),

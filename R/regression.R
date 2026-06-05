@@ -581,6 +581,11 @@ runmulti_gam <- function(data,
 #' @param endpoint For \code{"cox"}: a character vector of length 2
 #'   \code{c("time", "status")}.  Ignored for other types.
 #' @param covariates A character vector of covariate names. Default \code{NULL}.
+#' @param covariate_sets Optional named list of covariate sets for nested
+#'   epidemiological models. Each element must be \code{NULL} or a character
+#'   vector of covariate names. When supplied, \code{run_regression()} runs the
+#'   same exposure-outcome model once per covariate set and returns one stacked
+#'   table with a \code{model} column.
 #' @param family For \code{"glm"} and \code{"gam"}: the model family.  Accepts
 #'   a character string, function, or family object.  Default \code{"poisson"}
 #'   for \code{"glm"} and \code{"gaussian"} for \code{"gam"}.  See
@@ -613,6 +618,13 @@ runmulti_gam <- function(data,
 #' run_regression(mtcars, main_var = c("hp", "wt"),
 #'                type = "logit", outcome = "am_bin")
 #'
+#' run_regression(mtcars, main_var = "hp", type = "lm", outcome = "mpg",
+#'                covariate_sets = list(
+#'                  crude = NULL,
+#'                  model1 = c("cyl"),
+#'                  model2 = c("cyl", "wt")
+#'                ))
+#'
 #' mtcars$count <- round(mtcars$mpg)
 #' run_regression(mtcars, main_var = c("hp", "wt"),
 #'                type = "glm", family = "poisson", outcome = "count")
@@ -632,10 +644,64 @@ run_regression <- function(data,
                            outcome  = NULL,
                            endpoint = c("time", "status"),
                            covariates = NULL,
+                           covariate_sets = NULL,
                            family = NULL,
                            smooth = TRUE,
                            ...) {
   type <- match.arg(type)
+
+  if (!is.null(covariate_sets)) {
+    if (!is.null(covariates)) {
+      stop("Use either 'covariates' or 'covariate_sets', not both.", call. = FALSE)
+    }
+    if (!is.list(covariate_sets)) {
+      stop("'covariate_sets' must be a named list.", call. = FALSE)
+    }
+    if (length(covariate_sets) == 0) {
+      stop("'covariate_sets' must contain at least one covariate set.", call. = FALSE)
+    }
+    if (is.null(names(covariate_sets)) || any(!nzchar(names(covariate_sets)))) {
+      names(covariate_sets) <- paste0("model", seq_along(covariate_sets))
+    }
+
+    nested_results <- vector("list", length(covariate_sets))
+    for (i in seq_along(covariate_sets)) {
+      set_name <- names(covariate_sets)[[i]]
+      set_covariates <- covariate_sets[[i]]
+      if (!is.null(set_covariates) && !is.character(set_covariates)) {
+        stop(sprintf(
+          "Covariate set '%s' must be NULL or a character vector.",
+          set_name
+        ), call. = FALSE)
+      }
+
+      res <- run_regression(
+        data = data,
+        main_var = main_var,
+        type = type,
+        outcome = outcome,
+        endpoint = endpoint,
+        covariates = set_covariates,
+        family = family,
+        smooth = smooth,
+        ...
+      )
+      res$model <- set_name
+      res$covariates <- if (length(set_covariates) == 0) {
+        NA_character_
+      } else {
+        paste(set_covariates, collapse = ", ")
+      }
+      res$n_covariates <- length(set_covariates)
+      first_cols <- c("model", "covariates", "n_covariates")
+      nested_results[[i]] <- res[, c(first_cols, setdiff(names(res), first_cols)), drop = FALSE]
+    }
+
+    out <- do.call(rbind, nested_results)
+    rownames(out) <- NULL
+    class(out) <- c("ukb_nested_regression", class(out))
+    return(out)
+  }
 
   .require_outcome <- function() {
     if (is.null(outcome))

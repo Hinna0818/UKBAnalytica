@@ -47,6 +47,27 @@ test_that("run_regression cox with covariates works", {
   expect_equal(res$variable, "x1")
 })
 
+test_that("run_regression cox supports nested covariate sets", {
+  dt <- make_reg_test_data()
+  res <- run_regression(
+    dt,
+    main_var = "x1",
+    type = "cox",
+    endpoint = c("time", "status"),
+    covariate_sets = list(
+      crude = NULL,
+      model1 = "cov1",
+      model2 = c("cov1", "x2")
+    )
+  )
+
+  expect_s3_class(res, "ukb_nested_regression")
+  expect_equal(nrow(res), 3)
+  expect_equal(res$model, c("crude", "model1", "model2"))
+  expect_true(all(c("model", "covariates", "n_covariates", "HR") %in% names(res)))
+  expect_equal(res$n_covariates, c(0, 1, 2))
+})
+
 # ── run_regression (lm) ──────────────────────────────────────────────────────
 
 test_that("run_regression lm returns correct structure", {
@@ -67,6 +88,25 @@ test_that("run_regression lm with covariates works", {
                         type = "lm", outcome = "outcome")
 
   expect_equal(nrow(res), 1)
+})
+
+test_that("run_regression lm supports nested covariate sets", {
+  dt <- make_reg_test_data()
+  res <- run_regression(
+    dt,
+    main_var = c("x1", "x2"),
+    type = "lm",
+    outcome = "outcome",
+    covariate_sets = list(
+      crude = NULL,
+      adjusted = "cov1"
+    )
+  )
+
+  expect_s3_class(res, "ukb_nested_regression")
+  expect_equal(nrow(res), 4)
+  expect_equal(unique(res$model), c("crude", "adjusted"))
+  expect_true(all(c("model", "covariates", "n_covariates", "beta") %in% names(res)))
 })
 
 test_that("run_regression lm errors when outcome missing", {
@@ -206,6 +246,21 @@ test_that("run_regression errors on invalid type", {
   dt <- make_reg_test_data()
   expect_error(run_regression(dt, main_var = "x1", type = "tobit"),
                "should be one of")
+})
+
+test_that("run_regression errors when both covariates and covariate_sets are supplied", {
+  dt <- make_reg_test_data()
+  expect_error(
+    run_regression(
+      dt,
+      main_var = "x1",
+      type = "lm",
+      outcome = "outcome",
+      covariates = "cov1",
+      covariate_sets = list(crude = NULL)
+    ),
+    "Use either 'covariates' or 'covariate_sets'"
+  )
 })
 
 # ── runmulti_negbin ───────────────────────────────────────────────────────────
