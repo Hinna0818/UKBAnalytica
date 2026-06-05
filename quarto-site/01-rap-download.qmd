@@ -78,6 +78,95 @@ A successful result looks like:
 If no dataset is found, confirm that you opened the correct RAP project and that
 the `.dataset` file is visible in the project root.
 
+### Download the official RAP data dictionary
+
+Before extracting data, it is useful to create an official project-specific data
+dictionary from the RAP dataset. UKBAnalytica does not ship a third-party field
+dictionary. Instead, it can call the DNAnexus `dx extract_dataset -ddd` command
+inside RAP and use the generated official dictionary for field lookup.
+
+```r
+dict_path <- ukb_download_rap_dictionary(
+  dataset = dataset,
+  output_dir = "ukb_metadata"
+)
+
+dict_path
+```
+
+`ukb_download_rap_dictionary()` is a RAP-protected function. If it is called
+outside a RAP-like environment, it stops and asks the user to run
+`ukb_check_rap_env()` first. This keeps dictionary generation tied to the
+approved RAP project rather than a local copy of participant-level data.
+
+### Search fields using English or Chinese terms
+
+`ukb_query_dictionary()` combines two sources:
+
+- the official RAP data dictionary generated from your approved `.dataset`;
+- the built-in UKBAnalytica Chinese field-path dictionary.
+
+English field names, UKB field IDs, and RAP column names are searched directly
+against the official dictionary:
+
+```r
+ukb_query_dictionary(
+  query = c("sex", "age at recruitment", "21022", "p41270"),
+  official_dict = dict_path
+)
+```
+
+Chinese queries are first matched against the built-in Chinese dictionary and
+then converted into English candidate terms for official-dictionary matching:
+
+```r
+bp_query <- ukb_query_dictionary(
+  query = c("收缩压", "舒张压", "吸烟", "教育"),
+  official_dict = dict_path
+)
+
+bp_query$chinese_matches
+bp_query$official_matches
+```
+
+The returned object contains:
+
+- `query_info`: detected language and English candidate terms;
+- `chinese_matches`: matched Chinese dictionary entries;
+- `official_matches`: official UKB field IDs, RAP/UKB column names, value
+  types, units, coding names, and matching scores.
+
+Chinese-to-English matching is intentionally conservative. Results with lower
+matching scores are marked as `needs_review`, so users can verify the selected
+field IDs before extraction.
+
+### Validate requested columns
+
+After querying fields or reading an extracted dataset, check that all required
+columns are present:
+
+```r
+needed_cols <- c("eid", "participant.p31", "participant.p21022", "participant.p21001")
+available_cols <- c("eid", "p31", "p21022", "p21001", "p20116")
+
+ukb_validate_columns(
+  data = available_cols,
+  columns = needed_cols,
+  ignore_entity_prefix = TRUE
+)
+```
+
+`ignore_entity_prefix = TRUE` treats `participant.p31` and `p31` as equivalent.
+For analysis scripts where missing columns should stop the workflow, use:
+
+```r
+ukb_validate_columns(
+  data = extracted_data,
+  columns = needed_cols,
+  error = TRUE
+)
+```
+
 ### Inspect available fields
 
 Use `rap_list_fields()` to search fields that are approved for your project:

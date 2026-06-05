@@ -63,3 +63,4 @@ Config/testthat/edition: 3
 Config/Needs/bioc: TRUE
 Depends: 
     R (>= 4.0)
+LazyData: true
