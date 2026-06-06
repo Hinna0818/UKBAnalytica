@@ -9,6 +9,8 @@
 ^raw_demo\.csv$
 ^skill\.md$
 ^test_demo\.R$
+^tests$
+^tests/
 ^\.git$
 ^\.gitignore$
 ^README\.html$

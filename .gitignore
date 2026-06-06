@@ -13,6 +13,7 @@
 
 # Test outputs
 test_output/
+tests/
 tests/skill.md
 tests/raw_demo.csv
 tests/test_demo.R

@@ -11,6 +11,7 @@ build_survival_dataset(
   outcome_sources = c("ICD10", "ICD9", "Death"),
   censor_date = as.Date("2023-10-31"),
   baseline_col = "p53_i0",
+  time_skeleton = NULL,
   primary_disease = NULL,
   output = c("wide", "long"),
   include_all = TRUE,
@@ -45,6 +46,13 @@ interest is a surgery or procedure-based phenotype.}
 \item{censor_date}{Administrative censoring date (default: "2023-10-31").}
 
 \item{baseline_col}{Column name for baseline assessment date (default: "p53_i0").}
+
+\item{time_skeleton}{Optional output from \code{\link{ukb_time_skeleton}}.
+When supplied, its \code{baseline_date} is used for prevalent/incident
+classification and its participant-specific \code{followup_end_date} is
+used to calculate default follow-up time for non-cases. The
+\code{censor_date} argument remains the common administrative censoring
+date used by endpoint extraction.}
 
 \item{primary_disease}{Disease key used to compute follow-up time and event
 status (must be in \code{disease_definitions}). If NULL, the first disease

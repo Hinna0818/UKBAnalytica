@@ -28,6 +28,12 @@
 #'   interest is a surgery or procedure-based phenotype.
 #' @param censor_date Administrative censoring date (default: "2023-10-31").
 #' @param baseline_col Column name for baseline assessment date (default: "p53_i0").
+#' @param time_skeleton Optional output from \code{\link{ukb_time_skeleton}}.
+#'   When supplied, its \code{baseline_date} is used for prevalent/incident
+#'   classification and its participant-specific \code{followup_end_date} is
+#'   used to calculate default follow-up time for non-cases. The
+#'   \code{censor_date} argument remains the common administrative censoring
+#'   date used by endpoint extraction.
 #' @param primary_disease Disease key used to compute follow-up time and event
 #'   status (must be in \code{disease_definitions}). If NULL, the first disease
 #'   in the list is used.
@@ -103,6 +109,7 @@ build_survival_dataset <- function(dt,
                                     outcome_sources = c("ICD10", "ICD9", "Death"),
                                     censor_date = as.Date("2023-10-31"),
                                     baseline_col = "p53_i0",
+                                    time_skeleton = NULL,
                                     primary_disease = NULL,
                                     output = c("wide", "long"),
                                     include_all = TRUE,
@@ -129,8 +136,18 @@ build_survival_dataset <- function(dt,
     ))
   }
 
-  if (!baseline_col %in% names(dt)) {
+  if (is.null(time_skeleton) && !baseline_col %in% names(dt)) {
     stop(sprintf("Baseline column not found: %s", baseline_col))
+  }
+
+  skeleton_info <- .survival_prepare_time_skeleton(
+    time_skeleton = time_skeleton,
+    dt = dt,
+    baseline_col = baseline_col
+  )
+  if (!is.null(skeleton_info)) {
+    dt <- skeleton_info$dt
+    baseline_col <- skeleton_info$baseline_col
   }
 
   message("[build_survival_dataset] Extracting diagnosis records...")
@@ -162,13 +179,34 @@ build_survival_dataset <- function(dt,
 
   message("[build_survival_dataset] Calculating survival times...")
 
-  baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
-  death_dates <- get_death_dates(dt)
-  all_eids <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
+  if (!is.null(skeleton_info)) {
+    all_eids <- data.table::copy(skeleton_info$time_skeleton)
+    all_eids <- all_eids[, .(
+      eid,
+      baseline_date,
+      death_date,
+      end_date = followup_end_date,
+      default_surv_time = followup_time_years,
+      time_followup_end_reason = followup_end_reason,
+      time_valid_followup = valid_followup
+    )]
+  } else {
+    baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
+    death_dates <- get_death_dates(dt)
+    all_eids <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
 
-  all_eids[, end_date := pmin(death_date, censor_date, na.rm = TRUE)]
-  all_eids[is.na(end_date), end_date := censor_date]
-  all_eids[, default_surv_time := as.numeric(end_date - baseline_date) / 365.25]
+    all_eids[, end_date := pmin(death_date, censor_date, na.rm = TRUE)]
+    all_eids[is.na(end_date), end_date := censor_date]
+    all_eids[, default_surv_time := as.numeric(end_date - baseline_date) / 365.25]
+    all_eids[, `:=`(
+      time_followup_end_reason = data.table::fifelse(
+        !is.na(death_date) & end_date == death_date,
+        "death",
+        "administrative_censoring"
+      ),
+      time_valid_followup = !is.na(baseline_date) & !is.na(end_date) & default_surv_time >= 0
+    )]
+  }
 
   diseases <- names(disease_definitions)
   if (length(diseases) == 0) {
@@ -221,7 +259,8 @@ build_survival_dataset <- function(dt,
         ]
       }
 
-      cohort[, c("baseline_date", "death_date", "end_date", "default_surv_time") := NULL]
+      cohort[, c("baseline_date", "death_date", "end_date", "default_surv_time",
+                  "time_followup_end_reason", "time_valid_followup") := NULL]
       cohort
     })
 
@@ -387,6 +426,84 @@ build_survival_dataset <- function(dt,
   message("[build_survival_dataset] Complete")
 
   return(result_dt)
+}
+
+.survival_prepare_time_skeleton <- function(time_skeleton,
+                                            dt,
+                                            baseline_col = "p53_i0") {
+  if (is.null(time_skeleton)) {
+    return(NULL)
+  }
+  if (!data.table::is.data.table(time_skeleton)) {
+    time_skeleton <- data.table::as.data.table(time_skeleton)
+  } else {
+    time_skeleton <- data.table::copy(time_skeleton)
+  }
+
+  required <- c("eid", "baseline_date", "followup_end_date", "followup_time_years")
+  missing <- setdiff(required, names(time_skeleton))
+  if (length(missing) > 0L) {
+    stop(
+      "`time_skeleton` must contain columns: ",
+      paste(required, collapse = ", "),
+      ". Missing: ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  if (anyDuplicated(time_skeleton$eid) > 0L) {
+    stop("`time_skeleton$eid` must be unique.", call. = FALSE)
+  }
+  if (!"death_date" %in% names(time_skeleton)) {
+    time_skeleton[, death_date := as.Date(NA)]
+  }
+  if (!"followup_end_reason" %in% names(time_skeleton)) {
+    time_skeleton[, followup_end_reason := NA_character_]
+  }
+  if (!"valid_followup" %in% names(time_skeleton)) {
+    time_skeleton[, valid_followup := !is.na(baseline_date) &
+                    !is.na(followup_end_date) &
+                    !is.na(followup_time_years) &
+                    followup_time_years >= 0]
+  }
+
+  time_skeleton[, baseline_date := .safe_as_date(baseline_date, col_name = "time_skeleton$baseline_date")]
+  time_skeleton[, followup_end_date := .safe_as_date(followup_end_date, col_name = "time_skeleton$followup_end_date")]
+  time_skeleton[, death_date := .safe_as_date(death_date, col_name = "time_skeleton$death_date")]
+  time_skeleton[, followup_time_years := suppressWarnings(as.numeric(followup_time_years))]
+
+  missing_eids <- setdiff(dt$eid, time_skeleton$eid)
+  if (length(missing_eids) > 0L) {
+    stop(
+      "`time_skeleton` is missing ",
+      length(missing_eids),
+      " participant(s) from `dt`.",
+      call. = FALSE
+    )
+  }
+
+  skeleton_dt <- time_skeleton[eid %in% dt$eid]
+  temp_baseline_col <- ".ukba_time_skeleton_baseline_date"
+  while (temp_baseline_col %in% names(dt)) {
+    temp_baseline_col <- paste0(temp_baseline_col, "_")
+  }
+
+  merged_dt <- data.table::merge.data.table(
+    data.table::copy(dt),
+    skeleton_dt[, .(eid, .ukba_tmp_baseline = baseline_date)],
+    by = "eid",
+    all.x = TRUE,
+    sort = FALSE
+  )
+  data.table::setnames(merged_dt, ".ukba_tmp_baseline", temp_baseline_col)
+  data.table::setorder(merged_dt, eid)
+  data.table::setorder(skeleton_dt, eid)
+
+  list(
+    dt = merged_dt,
+    baseline_col = temp_baseline_col,
+    time_skeleton = skeleton_dt
+  )
 }
 
 
