@@ -13,6 +13,15 @@
 - Extended proteomics utilities for volcano plots, Gene Ontology enrichment, STRING-based PPI retrieval, topology metrics, fast-greedy community detection, and cluster-level enrichment analysis.
 - Refined visualization helpers for forest plots, volcano plots, calibration and decision-curve analysis, ROC comparison, SHAP summaries, enrichment plots, and manuscript-ready figure export.
 
+### Recent updates
+- Added `ukb_time_skeleton()` to create a reusable follow-up time skeleton with baseline date, death date, loss-to-follow-up date, administrative censoring, follow-up end reason, and valid follow-up indicators.
+- Added optional `time_skeleton` support to `build_survival_dataset()` while preserving the default survival workflow.
+- Added RAP-protected dictionary utilities, including `ukb_download_rap_dictionary()`, `ukb_query_dictionary()`, and `ukb_validate_columns()`, for official RAP dictionary lookup, Chinese/English field search, and column validation.
+- Added the built-in `ukb_dictionary_zh` metadata dataset for Chinese UKB field-path lookup.
+- Extended `run_regression()` with `covariate_sets` for nested epidemiological models such as crude, partially adjusted, and fully adjusted analyses.
+- Added lightweight publication-style plotting helpers for heatmaps, stacked bars, violin plots, and scatter plots.
+- Excluded local `tests/` from package builds and remote tracking.
+
 ## UKBAnalytica 0.6.2.2（2026-04-29）
 
 ### Disease phenotyping
