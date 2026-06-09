@@ -109,7 +109,7 @@ ukb_download_rap_dictionary <- function(dataset = NULL,
 #'
 #' @examples
 #' \dontrun{
-#' res <- ukb_query_dictionary("收缩压")
+#' res <- ukb_query_dictionary("systolic blood pressure")
 #' res <- ukb_query_dictionary(c("sex", "21022", "p41270"))
 #' }
 ukb_query_dictionary <- function(query,
@@ -303,7 +303,7 @@ ukb_validate_columns <- function(data,
     }
     x <- utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
   }
-  expected <- paste0("类别", 1:6)
+  expected <- paste0("\u7c7b\u522b", 1:6)
   missing <- setdiff(expected, names(x))
   if (length(missing) > 0L) {
     stop("Chinese dictionary is missing columns: ", paste(missing, collapse = ", "), call. = FALSE)
@@ -314,7 +314,7 @@ ukb_validate_columns <- function(data,
     trimws(z)
   })
   x$zh_path <- apply(x[expected], 1, function(row) paste(row[nzchar(row)], collapse = " > "))
-  x$zh_variable <- x[["类别6"]]
+  x$zh_variable <- x[["\u7c7b\u522b6"]]
   x
 }
 
@@ -432,37 +432,71 @@ ukb_validate_columns <- function(data,
 }
 
 .ukb_dictionary_translation_map <- function(translation_map = NULL) {
-  base <- c(
-    "性别" = "sex",
-    "年龄" = "age",
-    "招募年龄" = "age at recruitment",
-    "身体质量指数" = "body mass index",
-    "体重指数" = "body mass index",
-    "身高" = "standing height",
-    "体重" = "weight",
-    "腰围" = "waist circumference",
-    "臀围" = "hip circumference",
-    "收缩压" = "systolic blood pressure",
-    "舒张压" = "diastolic blood pressure",
-    "吸烟" = "smoking",
-    "抽烟" = "smoking",
-    "饮酒" = "alcohol",
-    "教育" = "qualifications education",
-    "种族" = "ethnic background",
-    "多重剥夺指数" = "Townsend deprivation index",
-    "哮喘" = "asthma",
-    "糖尿病" = "diabetes",
-    "慢性阻塞性肺疾病" = "chronic obstructive pulmonary disease COPD",
-    "高血压" = "hypertension",
-    "首次报告的日期" = "date first reported",
-    "报告来源" = "source of report",
-    "诊断" = "diagnosed diagnosis",
-    "日期" = "date",
-    "来源" = "source",
-    "实例0" = "Instance 0",
-    "实例1" = "Instance 1",
-    "实例2" = "Instance 2",
-    "实例3" = "Instance 3"
+  base <- setNames(
+    c(
+      "sex",
+      "age",
+      "age at recruitment",
+      "body mass index",
+      "body mass index",
+      "standing height",
+      "weight",
+      "waist circumference",
+      "hip circumference",
+      "systolic blood pressure",
+      "diastolic blood pressure",
+      "smoking",
+      "smoking",
+      "alcohol",
+      "qualifications education",
+      "ethnic background",
+      "Townsend deprivation index",
+      "asthma",
+      "diabetes",
+      "chronic obstructive pulmonary disease COPD",
+      "hypertension",
+      "date first reported",
+      "source of report",
+      "diagnosed diagnosis",
+      "date",
+      "source",
+      "Instance 0",
+      "Instance 1",
+      "Instance 2",
+      "Instance 3"
+    ),
+    c(
+      "\u6027\u522b",
+      "\u5e74\u9f84",
+      "\u62db\u52df\u5e74\u9f84",
+      "\u8eab\u4f53\u8d28\u91cf\u6307\u6570",
+      "\u4f53\u91cd\u6307\u6570",
+      "\u8eab\u9ad8",
+      "\u4f53\u91cd",
+      "\u8170\u56f4",
+      "\u81c0\u56f4",
+      "\u6536\u7f29\u538b",
+      "\u8212\u5f20\u538b",
+      "\u5438\u70df",
+      "\u62bd\u70df",
+      "\u996e\u9152",
+      "\u6559\u80b2",
+      "\u79cd\u65cf",
+      "\u591a\u91cd\u5265\u593a\u6307\u6570",
+      "\u54ee\u5598",
+      "\u7cd6\u5c3f\u75c5",
+      "\u6162\u6027\u963b\u585e\u6027\u80ba\u75be\u75c5",
+      "\u9ad8\u8840\u538b",
+      "\u9996\u6b21\u62a5\u544a\u7684\u65e5\u671f",
+      "\u62a5\u544a\u6765\u6e90",
+      "\u8bca\u65ad",
+      "\u65e5\u671f",
+      "\u6765\u6e90",
+      "\u5b9e\u4f8b0",
+      "\u5b9e\u4f8b1",
+      "\u5b9e\u4f8b2",
+      "\u5b9e\u4f8b3"
+    )
   )
   if (is.null(translation_map)) {
     return(base)

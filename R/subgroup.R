@@ -452,7 +452,7 @@ run_multi_subgroup <- function(data,
   int_term <- paste0(exposure, " * ", subgroup_var)
 
   tryCatch({
-    # ── fit full (interaction) model ──────────────────────────────────────────
+    # -- fit full (interaction) model ------------------------------------------
     if (model_type == "cox") {
       formula_obj <- stats::as.formula(paste0(
         "Surv(", endpoint[1], ", ", endpoint[2], ") ~ ",
@@ -485,7 +485,7 @@ run_multi_subgroup <- function(data,
       model <- stats::lm(formula_obj, data = data)
     }
 
-    # ── locate interaction coefficient rows ───────────────────────────────────
+    # -- locate interaction coefficient rows -----------------------------------
     coefs <- summary(model)$coefficients
     pat   <- paste0(exposure, ":", subgroup_var, "|",
                     subgroup_var, ":", exposure)
@@ -493,13 +493,13 @@ run_multi_subgroup <- function(data,
 
     if (length(interaction_rows) == 0) return(NA)
 
-    # ── single interaction term → Wald p-value ────────────────────────────────
+    # -- single interaction term -> Wald p-value --------------------------------
     if (length(interaction_rows) == 1) {
       pval_col <- if ("Pr(>|t|)" %in% colnames(coefs)) "Pr(>|t|)" else "Pr(>|z|)"
       return(coefs[interaction_rows[1], pval_col])
     }
 
-    # ── multiple terms → LRT via anova ───────────────────────────────────────
+    # -- multiple terms -> LRT via anova ---------------------------------------
     rhs_no_int <- .build_no_int_rhs()
 
     if (model_type == "cox") {

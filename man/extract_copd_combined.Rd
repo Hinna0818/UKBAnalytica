@@ -56,15 +56,15 @@ Set \code{NULL} for any airflow obstruction (GOLD 1+).}
 A data.table with columns:
 \describe{
 \item{eid}{Participant identifier}
-\item{COPD_prevalent}{1/0 — prevalent COPD from any source (ICD + SR + spirometry union)}
-\item{COPD_prevalent_icd}{1/0 — prevalent COPD from ICD/SR sources only}
-\item{COPD_prevalent_spirometry}{1/0/NA — prevalent COPD from spirometry only}
-\item{COPD_prevalent_source}{Character — "ICD_only", "spirometry_only", "both", or NA}
-\item{COPD_incident}{1/0 — incident COPD from ICD/death codes after baseline
+\item{COPD_prevalent}{1/0 - prevalent COPD from any source (ICD + SR + spirometry union)}
+\item{COPD_prevalent_icd}{1/0 - prevalent COPD from ICD/SR sources only}
+\item{COPD_prevalent_spirometry}{1/0/NA - prevalent COPD from spirometry only}
+\item{COPD_prevalent_source}{Character - "ICD_only", "spirometry_only", "both", or NA}
+\item{COPD_incident}{1/0 - incident COPD from ICD/death codes after baseline
 (0 for prevalent cases since they are not at risk)}
-\item{outcome_status}{0/1/NA — event indicator for survival analysis.
+\item{outcome_status}{0/1/NA - event indicator for survival analysis.
 NA for prevalent cases (not at risk).}
-\item{outcome_surv_time}{Numeric/NA — follow-up time in years.
+\item{outcome_surv_time}{Numeric/NA - follow-up time in years.
 NA for prevalent cases.}
 \item{fev1_fvc_ratio}{FEV1/FVC ratio (numeric)}
 \item{fev1_predicted_pct}{FEV1 predicted percent (numeric)}
@@ -108,7 +108,7 @@ while \code{outcome_sources} uses only objective sources for endpoints.
 }
 \examples{
 \dontrun{
-# Full COPD survival dataset — one line
+# Full COPD survival dataset - one line
 copd <- extract_copd_combined(ukb_data)
 
 # Exclude prevalent, run Cox regression

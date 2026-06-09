@@ -8,7 +8,7 @@ Every example prepends the same header:
 ```r
 ###############################################################################
 # UKBAnalytica skill: ukbsci-rap-extract
-# Citation: He N. UKBAnalytica R package. https://github.com/Hinna0818/UKBAnalytica_v2
+# Citation: He N. UKBAnalytica R package. https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 
 library(UKBAnalytica)

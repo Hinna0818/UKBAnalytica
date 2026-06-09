@@ -2,9 +2,9 @@
 
 <!-- badges: start -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/Hinna0818/UKBAnalytica_v2?style=flat)](https://github.com/Hinna0818/UKBAnalytica_v2/stargazers)
-[![GitHub last commit](https://img.shields.io/github/last-commit/Hinna0818/UKBAnalytica_v2)](https://github.com/Hinna0818/UKBAnalytica_v2/commits/main)
-[![Visits](https://hits.sh/github.com/Hinna0818/UKBAnalytica_v2.svg)](https://hits.sh/github.com/Hinna0818/UKBAnalytica_v2/)
+[![GitHub stars](https://img.shields.io/github/stars/Hinna0818/UKBAnalytica?style=flat)](https://github.com/Hinna0818/UKBAnalytica/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Hinna0818/UKBAnalytica)](https://github.com/Hinna0818/UKBAnalytica/commits/main)
+[![Visits](https://hits.sh/github.com/Hinna0818/UKBAnalytica.svg)](https://hits.sh/github.com/Hinna0818/UKBAnalytica/)
 <!-- badges: end -->
 
 <img src="man/figures/logo.png" align="right" height="139" alt="UKBAnalytica logo" />
@@ -18,7 +18,7 @@ The package **does not ship UK Biobank participant-level source records**; examp
 use field IDs, simulated toy data, or user-provided tables that remain within
 RAP-controlled storage.
 
-**For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica_v2/)
+**For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica/)
 
 ![](docs/assets/workflow.png)
 
@@ -28,7 +28,7 @@ You can install the development version of `UKBAnalytica` from GitHub with:
 
 ```r
 # install.packages("devtools")
-devtools::install_github("Hinna0818/UKBAnalytica_v2")
+devtools::install_github("Hinna0818/UKBAnalytica")
 ```
 
 ## Quick start
@@ -175,9 +175,9 @@ Here we provide some learning materials for UK Biobank in which you may be inter
 ## Star History
 
 <p align="center">
-  <a href="https://www.star-history.com/?repos=Hinna0818%2FUKBAnalytica_v2&type=date&legend=top-left">
+  <a href="https://www.star-history.com/?repos=Hinna0818%2FUKBAnalytica&type=date&legend=top-left">
     <img 
-      src="https://api.star-history.com/svg?repos=Hinna0818/UKBAnalytica_v2&type=date&legend=top-left"
+      src="https://api.star-history.com/svg?repos=Hinna0818/UKBAnalytica&type=date&legend=top-left"
       width="600"
       alt="Star History Chart"
     />

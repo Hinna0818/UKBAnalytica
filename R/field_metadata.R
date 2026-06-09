@@ -82,7 +82,7 @@ get_field_metadata <- function(field_id = NULL,
 #'
 #' @description
 #' Convenience wrapper around `get_field_metadata()` for a single UKB `field_id`.
-#' This is the simplest way to ask “what does field 4080 correspond to?” and get
+#' This is the simplest way to ask "what does field 4080 correspond to?" and get
 #' a one-row metadata table back in R.
 #'
 #' @param field_id A single UKB numeric field ID.

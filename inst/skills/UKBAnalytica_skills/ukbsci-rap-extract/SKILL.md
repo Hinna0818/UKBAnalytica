@@ -86,7 +86,7 @@ dir.create(extract_dir, showWarnings = FALSE, recursive = TRUE)
 
 ```r
 # Inside a RAP R session
-install.packages("UKBAnalytica")   # or devtools::install_github("Hinna0818/UKBAnalytica_v2")
+install.packages("UKBAnalytica")   # or devtools::install_github("Hinna0818/UKBAnalytica")
 library(UKBAnalytica)
 
 # Confirm dx CLI is available

@@ -1,6 +1,6 @@
 # UKBAnalytica Skill Pack (`UKBAnalytica_skills`)
 
-Agent-runtime-agnostic skill bundle for the [`UKBAnalytica`](https://github.com/Hinna0818/UKBAnalytica_v2)
+Agent-runtime-agnostic skill bundle for the [`UKBAnalytica`](https://github.com/Hinna0818/UKBAnalytica)
 R package. The pack works with any agent stack that supports a "skill" / "tool
 description" loaded from YAML front-matter + Markdown (Claude Code skills,
 OpenAI Assistants instructions / function-tool descriptions, custom RAG-driven
@@ -151,6 +151,6 @@ at the top of every generated script is:
 # UKBAnalytica Citation:
 # He N. UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for
 # UK Biobank RAP Data. R package version 0.6.2.2.
-# https://github.com/Hinna0818/UKBAnalytica_v2
+# https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 ```

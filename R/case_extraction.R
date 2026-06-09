@@ -1197,15 +1197,15 @@ extract_spirometry_copd <- function(dt,
 #' @return A data.table with columns:
 #'   \describe{
 #'     \item{eid}{Participant identifier}
-#'     \item{COPD_prevalent}{1/0 — prevalent COPD from any source (ICD + SR + spirometry union)}
-#'     \item{COPD_prevalent_icd}{1/0 — prevalent COPD from ICD/SR sources only}
-#'     \item{COPD_prevalent_spirometry}{1/0/NA — prevalent COPD from spirometry only}
-#'     \item{COPD_prevalent_source}{Character — "ICD_only", "spirometry_only", "both", or NA}
-#'     \item{COPD_incident}{1/0 — incident COPD from ICD/death codes after baseline
+#'     \item{COPD_prevalent}{1/0 - prevalent COPD from any source (ICD + SR + spirometry union)}
+#'     \item{COPD_prevalent_icd}{1/0 - prevalent COPD from ICD/SR sources only}
+#'     \item{COPD_prevalent_spirometry}{1/0/NA - prevalent COPD from spirometry only}
+#'     \item{COPD_prevalent_source}{Character - "ICD_only", "spirometry_only", "both", or NA}
+#'     \item{COPD_incident}{1/0 - incident COPD from ICD/death codes after baseline
 #'       (0 for prevalent cases since they are not at risk)}
-#'     \item{outcome_status}{0/1/NA — event indicator for survival analysis.
+#'     \item{outcome_status}{0/1/NA - event indicator for survival analysis.
 #'       NA for prevalent cases (not at risk).}
-#'     \item{outcome_surv_time}{Numeric/NA — follow-up time in years.
+#'     \item{outcome_surv_time}{Numeric/NA - follow-up time in years.
 #'       NA for prevalent cases.}
 #'     \item{fev1_fvc_ratio}{FEV1/FVC ratio (numeric)}
 #'     \item{fev1_predicted_pct}{FEV1 predicted percent (numeric)}
@@ -1243,7 +1243,7 @@ extract_spirometry_copd <- function(dt,
 #'
 #' @examples
 #' \dontrun{
-#' # Full COPD survival dataset — one line
+#' # Full COPD survival dataset - one line
 #' copd <- extract_copd_combined(ukb_data)
 #'
 #' # Exclude prevalent, run Cox regression
@@ -1293,10 +1293,10 @@ extract_copd_combined <- function(dt,
   message(sprintf("  Prevalent sources: %s + spirometry", paste(prevalent_sources, collapse = ", ")))
   message(sprintf("  Outcome sources:   %s", paste(outcome_sources, collapse = ", ")))
 
-  # ──────────────────────────────────────
+  # --------------------------------------
 
-  # 1. Prevalent COPD — ICD / Self-report
-  # ──────────────────────────────────────
+  # 1. Prevalent COPD - ICD / Self-report
+  # --------------------------------------
   copd_icd_history <- extract_disease_history(
     dt = dt,
     diseases = "COPD",
@@ -1306,9 +1306,9 @@ extract_copd_combined <- function(dt,
   )
   data.table::setnames(copd_icd_history, "COPD_history", "COPD_prevalent_icd")
 
-  # ──────────────────────────────────────
-  # 2. Prevalent COPD — Spirometry
-  # ──────────────────────────────────────
+  # --------------------------------------
+  # 2. Prevalent COPD - Spirometry
+  # --------------------------------------
   copd_spiro <- extract_spirometry_copd(
     dt = dt,
     fev1_col = fev1_col,
@@ -1320,9 +1320,9 @@ extract_copd_combined <- function(dt,
   )
   data.table::setnames(copd_spiro, "COPD_spirometry", "COPD_prevalent_spirometry")
 
-  # ──────────────────────────────────────
+  # --------------------------------------
   # 3. Merge & compute combined prevalent
-  # ──────────────────────────────────────
+  # --------------------------------------
   result_dt <- data.table::merge.data.table(copd_icd_history, copd_spiro, by = "eid")
 
   result_dt[, COPD_prevalent := data.table::fcase(
@@ -1340,9 +1340,9 @@ extract_copd_combined <- function(dt,
     rep(TRUE, .N), NA_character_
   )]
 
-  # ──────────────────────────────────────
-  # 4. Incident COPD — ICD / Death after baseline
-  # ──────────────────────────────────────
+  # --------------------------------------
+  # 4. Incident COPD - ICD / Death after baseline
+  # --------------------------------------
   copd_def <- disease_definitions["COPD"]
   outcome_long <- extract_cases_by_source(
     dt = dt,
@@ -1362,9 +1362,9 @@ extract_copd_combined <- function(dt,
   result_dt <- data.table::merge.data.table(result_dt, outcome_incident, by = "eid", all.x = TRUE)
   result_dt[is.na(COPD_incident), COPD_incident := 0L]
 
-  # ──────────────────────────────────────
+  # --------------------------------------
   # 5. Survival time for non-prevalent
-  # ──────────────────────────────────────
+  # --------------------------------------
   death_dates <- get_death_dates(dt)
   baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
   surv_info <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
@@ -1378,14 +1378,14 @@ extract_copd_combined <- function(dt,
     by = "eid", all.x = TRUE
   )
 
-  # outcome_status / outcome_surv_time — aligned with build_survival_dataset
+  # outcome_status / outcome_surv_time - aligned with build_survival_dataset
   result_dt[, outcome_status := data.table::fcase(
-    COPD_prevalent == 1L, NA_integer_,                  # prevalent → not at risk
+    COPD_prevalent == 1L, NA_integer_,                  # prevalent -> not at risk
     COPD_incident == 1L,  1L,                           # incident event
     rep(TRUE, .N),        0L                            # censored
   )]
   result_dt[, outcome_surv_time := data.table::fcase(
-    COPD_prevalent == 1L, NA_real_,                     # prevalent → NA
+    COPD_prevalent == 1L, NA_real_,                     # prevalent -> NA
     COPD_incident == 1L,  incident_surv_time,           # time to event
     rep(TRUE, .N),        default_surv_time             # time to censor
   )]
@@ -1397,9 +1397,9 @@ extract_copd_combined <- function(dt,
   result_dt[, c("incident_surv_time", "default_surv_time") := NULL]
   data.table::setorder(result_dt, eid)
 
-  # ──────────────────────────────────────
+  # --------------------------------------
   # 6. Summary
-  # ──────────────────────────────────────
+  # --------------------------------------
   n_total <- nrow(result_dt)
   n_prev <- sum(result_dt$COPD_prevalent == 1L, na.rm = TRUE)
   n_prev_icd <- sum(result_dt$COPD_prevalent_icd == 1L)

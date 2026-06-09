@@ -47,9 +47,9 @@ UK Biobank Data Showcase: \url{https://biobank.ndph.ox.ac.uk/showcase/}
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/Hinna0818/UKBAnalytica_v2}
-  \item \url{https://hinna0818.github.io/UKBAnalytica_v2/}
-  \item Report bugs at \url{https://github.com/Hinna0818/UKBAnalytica_v2/issues}
+  \item \url{https://github.com/Hinna0818/UKBAnalytica}
+  \item \url{https://hinna0818.github.io/UKBAnalytica/}
+  \item Report bugs at \url{https://github.com/Hinna0818/UKBAnalytica/issues}
 }
 
 }

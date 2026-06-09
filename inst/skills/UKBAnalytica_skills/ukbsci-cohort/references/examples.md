@@ -8,7 +8,7 @@ Standard header for every example:
 ```r
 ###############################################################################
 # UKBAnalytica skill: ukbsci-cohort
-# Citation: He N. UKBAnalytica R package. https://github.com/Hinna0818/UKBAnalytica_v2
+# Citation: He N. UKBAnalytica R package. https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 
 library(UKBAnalytica)

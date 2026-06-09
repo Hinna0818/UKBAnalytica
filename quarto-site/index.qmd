@@ -22,7 +22,7 @@ use field IDs, simulated toy data, or user-provided tables that remain within
 RAP-controlled storage.
 
 [<i class="bi bi-rocket-takeoff"></i> Get started](01-rap-download.qmd){.btn .btn-primary}
-[<i class="bi bi-github"></i> View GitHub](https://github.com/Hinna0818/UKBAnalytica_v2){.btn .btn-outline}
+[<i class="bi bi-github"></i> View GitHub](https://github.com/Hinna0818/UKBAnalytica){.btn .btn-outline}
 :::
 
 ::: {.hero-logo}
@@ -83,7 +83,7 @@ and STRING-based PPI analysis.
 
 ```r
 # install.packages("devtools")
-devtools::install_github("Hinna0818/UKBAnalytica_v2")
+devtools::install_github("Hinna0818/UKBAnalytica")
 
 # use pkg like:
 library(UKBAnalytica)

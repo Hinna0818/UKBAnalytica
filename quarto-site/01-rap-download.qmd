@@ -1,6 +1,6 @@
 # RAP-internal Data Extraction {#rap-extract}
 
-UKBAnalytica_v2 provides R-native helpers for extracting phenotype data inside the
+UKBAnalytica provides R-native helpers for extracting phenotype data inside the
 UK Biobank Research Analysis Platform (RAP). The recommended workflow calls the
 DNAnexus `dx` CLI from R, using `dx extract_dataset` for small synchronous
 extracts and the RAP `table-exporter` app for large cloud-side extracts.
@@ -45,7 +45,7 @@ If the package is not installed yet:
 
 ```r
 #install.packages("remotes")
-remotes::install_github("Hinna0818/UKBAnalytica_v2")
+remotes::install_github("Hinna0818/UKBAnalytica")
 library(UKBAnalytica)
 ```
 

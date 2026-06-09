@@ -383,7 +383,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="https://github.com/Hinna0818/UKBAnalytica_v2"> 
+    <a class="nav-link" href="https://github.com/Hinna0818/UKBAnalytica"> 
 <span class="menu-text">GitHub</span></a>
   </li>  
 </ul>
@@ -594,7 +594,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#comparing-data-sources" id="toc-comparing-data-sources" class="nav-link" data-scroll-target="#comparing-data-sources">Comparing data sources</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/03-disease-definitions.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/03-disease-definitions.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./03-disease-definitions.html">Cohort construction</a></li><li class="breadcrumb-item"><a href="./03-disease-definitions.html">Disease Definitions</a></li></ol></nav></header>
@@ -667,7 +667,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The package now provides two disease-definition layers:</p>
 <ul>
 <li><strong>Curated definitions</strong>: 86 manually maintained UKBAnalytica definitions for commonly used endpoints, including literature-checked subtype and composite endpoints.</li>
-<li><strong>Pomegranate-derived definitions</strong>: 313 definitions converted from the public Pomegranate GitHub YAML algorithms and stored in the built-in disease catalog. The Pomegranate portal long-form table is retained in <code>extdata</code> for audit and traceability.</li>
+<li><strong>Pomegranate-derived definitions</strong>: 313 definitions converted from the public Pomegranate GitHub YAML algorithms and stored in the built-in disease catalog. The large Pomegranate portal long-form audit table is not required for endpoint construction and is not shipped in the package build.</li>
 </ul>
 <p>The default behavior is unchanged: <code>get_predefined_diseases()</code> returns the curated definitions.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
@@ -684,9 +684,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"COPD"</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"asthma"</span>, <span class="at">source =</span> <span class="st">"pomegranate"</span>)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">get_disease_catalog</span>(<span class="at">disease =</span> <span class="st">"diabetes"</span>, <span class="at">code_system =</span> <span class="st">"ICD-10"</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">get_pomegranate_source_manifest</span>()</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>portal_codes <span class="ot">&lt;-</span> <span class="fu">load_pomegranate_portal_coding</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The catalog is a code-level table with columns such as <code>definition_id</code>, <code>disease_name</code>, <code>source</code>, <code>code_system</code>, <code>field_id</code>, <code>code</code>, <code>code_label</code>, <code>match_rule</code>, and <code>validation_status</code>. It is useful for checking exactly which ICD-10, self-report, OPCS4, cancer-registry, or other source codes support a target disease. By default, <code>source = "pomegranate"</code> uses the GitHub YAML catalog pinned in the source manifest; the portal CSV is provided only as a reference table.</p>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">get_pomegranate_source_manifest</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The catalog is a code-level table with columns such as <code>definition_id</code>, <code>disease_name</code>, <code>source</code>, <code>code_system</code>, <code>field_id</code>, <code>code</code>, <code>code_label</code>, <code>match_rule</code>, and <code>validation_status</code>. It is useful for checking exactly which ICD-10, self-report, OPCS4, cancer-registry, or other source codes support a target disease. By default, <code>source = "pomegranate"</code> uses the GitHub YAML catalog pinned in the source manifest. If users keep a local portal audit CSV, they can load it explicitly with <code>load_pomegranate_portal_coding(path = ...)</code>; this optional audit table is not needed for ordinary endpoint construction.</p>
 </section>
 <section id="choosing-a-definition-source" class="level2">
 <h2 class="anchored" data-anchor-id="choosing-a-definition-source">Choosing a definition source</h2>
@@ -1360,7 +1359,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/03-disease-definitions.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/03-disease-definitions.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p>Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects.</p>
 </div>

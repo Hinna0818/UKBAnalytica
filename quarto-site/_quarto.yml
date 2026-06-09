@@ -23,7 +23,7 @@ project:
 website:
   title: "UKBAnalytica"
   description: "Scalable phenotyping and statistical workflow for UK Biobank RAP data"
-  repo-url: "https://github.com/Hinna0818/UKBAnalytica_v2"
+  repo-url: "https://github.com/Hinna0818/UKBAnalytica"
   repo-subdir: quarto-site
   repo-actions: [source, issue]
   page-navigation: true
@@ -76,7 +76,7 @@ website:
         href: case-study.qmd
     right:
       - text: "GitHub"
-        href: "https://github.com/Hinna0818/UKBAnalytica_v2"
+        href: "https://github.com/Hinna0818/UKBAnalytica"
   sidebar:
     style: docked
     background: light

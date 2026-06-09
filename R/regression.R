@@ -435,7 +435,7 @@ runmulti_negbin <- function(data,
 #' detected.
 #'
 #' When \code{smooth = TRUE} (default) the returned table reports the smooth
-#' term's estimated degrees of freedom (\code{edf}), F-statistic, and p-value —
+#' term's estimated degrees of freedom (\code{edf}), F-statistic, and p-value -
 #' useful for screening whether an association exists and whether it is
 #' non-linear (\code{edf > 1}).  When \code{smooth = FALSE} the main variable
 #' enters as a parametric linear term and the output mirrors \code{runmulti_glm}

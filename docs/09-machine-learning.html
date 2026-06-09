@@ -383,7 +383,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link" href="https://github.com/Hinna0818/UKBAnalytica_v2"> 
+    <a class="nav-link" href="https://github.com/Hinna0818/UKBAnalytica"> 
 <span class="menu-text">GitHub</span></a>
   </li>  
 </ul>
@@ -602,7 +602,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#optional-packages" id="toc-optional-packages" class="nav-link" data-scroll-target="#optional-packages">Optional packages</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/09-machine-learning.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/09-machine-learning.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./06-imputation.html">Analysis modules</a></li><li class="breadcrumb-item"><a href="./09-machine-learning.html">Machine Learning Workflow</a></li></ol></nav></header>
@@ -1299,7 +1299,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="optional-packages" class="level2">
 <h2 class="anchored" data-anchor-id="optional-packages">Optional packages</h2>
-<p>Install only the model backends you plan to use. UKBAnalytica_v2 checks optional packages only when the selected model or helper needs them. It does not install extra ML dependencies unless you explicitly opt in:</p>
+<p>Install only the model backends you plan to use. UKBAnalytica checks optional packages only when the selected model or helper needs them. It does not install extra ML dependencies unless you explicitly opt in:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">UKBAnalytica.auto_install_ml =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -1313,12 +1313,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"nnet"</span>,        <span class="co"># neural network / multinomial regression</span></span>
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"rpart"</span>,       <span class="co"># decision tree</span></span>
 <span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">"Boruta"</span>,      <span class="co"># Boruta feature selection</span></span>
-<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"fastshap"</span>,    <span class="co"># SHAP explanations</span></span>
-<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pROC"</span>,        <span class="co"># legacy ROC helpers</span></span>
-<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"survival"</span>,    <span class="co"># Cox and survival metrics</span></span>
-<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gbm"</span>,         <span class="co"># boosted survival model</span></span>
-<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">"randomForestSRC"</span>  <span class="co"># random survival forest</span></span>
-<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">"pROC"</span>,        <span class="co"># legacy ROC helpers</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">"survival"</span>,    <span class="co"># Cox and survival metrics</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">"gbm"</span>,         <span class="co"># boosted survival model</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">"randomForestSRC"</span>  <span class="co"># random survival forest</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p><code>logistic</code> and <code>linear</code> models use base R and do not require extra model backend packages. <code>naive_bayes</code> reuses <code>e1071</code>, so no separate package is needed if you already installed it for SVM. For survival ML, <code>model = "cox"</code> uses <code>survival</code>, <code>model = "coxnet"</code> uses <code>glmnet</code>, <code>model = "gbm_surv"</code> uses <code>gbm</code>, and <code>model = "rsf"</code> uses <code>randomForestSRC</code>.</p>
 
@@ -1765,7 +1764,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/blob/main/quarto-site/09-machine-learning.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica_v2/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/09-machine-learning.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p>Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects.</p>
 </div>

@@ -18,9 +18,9 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-URL: https://github.com/Hinna0818/UKBAnalytica_v2,
-    https://hinna0818.github.io/UKBAnalytica_v2/
-BugReports: https://github.com/Hinna0818/UKBAnalytica_v2/issues
+URL: https://github.com/Hinna0818/UKBAnalytica,
+    https://hinna0818.github.io/UKBAnalytica/
+BugReports: https://github.com/Hinna0818/UKBAnalytica/issues
 Imports: 
     data.table,
     stringi,

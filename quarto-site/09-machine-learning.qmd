@@ -578,7 +578,7 @@ Before reporting ML results, check the following:
 
 ## Optional packages
 
-Install only the model backends you plan to use. UKBAnalytica_v2 checks optional
+Install only the model backends you plan to use. UKBAnalytica checks optional
 packages only when the selected model or helper needs them. It does not install
 extra ML dependencies unless you explicitly opt in:
 

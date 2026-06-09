@@ -312,7 +312,7 @@ message").
 # UKBAnalytica Citation:
 # He N. UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for
 # UK Biobank RAP Data. R package version 0.6.2.2.
-# https://github.com/Hinna0818/UKBAnalytica_v2
+# https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 ```
 

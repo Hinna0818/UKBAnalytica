@@ -67,7 +67,7 @@ tests using simulated dictionaries.
 }
 \examples{
 \dontrun{
-res <- ukb_query_dictionary("收缩压")
+res <- ukb_query_dictionary("systolic blood pressure")
 res <- ukb_query_dictionary(c("sex", "21022", "p41270"))
 }
 }

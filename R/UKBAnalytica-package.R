@@ -85,6 +85,10 @@ utils::globalVariables(c(
   # Survival module
 
   "i.status", "i.prevalent_case", "i.earliest_date", "i.diagnosis_source", "i.surv_time",
+  "birth_date_approx", "birth_year", "birth_month", "age_at_baseline",
+  "age_at_baseline_source", "lost_to_followup_date", "followup_end_date",
+  "followup_end_reason", "followup_time_days", "followup_time_years",
+  "valid_followup",
   # Subgroup/propensity module
   "subgroup_var_name", "subgroup_level", "n_total", "n_event",
   "ps", "weight", "match_id", "match_distance", "..covariates",
