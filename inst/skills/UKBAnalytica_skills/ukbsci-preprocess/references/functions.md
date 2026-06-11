@@ -72,22 +72,6 @@ Unified pipeline using the predefined variable map. Errors when a name in
 
 ---
 
-## `prepare_analysis_dataset()`
-
-```r
-prepare_analysis_dataset(df,
-                         preprocess_vars = NULL,
-                         impute          = FALSE,
-                         impute_method   = "pmm",
-                         impute_m        = 5,
-                         seed            = NULL)
-```
-
-Convenience: preprocessing + optional one-shot MI via `run_imputation()`.
-Use `ukbsci-imputation` for full MI pooling.
-
----
-
 ## Catalogue helpers
 
 ```r

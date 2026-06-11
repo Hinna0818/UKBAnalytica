@@ -101,19 +101,12 @@ Wraps `TCMDATA::ppi_subset`, `TCMDATA::compute_nodeinfo`,
 ## Community detection
 
 ```r
-run_protein_ppi_louvain(ppi, resolution = 1.0, weights = NULL)
-run_protein_ppi_fastgreedy(ppi, n_clusters = 4L,
-                            largest_component = TRUE,
-                            cluster_attr = "fast_greedy_cluster",
-                            prefix = "FG")
-run_protein_ppi_mcl(ppi, inflation = 2.5, max_iter = 100,
-                    pruning = 1e-5, allow1 = FALSE)
-run_protein_ppi_mcode(ppi, vwp = 0.2, degree_cutoff = 2,
-                      k_core_threshold = 2, haircut = TRUE,
-                      fluff = FALSE, fdt = 0.1, loops = FALSE,
-                      max_depth = 100)
-get_protein_mcode_res(ppi, only_clusters = FALSE)
-score_protein_ppi_clusters(ppi, cluster_attr = "louvain_cluster",
+run_protein_ppi_clustering(
+  ppi,
+  method = c("fastgreedy", "louvain", "mcode", "mcl"),
+  ...
+)
+score_protein_ppi_clusters(ppi, cluster_attr = "fast_greedy_cluster",
                             min_size = 3)
 ```
 

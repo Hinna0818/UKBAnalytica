@@ -129,21 +129,19 @@ dt <- preprocess_baseline(
 `preprocess_baseline()` understands the same variable names as
 `get_variable_info()`; passing a name not in the catalogue raises an error.
 
-### Phase 5 — End-to-end with optional imputation
+### Phase 5 — Optional imputation
 
 ```r
-ready <- prepare_analysis_dataset(
+imp <- run_imputation(
   dt,
-  preprocess_vars = c("age","sex","bmi","sbp","ldl_cholesterol","hba1c"),
-  impute          = FALSE,           # TRUE to call mice via run_imputation
-  impute_method   = "pmm",
-  impute_m        = 5,
-  seed            = 1234
+  variables = c("age","sex","bmi","sbp","ldl_cholesterol","hba1c"),
+  m = 5,
+  method = "pmm",
+  seed = 1234
 )
 ```
 
-If `impute = TRUE`, the return value is the list-of-imputations from
-`run_imputation()`. For full MI workflows use `ukbsci-imputation`.
+For full multiple-imputation model fitting and pooling, use `ukbsci-imputation`.
 
 ---
 
@@ -181,7 +179,6 @@ If `impute = TRUE`, the return value is the list-of-imputations from
 | `calculate_air_pollution(df, pollutants = c("NO2","PM10","PM2.5","NOx"))` | Time-averaged exposures |
 | `calculate_diet_score(df, components = c("fruit","vegetable","fish","meat","cereal","milk"), na_handling = c("strict","partial"))` | 0–7 healthy diet score |
 | `preprocess_baseline(df, variables, custom_mapping = NULL, missing_action = c("keep","drop"), invalid_codes = c(-1,-3))` | Unified pipeline using predefined variable map |
-| `prepare_analysis_dataset(df, preprocess_vars = NULL, impute = FALSE, impute_method = "pmm", impute_m = 5, seed = NULL)` | Preprocessing + optional MI |
 | `get_variable_info(category = "all")` | Catalogue rows |
 | `get_variable_set(set, output = c("data.frame","field_id","ukb_col"))` | One set |
 | `get_variable_sets(set = NULL, category = NULL)` | All sets with filter |

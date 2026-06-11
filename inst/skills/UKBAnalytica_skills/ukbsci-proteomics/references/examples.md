@@ -40,18 +40,30 @@ ppi_m   <- compute_protein_ppi_metrics(ppi_top, weight_attr = "score")
 ranked  <- rank_protein_ppi_nodes(ppi_m,
             metrics = c("degree","betweenness","closeness","Stress",
                         "MCC","MNC","DMNC","BN","EPC"))
-ppi_louv <- run_protein_ppi_louvain(ppi_m, resolution = 1.0)
-scores   <- score_protein_ppi_clusters(ppi_louv,
-              cluster_attr = "louvain_cluster", min_size = 3)
+ppi_fg <- run_protein_ppi_clustering(
+  ppi_m,
+  method = "fastgreedy",
+  n_clusters = 4,
+  largest_component = TRUE
+)
+scores <- score_protein_ppi_clusters(
+  ppi_fg,
+  cluster_attr = "fast_greedy_cluster",
+  min_size = 3
+)
 fwrite(ranked$table, "/mnt/project/<area>/04-results/14-ppi_node_rank.csv")
 fwrite(scores,      "/mnt/project/<area>/04-results/15-ppi_cluster_scores.csv")
 ```
 
-## C. MCODE clusters + robustness to knockout
+## C. Alternative clustering + robustness to knockout
 
 ```r
-ppi_mc <- run_protein_ppi_mcode(ppi_m, vwp = 0.2, degree_cutoff = 2)
-mc_df  <- get_protein_mcode_res(ppi_mc, only_clusters = FALSE)
+ppi_mc <- run_protein_ppi_clustering(
+  ppi_m,
+  method = "mcode",
+  vwp = 0.2,
+  degree_cutoff = 2
+)
 
 robust <- run_protein_ppi_robustness(
   ppi = ppi_m, targets = c("APOB","LPA"),

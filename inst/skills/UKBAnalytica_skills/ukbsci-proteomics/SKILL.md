@@ -164,19 +164,17 @@ ranked$table[1:20, ]
 
 ```r
 # Pick ONE algorithm based on network size / preference
-ppi_louv <- run_protein_ppi_louvain(ppi_m, resolution = 1.0)
-ppi_fg   <- run_protein_ppi_fastgreedy(ppi_m, n_clusters = 4,
-                                        largest_component = TRUE)
-ppi_mcl  <- run_protein_ppi_mcl(ppi_m, inflation = 2.5)
-ppi_mc   <- run_protein_ppi_mcode(ppi_m, vwp = 0.2, degree_cutoff = 2)
-
-# MCODE-specific result extraction
-mc_df  <- get_protein_mcode_res(ppi_mc, only_clusters = FALSE)
+ppi_fg <- run_protein_ppi_clustering(
+  ppi_m,
+  method = "fastgreedy",
+  n_clusters = 4,
+  largest_component = TRUE
+)
 
 # Score clusters (size, density, average centrality)
 scores <- score_protein_ppi_clusters(
-  ppi_louv,
-  cluster_attr = "louvain_cluster",
+  ppi_fg,
+  cluster_attr = "fast_greedy_cluster",
   min_size     = 3
 )
 ```
@@ -250,11 +248,7 @@ ggplot2::ggsave("/mnt/project/<area>/05-figs/Fig12-kegg_lollipop.pdf",
 | Subset | `subset_protein_ppi(ppi, n, score_cutoff, rm_isolates)` |
 | Metrics | `compute_protein_ppi_metrics(ppi, weight_attr, normalize, seed)` |
 | Rank | `rank_protein_ppi_nodes(ppi, metrics, use_weight, na_rm)` |
-| Cluster (Louvain) | `run_protein_ppi_louvain(ppi, resolution, weights)` |
-| Cluster (Fastgreedy) | `run_protein_ppi_fastgreedy(ppi, n_clusters, largest_component, cluster_attr, prefix)` |
-| Cluster (MCL) | `run_protein_ppi_mcl(ppi, inflation, max_iter, pruning, allow1)` |
-| Cluster (MCODE) | `run_protein_ppi_mcode(ppi, vwp, degree_cutoff, k_core_threshold, haircut, fluff, fdt, loops, max_depth)` |
-| MCODE extract | `get_protein_mcode_res(ppi, only_clusters)` |
+| Cluster | `run_protein_ppi_clustering(ppi, method = c("fastgreedy","louvain","mcode","mcl"), ...)` |
 | Cluster score | `score_protein_ppi_clusters(ppi, cluster_attr, min_size)` |
 | Robustness | `run_protein_ppi_robustness(ppi, targets, target_col, from_type, mapping_table, n_perm, rewire_niter, weight_attr, seed)` |
 | Plot — GO bar | `plot_go_ora_bar(x)` |

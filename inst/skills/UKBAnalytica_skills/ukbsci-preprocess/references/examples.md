@@ -26,15 +26,16 @@ dt <- preprocess_baseline(
 )
 ```
 
-## C. One-shot prep + imputation
+## C. Optional imputation after preprocessing
 
 ```r
-ready <- prepare_analysis_dataset(
+imp <- run_imputation(
   dt,
-  preprocess_vars = c("age","sex","bmi","sbp","ldl_cholesterol","hba1c"),
-  impute = TRUE, impute_method = "pmm", impute_m = 5, seed = 1234
+  variables = c("age","sex","bmi","sbp","ldl_cholesterol","hba1c"),
+  m = 5,
+  method = "pmm",
+  seed = 1234
 )
-# `ready` is a list of 5 imputed data.tables
 ```
 
 ## D. Look up a variable set before extraction

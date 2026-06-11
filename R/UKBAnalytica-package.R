@@ -72,6 +72,7 @@ utils::globalVariables(c(
   "earliest_date", "col_name", "date_col", "col", "instance", "array_idx",
   "cause_type", "baseline_date", "end_date", "status", "surv_time",
   "prevalent_case", "diagnosis_source", "p41270", "p41271", "p41272",
+  "diagnosed", "incident_case",
   "default_surv_time", "control_surv_time", "primary_outcome_prevalent",
   "outcome_status", "outcome_surv_time", "outcome_prevalent",
   # Algorithm and spirometry module

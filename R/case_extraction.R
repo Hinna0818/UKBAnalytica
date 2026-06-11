@@ -260,6 +260,154 @@ extract_cases_by_source <- function(dt,
 }
 
 
+#' Extract participant-level disease diagnosis status
+#'
+#' @description
+#' Defines whether each participant has a selected disease using one or more
+#' UK Biobank evidence sources. This is the recommended public helper when the
+#' goal is disease ascertainment rather than construction of a full survival
+#' cohort. For survival-ready endpoints, use \code{\link{build_survival_dataset}}.
+#'
+#' @param dt A data.table or data.frame containing UKB data.
+#' @param disease Character vector of disease keys or disease names.
+#' @param disease_definitions Optional named list of disease definitions. If
+#'   \code{NULL}, \code{\link{get_predefined_diseases}} is used.
+#' @param sources Character vector of evidence sources. Valid options are
+#'   \code{"ICD10"}, \code{"ICD9"}, \code{"Self-report"}, \code{"Death"},
+#'   \code{"OPCS4"}, \code{"CancerRegistry"}, \code{"FirstOccurrence"}, and
+#'   \code{"Algorithm"}.
+#' @param censor_date Administrative censoring date.
+#' @param baseline_col Column name for baseline assessment date.
+#' @param include_all Logical. If \code{TRUE}, return one row per participant
+#'   per disease, including non-cases. If \code{FALSE}, return diagnosed
+#'   participants only.
+#'
+#' @return A data.table with participant-level diagnosis status, first diagnosis
+#'   date, diagnosis source, prevalent and incident indicators, and survival
+#'   fields returned by \code{\link{extract_cases_by_source}} where available.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' asthma <- extract_disease_diagnosis(
+#'   dt = ukb_data,
+#'   disease = "Asthma",
+#'   sources = c("ICD10", "ICD9", "Self-report")
+#' )
+#' }
+extract_disease_diagnosis <- function(dt,
+                                      disease,
+                                      disease_definitions = NULL,
+                                      sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                                      censor_date = as.Date("2023-10-31"),
+                                      baseline_col = "p53_i0",
+                                      include_all = TRUE) {
+  if (!data.table::is.data.table(dt)) {
+    dt <- data.table::as.data.table(dt)
+  }
+  if (!"eid" %in% names(dt)) {
+    stop("Column 'eid' was not found in `dt`.", call. = FALSE)
+  }
+  if (!is.character(disease) || length(disease) == 0L || anyNA(disease)) {
+    stop("`disease` must be a non-empty character vector.", call. = FALSE)
+  }
+  if (is.null(disease_definitions)) {
+    disease_definitions <- get_predefined_diseases()
+  }
+  if (!is.list(disease_definitions) || is.null(names(disease_definitions))) {
+    stop("`disease_definitions` must be a named list.", call. = FALSE)
+  }
+
+  disease_keys <- .resolve_disease_keys(disease, disease_definitions)
+  selected_defs <- disease_definitions[disease_keys]
+
+  cases <- extract_cases_by_source(
+    dt = dt,
+    disease_definitions = selected_defs,
+    sources = sources,
+    censor_date = censor_date,
+    baseline_col = baseline_col
+  )
+  if (!data.table::is.data.table(cases)) {
+    cases <- data.table::as.data.table(cases)
+  }
+
+  all_pairs <- data.table::CJ(
+    eid = dt[["eid"]],
+    disease = disease_keys,
+    unique = TRUE
+  )
+
+  if (nrow(cases) > 0L) {
+    out <- data.table::merge.data.table(
+      all_pairs,
+      cases,
+      by = c("eid", "disease"),
+      all.x = TRUE
+    )
+  } else {
+    out <- all_pairs
+    out[, `:=`(
+      earliest_date = as.Date(NA),
+      diagnosis_source = NA_character_,
+      prevalent_case = NA,
+      status = NA_integer_,
+      surv_time = NA_real_
+    )]
+  }
+
+  out[, diagnosed := !is.na(earliest_date)]
+  out[, prevalent_case := data.table::fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
+  out[, incident_case := data.table::fifelse(is.na(status), 0L, as.integer(status == 1L))]
+  out[, status := data.table::fifelse(is.na(status), 0L, status)]
+
+  data.table::setcolorder(
+    out,
+    c(
+      "eid", "disease", "diagnosed", "prevalent_case", "incident_case",
+      "earliest_date", "diagnosis_source", "status", "surv_time"
+    )
+  )
+  data.table::setorder(out, disease, eid)
+  if (!isTRUE(include_all)) {
+    out <- out[diagnosed == TRUE]
+  }
+  out[]
+}
+
+.resolve_disease_keys <- function(disease, disease_definitions) {
+  keys <- names(disease_definitions)
+  out <- character(length(disease))
+  def_names <- vapply(disease_definitions, function(x) {
+    if (is.list(x) && !is.null(x$name)) as.character(x$name)[1] else NA_character_
+  }, character(1))
+
+  for (i in seq_along(disease)) {
+    x <- disease[[i]]
+    if (x %in% keys) {
+      out[[i]] <- x
+      next
+    }
+    hit <- keys[tolower(keys) == tolower(x)]
+    if (length(hit) == 1L) {
+      out[[i]] <- hit
+      next
+    }
+    hit <- keys[tolower(def_names) == tolower(x)]
+    if (length(hit) == 1L) {
+      out[[i]] <- hit
+      next
+    }
+    stop(
+      "Disease not found in `disease_definitions`: ", x,
+      ". Use names(get_predefined_diseases()) to inspect supported keys.",
+      call. = FALSE
+    )
+  }
+  unique(out)
+}
+
+
 #' @title Generate Wide-Format with Dual Source Definition
 #'
 #' @description
@@ -387,7 +535,7 @@ generate_wide_format_dual_source <- function(dt,
 #' wide_dt <- generate_wide_format(dt, diseases, sources = "ICD10")
 #' }
 #'
-#' @export
+#' @noRd
 generate_wide_format <- function(dt,
                                   disease_definitions,
                                   sources = c("ICD10", "ICD9", "Self-report", "Death"),
@@ -552,7 +700,7 @@ compare_data_sources <- function(dt,
 #'       Hypertension_history + Diabetes_history, data = analysis_dt)
 #' }
 #'
-#' @export
+#' @noRd
 prepare_analysis_dataset <- function(dt,
                                       disease_definitions,
                                       primary_outcome,
@@ -956,468 +1104,3 @@ extract_disease_history_sensitivity <- function(dt,
   return(result_dt)
 }
 
-
-#' @title Extract Spirometry-Based COPD Cases (GOLD Criteria)
-#'
-#' @description
-#' Defines COPD cases based on pre-bronchodilator spirometry measures following
-#' modified GOLD criteria. Returns output in the same format as
-#' \code{\link{extract_disease_history}} (eid + binary columns) for easy integration.
-#'
-#' Uses UK Biobank fields:
-#' \itemize{
-#'   \item Field 20150: FEV1 (Forced Expiratory Volume in 1 second)
-#'   \item Field 20151: FVC (Forced Vital Capacity)
-#'   \item Field 20154: FEV1 predicted percentage
-#' }
-#'
-#' @param dt A data.table or data.frame containing UKB data.
-#' @param fev1_col Column name for FEV1 (litres). Default: \code{"p20150_i0"}.
-#' @param fvc_col Column name for FVC (litres). Default: \code{"p20151_i0"}.
-#' @param fev1_pred_col Column name for FEV1 predicted percentage.
-#'   Default: \code{"p20154_i0"}. Set to \code{NULL} to use FEV1/FVC ratio only.
-#' @param ratio_threshold Numeric. FEV1/FVC ratio threshold for airflow obstruction.
-#'   Default: \code{0.7}.
-#' @param fev1_pred_threshold Numeric. FEV1 predicted percentage threshold.
-#'   Default: \code{80} (moderate-to-severe, GOLD 2+). Set to \code{NULL} to
-#'   define cases by FEV1/FVC ratio alone (any airflow obstruction, GOLD 1+).
-#' @param include_severity Logical. If \code{TRUE}, include an additional column
-#'   \code{COPD_gold_grade} with GOLD severity classification (1-4). Default: \code{FALSE}.
-#'
-#' @return A data.table with columns:
-#'   \describe{
-#'     \item{eid}{Participant identifier}
-#'     \item{COPD_spirometry}{1 if COPD case by spirometry criteria, 0 if control
-#'       (normal spirometry), NA if spirometry data unavailable or invalid}
-#'     \item{fev1_fvc_ratio}{Calculated FEV1/FVC ratio (numeric)}
-#'     \item{fev1_predicted_pct}{FEV1 predicted percentage from UKB data (numeric)}
-#'     \item{COPD_gold_grade}{(Optional) GOLD severity grade: 1=Mild, 2=Moderate,
-#'       3=Severe, 4=Very Severe. NA for non-cases.}
-#'   }
-#'
-#' @details
-#' The modified GOLD criteria used by most UK Biobank studies:
-#' \itemize{
-#'   \item \strong{Any airflow obstruction}: FEV1/FVC < 0.7
-#'   \item \strong{Moderate-to-severe (default)}: FEV1/FVC < 0.7 AND FEV1 < 80% predicted
-#' }
-#'
-#' GOLD severity grades (when \code{include_severity = TRUE}):
-#' \itemize{
-#'   \item \strong{GOLD 1 (Mild)}: FEV1/FVC < 0.7, FEV1 >= 80% predicted
-#'   \item \strong{GOLD 2 (Moderate)}: FEV1/FVC < 0.7, 50% <= FEV1 < 80% predicted
-#'   \item \strong{GOLD 3 (Severe)}: FEV1/FVC < 0.7, 30% <= FEV1 < 50% predicted
-#'   \item \strong{GOLD 4 (Very Severe)}: FEV1/FVC < 0.7, FEV1 < 30% predicted
-#' }
-#'
-#' Controls are defined as participants with \strong{normal} spirometry
-#' (FEV1/FVC >= 0.7 and FEV1 >= 80% predicted when \code{fev1_pred_col} is provided).
-#' Participants with missing or invalid spirometry data receive \code{NA}.
-#'
-#' Note: UK Biobank spirometry is pre-bronchodilator, which may overestimate COPD
-#' prevalence compared to post-bronchodilator measurements recommended by GOLD guidelines.
-#'
-#' @references
-#' Joo J, Hobbs BD, Cho MH, Himes BE (2020). Trait Insights Gained by Comparing
-#' GWAS Results using Different COPD Definitions. AMIA Jt Summits Transl Sci Proc, 278-287.
-#'
-#' Hobbs BD et al. (2017). Genetic loci associated with COPD overlap with loci
-#' for lung function and pulmonary fibrosis. Nat Genet, 49(3):426-432.
-#'
-#' @examples
-#' \dontrun{
-#' # Default: moderate-to-severe (GOLD 2+)
-#' copd_spiro <- extract_spirometry_copd(ukb_data)
-#'
-#' # Any airflow obstruction (GOLD 1+)
-#' copd_any <- extract_spirometry_copd(ukb_data, fev1_pred_threshold = NULL)
-#'
-#' # With severity grades
-#' copd_graded <- extract_spirometry_copd(ukb_data, include_severity = TRUE)
-#'
-#' # Combine with ICD-based history
-#' copd_icd <- extract_disease_history(ukb_data, diseases = "COPD",
-#'                                      sources = c("ICD10", "ICD9"))
-#' copd_combined <- merge(copd_icd, copd_spiro, by = "eid")
-#'
-#' # Use imaging visit spirometry (instance 2)
-#' copd_imaging <- extract_spirometry_copd(ukb_data,
-#'   fev1_col = "p20150_i2", fvc_col = "p20151_i2", fev1_pred_col = "p20154_i2")
-#' }
-#'
-#' @export
-extract_spirometry_copd <- function(dt,
-                                     fev1_col = "p20150_i0",
-                                     fvc_col = "p20151_i0",
-                                     fev1_pred_col = "p20154_i0",
-                                     ratio_threshold = 0.7,
-                                     fev1_pred_threshold = 80,
-                                     include_severity = FALSE) {
-
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
-  }
-
-  # Validate required columns
-  required_cols <- c("eid", fev1_col, fvc_col)
-  if (!is.null(fev1_pred_col)) {
-    required_cols <- c(required_cols, fev1_pred_col)
-  }
-  missing_cols <- setdiff(required_cols, names(dt))
-  if (length(missing_cols) > 0) {
-    stop(sprintf("Required columns not found in data: %s",
-                 paste(missing_cols, collapse = ", ")))
-  }
-
-  message(sprintf("[extract_spirometry_copd] Using FEV1=%s, FVC=%s, FEV1_pred=%s",
-                  fev1_col, fvc_col,
-                  ifelse(is.null(fev1_pred_col), "none", fev1_pred_col)))
-  message(sprintf("  Criteria: FEV1/FVC < %.2f%s",
-                  ratio_threshold,
-                  ifelse(is.null(fev1_pred_threshold), "",
-                         sprintf(" AND FEV1 predicted < %g%%", fev1_pred_threshold))))
-
-  # Extract and validate spirometry values
-  result_dt <- data.table::data.table(
-    eid = dt[["eid"]],
-    fev1 = as.numeric(dt[[fev1_col]]),
-    fvc = as.numeric(dt[[fvc_col]])
-  )
-
-  if (!is.null(fev1_pred_col)) {
-    result_dt[, fev1_predicted_pct := as.numeric(dt[[fev1_pred_col]])]
-  }
-
-  # Calculate FEV1/FVC ratio (only when both values are valid and positive)
-  result_dt[, fev1_fvc_ratio := fifelse(
-    is.finite(fev1) & is.finite(fvc) & fvc > 0 & fev1 >= 0,
-    fev1 / fvc,
-    NA_real_
-  )]
-
-  # Define airflow obstruction
-  result_dt[, obstruction := fifelse(
-    is.finite(fev1_fvc_ratio),
-    fev1_fvc_ratio < ratio_threshold,
-    NA
-  )]
-
-  # Define COPD case status
-  if (!is.null(fev1_pred_col) && !is.null(fev1_pred_threshold)) {
-    # Moderate-to-severe: ratio < threshold AND FEV1 predicted < threshold
-    result_dt[, COPD_spirometry := fifelse(
-      is.finite(fev1_fvc_ratio) & is.finite(fev1_predicted_pct),
-      as.integer(obstruction == TRUE & fev1_predicted_pct < fev1_pred_threshold),
-      NA_integer_
-    )]
-
-    # Define controls: normal spirometry (no obstruction AND normal FEV1)
-    # Participants with obstruction but FEV1 >= threshold (GOLD 1 mild) are set to 0
-    # when using moderate-to-severe definition
-
-  } else {
-    # Any airflow obstruction: ratio < threshold only
-    result_dt[, COPD_spirometry := fifelse(
-      is.finite(fev1_fvc_ratio),
-      as.integer(obstruction == TRUE),
-      NA_integer_
-    )]
-  }
-
-  # GOLD severity grading (requires FEV1 predicted %)
-  if (include_severity && !is.null(fev1_pred_col)) {
-    result_dt[, COPD_gold_grade := NA_integer_]
-    result_dt[obstruction == TRUE & is.finite(fev1_predicted_pct),
-              COPD_gold_grade := data.table::fcase(
-                fev1_predicted_pct >= 80, 1L,   # Mild
-                fev1_predicted_pct >= 50, 2L,   # Moderate
-                fev1_predicted_pct >= 30, 3L,   # Severe
-                fev1_predicted_pct < 30,  4L    # Very Severe
-              )]
-  }
-
-  # Clean up intermediate columns
-  result_dt[, c("fev1", "fvc", "obstruction") := NULL]
-
-  data.table::setorder(result_dt, eid)
-
-  # Summary statistics
-  n_total <- nrow(result_dt)
-  n_valid <- sum(!is.na(result_dt$COPD_spirometry))
-  n_cases <- sum(result_dt$COPD_spirometry == 1L, na.rm = TRUE)
-  n_controls <- sum(result_dt$COPD_spirometry == 0L, na.rm = TRUE)
-  n_missing <- n_total - n_valid
-
-  message(sprintf("  Total: %d | Valid spirometry: %d (%.1f%%)",
-                  n_total, n_valid, 100 * n_valid / n_total))
-  message(sprintf("  COPD cases: %d (%.1f%%) | Controls: %d | Missing: %d",
-                  n_cases, 100 * n_cases / n_valid, n_controls, n_missing))
-
-  if (include_severity && !is.null(fev1_pred_col)) {
-    for (g in 1:4) {
-      labels <- c("Mild", "Moderate", "Severe", "Very Severe")
-      n_g <- sum(result_dt$COPD_gold_grade == g, na.rm = TRUE)
-      message(sprintf("    GOLD %d (%s): %d", g, labels[g], n_g))
-    }
-  }
-
-  return(result_dt)
-}
-
-
-#' @title Extract Combined COPD Definition (ICD + Spirometry) with Survival Data
-#'
-#' @description
-#' One-step COPD extraction combining ICD codes, self-report, spirometry, and
-#' optionally UK Biobank algorithmically-defined outcomes, with full
-#' prevalent/incident classification for survival analysis.
-#' Output format aligns with \code{\link{build_survival_dataset}}.
-#'
-#' @param dt A data.table or data.frame containing UKB data.
-#' @param disease_definitions Named list of disease definitions. If NULL, uses
-#'   predefined definitions. Must contain a \code{"COPD"} entry.
-#' @param prevalent_sources Character vector of sources for prevalent case
-#'   identification. Default: \code{c("ICD10", "ICD9", "Self-report")}.
-#'   Add \code{"Algorithm"} to include UK Biobank algorithmically-defined outcomes.
-#' @param outcome_sources Character vector of sources for incident outcome
-#'   ascertainment. Default: \code{c("ICD10", "ICD9", "Death")}.
-#'   Self-report is excluded because follow-up dates are imprecise.
-#'   Add \code{"Algorithm"} to include UK Biobank algorithmically-defined outcomes.
-#' @param censor_date Administrative censoring date. Default: \code{as.Date("2023-10-31")}.
-#' @param baseline_col Column name for baseline assessment date. Default: \code{"p53_i0"}.
-#' @param fev1_col Column name for FEV1. Default: \code{"p20150_i0"}.
-#' @param fvc_col Column name for FVC. Default: \code{"p20151_i0"}.
-#' @param fev1_pred_col Column name for FEV1 predicted percentage.
-#'   Default: \code{"p20154_i0"}. Set \code{NULL} to skip FEV1% filter.
-#' @param ratio_threshold FEV1/FVC ratio threshold. Default: \code{0.7}.
-#' @param fev1_pred_threshold FEV1 predicted percent threshold. Default: \code{80}.
-#'   Set \code{NULL} for any airflow obstruction (GOLD 1+).
-#' @param include_severity Logical. Include GOLD severity grade column. Default: \code{FALSE}.
-#'
-#' @return A data.table with columns:
-#'   \describe{
-#'     \item{eid}{Participant identifier}
-#'     \item{COPD_prevalent}{1/0 - prevalent COPD from any source (ICD + SR + spirometry union)}
-#'     \item{COPD_prevalent_icd}{1/0 - prevalent COPD from ICD/SR sources only}
-#'     \item{COPD_prevalent_spirometry}{1/0/NA - prevalent COPD from spirometry only}
-#'     \item{COPD_prevalent_source}{Character - "ICD_only", "spirometry_only", "both", or NA}
-#'     \item{COPD_incident}{1/0 - incident COPD from ICD/death codes after baseline
-#'       (0 for prevalent cases since they are not at risk)}
-#'     \item{outcome_status}{0/1/NA - event indicator for survival analysis.
-#'       NA for prevalent cases (not at risk).}
-#'     \item{outcome_surv_time}{Numeric/NA - follow-up time in years.
-#'       NA for prevalent cases.}
-#'     \item{fev1_fvc_ratio}{FEV1/FVC ratio (numeric)}
-#'     \item{fev1_predicted_pct}{FEV1 predicted percent (numeric)}
-#'     \item{COPD_gold_grade}{(Optional) GOLD 1-4 severity grade}
-#'   }
-#'
-#' @details
-#' Prevalent (history) COPD is identified by the union of:
-#' ICD-10/ICD-9 codes before baseline, self-reported COPD/emphysema/chronic
-#' bronchitis, spirometry obstruction at baseline (FEV1/FVC < 0.7), and
-#' optionally UK Biobank algorithmically-defined COPD (Field 42016).
-#'
-#' Incident (prospective) COPD is identified by:
-#' ICD-10/ICD-9 codes after baseline, death registry codes, and optionally
-#' algorithm-defined dates after baseline. Spirometry cannot define incident
-#' cases as it is measured only at baseline.
-#'
-#' Workflow:
-#' \enumerate{
-#'   \item Extract prevalent COPD from ICD/SR (before baseline) via
-#'     \code{\link{extract_disease_history}}
-#'   \item Extract spirometry COPD at baseline via
-#'     \code{\link{extract_spirometry_copd}}
-#'   \item Combine: \code{COPD_prevalent = COPD_prevalent_icd | COPD_prevalent_spirometry}
-#'   \item Extract incident COPD from ICD/death (after baseline) via
-#'     \code{\link{extract_cases_by_source}}
-#'   \item Exclude prevalent cases from the at-risk population
-#'     (\code{outcome_status = NA}, \code{outcome_surv_time = NA})
-#'   \item Calculate survival time for non-prevalent participants
-#' }
-#'
-#' This mirrors the design of \code{\link{build_survival_dataset}} where
-#' \code{prevalent_sources} can include self-report for baseline exclusion,
-#' while \code{outcome_sources} uses only objective sources for endpoints.
-#'
-#' @examples
-#' \dontrun{
-#' # Full COPD survival dataset - one line
-#' copd <- extract_copd_combined(ukb_data)
-#'
-#' # Exclude prevalent, run Cox regression
-#' library(survival)
-#' analysis_data <- copd[!is.na(outcome_status)]
-#' coxph(Surv(outcome_surv_time, outcome_status) ~ age + sex,
-#'       data = analysis_data)
-#'
-#' # Sensitivity: compare prevalent sources
-#' copd[, .(ICD_SR = sum(COPD_prevalent_icd),
-#'          Spirometry = sum(COPD_prevalent_spirometry == 1, na.rm = TRUE),
-#'          Combined = sum(COPD_prevalent))]
-#'
-#' # Source breakdown
-#' table(copd$COPD_prevalent_source)
-#'
-#' # Any airflow obstruction (GOLD 1+), no FEV1% filter
-#' copd_broad <- extract_copd_combined(ukb_data, fev1_pred_threshold = NULL)
-#' }
-#'
-#' @export
-extract_copd_combined <- function(dt,
-                                   disease_definitions = NULL,
-                                   prevalent_sources = c("ICD10", "ICD9", "Self-report"),
-                                   outcome_sources = c("ICD10", "ICD9", "Death"),
-                                   censor_date = as.Date("2023-10-31"),
-                                   baseline_col = "p53_i0",
-                                   fev1_col = "p20150_i0",
-                                   fvc_col = "p20151_i0",
-                                   fev1_pred_col = "p20154_i0",
-                                   ratio_threshold = 0.7,
-                                   fev1_pred_threshold = 80,
-                                   include_severity = FALSE) {
-
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
-  }
-
-  if (is.null(disease_definitions)) {
-    disease_definitions <- get_predefined_diseases()
-  }
-  if (!"COPD" %in% names(disease_definitions)) {
-    stop("'COPD' not found in disease_definitions")
-  }
-
-  message("[extract_copd_combined] === COPD Combined Extraction ===")
-  message(sprintf("  Prevalent sources: %s + spirometry", paste(prevalent_sources, collapse = ", ")))
-  message(sprintf("  Outcome sources:   %s", paste(outcome_sources, collapse = ", ")))
-
-  # --------------------------------------
-
-  # 1. Prevalent COPD - ICD / Self-report
-  # --------------------------------------
-  copd_icd_history <- extract_disease_history(
-    dt = dt,
-    diseases = "COPD",
-    disease_definitions = disease_definitions,
-    sources = prevalent_sources,
-    baseline_col = baseline_col
-  )
-  data.table::setnames(copd_icd_history, "COPD_history", "COPD_prevalent_icd")
-
-  # --------------------------------------
-  # 2. Prevalent COPD - Spirometry
-  # --------------------------------------
-  copd_spiro <- extract_spirometry_copd(
-    dt = dt,
-    fev1_col = fev1_col,
-    fvc_col = fvc_col,
-    fev1_pred_col = fev1_pred_col,
-    ratio_threshold = ratio_threshold,
-    fev1_pred_threshold = fev1_pred_threshold,
-    include_severity = include_severity
-  )
-  data.table::setnames(copd_spiro, "COPD_spirometry", "COPD_prevalent_spirometry")
-
-  # --------------------------------------
-  # 3. Merge & compute combined prevalent
-  # --------------------------------------
-  result_dt <- data.table::merge.data.table(copd_icd_history, copd_spiro, by = "eid")
-
-  result_dt[, COPD_prevalent := data.table::fcase(
-    COPD_prevalent_icd == 1L | COPD_prevalent_spirometry == 1L, 1L,
-    COPD_prevalent_icd == 0L & COPD_prevalent_spirometry == 0L, 0L,
-    COPD_prevalent_icd == 0L & is.na(COPD_prevalent_spirometry), 0L,
-    COPD_prevalent_icd == 1L & is.na(COPD_prevalent_spirometry), 1L,
-    rep(TRUE, .N), NA_integer_
-  )]
-
-  result_dt[, COPD_prevalent_source := data.table::fcase(
-    COPD_prevalent_icd == 1L & COPD_prevalent_spirometry == 1L, "both",
-    COPD_prevalent_icd == 1L & (is.na(COPD_prevalent_spirometry) | COPD_prevalent_spirometry == 0L), "ICD_only",
-    COPD_prevalent_icd == 0L & COPD_prevalent_spirometry == 1L, "spirometry_only",
-    rep(TRUE, .N), NA_character_
-  )]
-
-  # --------------------------------------
-  # 4. Incident COPD - ICD / Death after baseline
-  # --------------------------------------
-  copd_def <- disease_definitions["COPD"]
-  outcome_long <- extract_cases_by_source(
-    dt = dt,
-    disease_definitions = copd_def,
-    sources = outcome_sources,
-    censor_date = censor_date,
-    baseline_col = baseline_col
-  )
-
-  # incident = diagnosed after baseline, and NOT a prevalent case
-  prevalent_eids <- result_dt[COPD_prevalent == 1L, eid]
-  outcome_incident <- outcome_long[
-    !is.na(earliest_date) & prevalent_case == FALSE & !eid %in% prevalent_eids,
-    .(eid, COPD_incident = 1L, incident_surv_time = surv_time)
-  ]
-
-  result_dt <- data.table::merge.data.table(result_dt, outcome_incident, by = "eid", all.x = TRUE)
-  result_dt[is.na(COPD_incident), COPD_incident := 0L]
-
-  # --------------------------------------
-  # 5. Survival time for non-prevalent
-  # --------------------------------------
-  death_dates <- get_death_dates(dt)
-  baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
-  surv_info <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
-  surv_info[, default_end := pmin(death_date, censor_date, na.rm = TRUE)]
-  surv_info[is.na(default_end), default_end := censor_date]
-  surv_info[, default_surv_time := as.numeric(default_end - baseline_date) / 365.25]
-
-  result_dt <- data.table::merge.data.table(
-    result_dt,
-    surv_info[, .(eid, default_surv_time)],
-    by = "eid", all.x = TRUE
-  )
-
-  # outcome_status / outcome_surv_time - aligned with build_survival_dataset
-  result_dt[, outcome_status := data.table::fcase(
-    COPD_prevalent == 1L, NA_integer_,                  # prevalent -> not at risk
-    COPD_incident == 1L,  1L,                           # incident event
-    rep(TRUE, .N),        0L                            # censored
-  )]
-  result_dt[, outcome_surv_time := data.table::fcase(
-    COPD_prevalent == 1L, NA_real_,                     # prevalent -> NA
-    COPD_incident == 1L,  incident_surv_time,           # time to event
-    rep(TRUE, .N),        default_surv_time             # time to censor
-  )]
-
-  # prevalent cases: set incident to 0 (they're excluded from at-risk)
-  result_dt[COPD_prevalent == 1L, COPD_incident := 0L]
-
-  # Clean up
-  result_dt[, c("incident_surv_time", "default_surv_time") := NULL]
-  data.table::setorder(result_dt, eid)
-
-  # --------------------------------------
-  # 6. Summary
-  # --------------------------------------
-  n_total <- nrow(result_dt)
-  n_prev <- sum(result_dt$COPD_prevalent == 1L, na.rm = TRUE)
-  n_prev_icd <- sum(result_dt$COPD_prevalent_icd == 1L)
-  n_prev_spiro <- sum(result_dt$COPD_prevalent_spirometry == 1L, na.rm = TRUE)
-  n_both <- sum(result_dt$COPD_prevalent_source == "both", na.rm = TRUE)
-  n_icd_only <- sum(result_dt$COPD_prevalent_source == "ICD_only", na.rm = TRUE)
-  n_spiro_only <- sum(result_dt$COPD_prevalent_source == "spirometry_only", na.rm = TRUE)
-  n_incident <- sum(result_dt$COPD_incident == 1L)
-  n_at_risk <- sum(!is.na(result_dt$outcome_status))
-
-  message("\n[COPD Combined Summary]")
-  message(sprintf("  Total participants:     %d", n_total))
-  message(sprintf("  Prevalent COPD:         %d (ICD/SR=%d, spirometry=%d)",
-                  n_prev, n_prev_icd, n_prev_spiro))
-  message(sprintf("    both=%d | ICD_only=%d | spirometry_only=%d",
-                  n_both, n_icd_only, n_spiro_only))
-  message(sprintf("  At-risk (non-prevalent): %d", n_at_risk))
-  message(sprintf("  Incident COPD:          %d", n_incident))
-
-  return(result_dt)
-}

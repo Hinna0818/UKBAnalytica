@@ -530,6 +530,46 @@ rank_protein_ppi_nodes <- function(ppi,
 }
 
 
+#' Cluster a protein-protein interaction network
+#'
+#' @description
+#' Unified interface for community detection in STRING-derived PPI networks.
+#' New analyses should call this function and choose the algorithm with
+#' \code{method}. Method-specific helper functions are retained internally.
+#'
+#' @inheritParams subset_protein_ppi
+#' @param method Clustering algorithm. Options are \code{"fastgreedy"},
+#'   \code{"louvain"}, \code{"mcode"}, and \code{"mcl"}.
+#' @param ... Method-specific arguments passed to the selected clustering
+#'   helper, such as \code{n_clusters} for \code{"fastgreedy"},
+#'   \code{resolution} for \code{"louvain"}, \code{vwp} for \code{"mcode"},
+#'   or \code{inflation} for \code{"mcl"}.
+#'
+#' @return An \code{igraph} object with method-specific cluster attributes.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' ppi_clustered <- run_protein_ppi_clustering(
+#'   ppi,
+#'   method = "fastgreedy",
+#'   n_clusters = 4
+#' )
+#' }
+run_protein_ppi_clustering <- function(ppi,
+                                       method = c("fastgreedy", "louvain", "mcode", "mcl"),
+                                       ...) {
+  method <- match.arg(method)
+  switch(
+    method,
+    fastgreedy = run_protein_ppi_fastgreedy(ppi, ...),
+    louvain = run_protein_ppi_louvain(ppi, ...),
+    mcode = run_protein_ppi_mcode(ppi, ...),
+    mcl = run_protein_ppi_mcl(ppi, ...)
+  )
+}
+
+
 #' Run Louvain clustering on a PPI network
 #'
 #' @description
@@ -547,7 +587,7 @@ rank_protein_ppi_nodes <- function(ppi,
 #' ppi_louvain <- run_protein_ppi_louvain(ppi_metrics)
 #' }
 #'
-#' @export
+#' @noRd
 run_protein_ppi_louvain <- function(ppi,
                                     resolution = 1.0,
                                     weights = NULL) {
@@ -585,7 +625,7 @@ run_protein_ppi_louvain <- function(ppi,
 #' ppi_fg <- run_protein_ppi_fastgreedy(ppi_graph, n_clusters = 4)
 #' }
 #'
-#' @export
+#' @noRd
 run_protein_ppi_fastgreedy <- function(ppi,
                                        n_clusters = 4L,
                                        largest_component = TRUE,
@@ -657,7 +697,7 @@ run_protein_ppi_fastgreedy <- function(ppi,
 #' ppi_mcode <- run_protein_ppi_mcode(ppi_metrics)
 #' }
 #'
-#' @export
+#' @noRd
 run_protein_ppi_mcode <- function(ppi,
                                   vwp = 0.2,
                                   degree_cutoff = 2,
@@ -699,7 +739,7 @@ run_protein_ppi_mcode <- function(ppi,
 #' mcode_res <- get_protein_mcode_res(ppi_mcode, only_clusters = TRUE)
 #' }
 #'
-#' @export
+#' @noRd
 get_protein_mcode_res <- function(ppi, only_clusters = FALSE) {
   .require_package("TCMDATA")
   graph <- .extract_ppi_graph(ppi)
@@ -727,7 +767,7 @@ get_protein_mcode_res <- function(ppi, only_clusters = FALSE) {
 #' ppi_mcl <- run_protein_ppi_mcl(ppi_metrics)
 #' }
 #'
-#' @export
+#' @noRd
 run_protein_ppi_mcl <- function(ppi,
                                 inflation = 2.5,
                                 max_iter = 100,

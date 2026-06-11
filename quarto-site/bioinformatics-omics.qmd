@@ -218,16 +218,17 @@ node_rank <- rank_protein_ppi_nodes(ppi_metrics)
 head(node_rank$table)
 ```
 
-## Fast greedy clustering of PPI modules
+## PPI module clustering
 
-For module detection, `run_protein_ppi_fastgreedy()` applies igraph fast-greedy
-community detection to the PPI graph. By default, it works on the largest
-connected component and stores cluster labels in the `fast_greedy_cluster`
-vertex attribute.
+For module detection, `run_protein_ppi_clustering()` provides a unified
+interface to fast-greedy, Louvain, MCODE, and MCL clustering. The example below
+uses fast-greedy community detection on the largest connected component and
+stores cluster labels in the `fast_greedy_cluster` vertex attribute.
 
 ```{r proteomics-ppi-fastgreedy, eval=FALSE}
-ppi_fg <- run_protein_ppi_fastgreedy(
+ppi_fg <- run_protein_ppi_clustering(
   ppi_metrics,
+  method = "fastgreedy",
   n_clusters = 4,
   largest_component = TRUE
 )
