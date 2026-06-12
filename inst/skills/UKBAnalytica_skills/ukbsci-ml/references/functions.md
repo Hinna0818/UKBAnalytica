@@ -1,6 +1,6 @@
 # `ukbsci-ml` — function reference
 
-Verbatim from `UKBAnalytica` ≥ 0.6.2.2 (`R/ml_workflow.R`, `R/ml_model.R`,
+Reflects `UKBAnalytica` 1.0.0 (`R/ml_workflow.R`, `R/ml_model.R`,
 `R/ml_evaluate.R`, `R/ml_shap.R`, `R/ml_survival.R`).
 
 ---

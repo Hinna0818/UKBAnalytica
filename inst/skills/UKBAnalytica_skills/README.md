@@ -150,7 +150,7 @@ at the top of every generated script is:
 ###############################################################################
 # UKBAnalytica Citation:
 # He N. UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for
-# UK Biobank RAP Data. R package version 0.6.2.2.
+# UK Biobank RAP Data. R package version 1.0.0.
 # https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 ```

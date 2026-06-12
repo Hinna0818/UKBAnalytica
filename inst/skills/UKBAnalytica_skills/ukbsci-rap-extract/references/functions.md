@@ -1,12 +1,33 @@
 # `ukbsci-rap-extract` — function reference
 
-All signatures are verbatim from `UKBAnalytica` ≥ 0.6.2.2
-(`NAMESPACE` + `R/rap_extract.R` + `R/ukb_metadata.R` + `R/field_metadata.R`).
+All signatures reflect `UKBAnalytica` 1.0.0
+(`R/rap_extract.R`, `R/rap_manifest.R`, `R/ukb_metadata.R`,
+`R/field_metadata.R`).
 
 Symbols:
 - **RAP-required** — calls `dx`; the R session must be inside an authenticated
   RAP node.
 - **Offline** — pure-R, no network or `dx` requirement.
+
+---
+
+## 0. `ukb_check_rap_env()` — Offline + optional dx checks
+
+```r
+ukb_check_rap_env(output_dir = NULL,
+                  require_rap = FALSE,
+                  require_dx = FALSE,
+                  check_auth = FALSE,
+                  check_write = FALSE,
+                  verbose = TRUE)
+```
+
+Detects RAP environment signals (`DX_PROJECT_CONTEXT_ID`, workspace/job IDs,
+`/mnt/project`) and dx availability. With `require_rap = TRUE` or
+`require_dx = TRUE`, stops early if a RAP-only script is being run locally.
+
+**Returns:** list with `is_rap`, `dx_available`, RAP signal details, auth/write
+check status, and a checks table.
 
 ---
 
@@ -103,6 +124,30 @@ Plan an extraction without running it. Validates and expands the field set.
 | `dataset`, `entity`, `field_id`, `variables`, `table_exporter` | metadata |
 
 **Best practice:** check `length(plan$unmatched) == 0` before executing.
+
+---
+
+## 3b. Manifest helpers — Offline
+
+```r
+ukb_create_extraction_manifest(field_id = NULL,
+                               variable_set = NULL,
+                               variables = NULL,
+                               dataset = NULL,
+                               entity = "participant",
+                               output = NULL,
+                               include_eid = TRUE,
+                               purpose = NULL,
+                               notes = NULL)
+
+ukb_write_extraction_manifest(manifest, path,
+                              format = c("csv", "rds"))
+```
+
+`ukb_create_extraction_manifest()` creates an S3 `ukb_extraction_manifest`
+list. The field-level table is stored in `manifest$fields`; it contains no
+participant rows. `ukb_write_extraction_manifest()` writes the manifest to CSV
+or RDS.
 
 ---
 

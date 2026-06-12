@@ -5,7 +5,9 @@ description: >
   Platform (RAP) analyses built with UKBAnalytica. Wraps the package's
   built-in plotters — plot_forest (subgroup / regression forest),
   plot_calibration (clinical-model calibration), plot_regression_volcano
-  (multi-exposure / multi-protein volcano), plus the family of survival,
+  (multi-exposure / multi-protein volcano), plot_heatmap, plot_stacked_bar,
+  plot_violin, and plot_scatter for lightweight exploratory/manuscript panels,
+  plus the family of survival,
   ML, SHAP, mediation, propensity, imputation, correlation, and
   enrichment plots from sibling skills — and adds a shared neutral theme
   (ukbsci_clinical / ukbsci_diverging / ukbsci_sequential palettes), a
@@ -168,6 +170,10 @@ otherwise.
 | Forest (subgroup / batch reg) | `UKBAnalytica::plot_forest` | This skill — see §7 |
 | Calibration | `UKBAnalytica::plot_calibration` | This skill — see §8 |
 | Volcano | `UKBAnalytica::plot_regression_volcano` | This skill — see §9 |
+| Heatmap | `UKBAnalytica::plot_heatmap` | Long-format matrix-style data |
+| Stacked bar | `UKBAnalytica::plot_stacked_bar` | Categorical composition |
+| Violin | `UKBAnalytica::plot_violin` | Grouped continuous distributions |
+| Scatter | `UKBAnalytica::plot_scatter` | Exposure-response or feature-feature trends |
 | KM survival | `plot_km_curve` | `ukbsci-survival` |
 | Love / PS distribution | `plot_balance`, `plot_ps_distribution` | `ukbsci-propensity` |
 | Mediation effects | `plot_mediation`, `plot_mediation_forest` | `ukbsci-mediation` |
@@ -254,7 +260,22 @@ underlying tables — write those to `05-figs/data/`.
 
 ---
 
-## 10. Multi-panel composition
+## 10. Lightweight plot helpers
+
+Use these for compact exploratory or supplementary panels when the user has an
+aggregate or de-identified plotting table.
+
+```r
+plot_heatmap(cor_df, x = "trait", y = "protein", fill = "rho")
+plot_stacked_bar(tab_df, x = "risk_group", fill = "case_status", position = "fill")
+plot_violin(plot_df, x = "group", y = "marker", fill = "group")
+plot_scatter(plot_df, x = "exposure", y = "outcome", color = "group")
+```
+
+Inputs must use column names as strings. Do not pass `eid`, exact dates, or
+row-level raw RAP fields into local-agent-visible source CSVs.
+
+## 11. Multi-panel composition
 
 `patchwork` is the recommended layout engine:
 
@@ -274,7 +295,7 @@ labels — common across observational epidemiology.
 
 ---
 
-## 11. Common pitfalls
+## 12. Common pitfalls
 
 1. **Mixing `theme_classic()` and `theme_minimal()`** across panels of a
    composite. Always end the orchestrating script with `& ukbsci_theme()` so
@@ -307,18 +328,22 @@ labels — common across observational epidemiology.
 
 ---
 
-## 12. Key functions
+## 13. Key functions
 
 | Function | Returns |
 |----------|---------|
 | `plot_forest(...)` | ggplot |
 | `plot_calibration(data, predicted, observed, n_bins, smooth, conf_int)` | ggplot |
 | `plot_regression_volcano(...)` | ggplot (with `plot_data`, `label_data` attrs) |
+| `plot_heatmap(data, x, y, fill, label, show_values)` | ggplot |
+| `plot_stacked_bar(data, x, fill, weight, position)` | ggplot |
+| `plot_violin(data, x, y, fill, add_boxplot)` | ggplot |
+| `plot_scatter(data, x, y, color, add_smooth)` | ggplot |
 | (helpers defined locally in this skill) `ukbsci_theme()`, `ukbsci_clinical`, `ukbsci_diverging`, `ukbsci_sequential`, `save_ukbsci_figure()` | utilities |
 
 ---
 
-## 13. Related skills
+## 14. Related skills
 
 | Skill | When |
 |-------|------|
@@ -333,7 +358,7 @@ labels — common across observational epidemiology.
 
 ---
 
-## 14. References
+## 15. References
 
 - [`references/functions.md`](references/functions.md)
 - [`references/theme-and-palettes.R`](references/theme-and-palettes.R) —

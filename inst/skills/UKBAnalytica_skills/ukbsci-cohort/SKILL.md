@@ -8,11 +8,13 @@ description: >
   create_disease_definition, combine_disease_definitions), source parsers
   (parse_icd10_diagnoses, parse_icd9_diagnoses, parse_opcs4_procedures,
   parse_cancer_registry, parse_death_records, parse_self_reported_illnesses),
-  multi-source case extraction (extract_cases_by_source, extract_disease_history,
-  extract_disease_history_sensitivity, compare_data_sources), and the
-  Cox-ready dataset builder build_survival_dataset() with prevalent vs incident
-  separation and follow-up time computation, plus select_incident_by_years()
-  for time-window stratification. Use this skill when the user asks to define a
+  multi-source case extraction (extract_cases_by_source, extract_disease_diagnosis,
+  extract_disease_history, extract_disease_history_sensitivity,
+  compare_data_sources), reusable follow-up time skeletons
+  (ukb_time_skeleton), and the Cox-ready dataset builder
+  build_survival_dataset() with prevalent vs incident separation and follow-up
+  time computation, plus select_incident_by_years() for time-window
+  stratification. Use this skill when the user asks to define a
   UKB disease phenotype, inspect curated/Pomegranate diagnostic codes,
   separate prevalent from incident cases, build a survival dataset, compare
   diagnostic sources, or compute follow-up time.
@@ -107,10 +109,11 @@ stopifnot("p53_i0" %in% colnames(dt))   # baseline date
 
 ### Phase 1 — Pick or build disease definitions
 
-Start with the curated catalogue. In UKBAnalytica 1.0.0, the default curated
-library contains **86** analysis-ready disease definitions. The source-aware
-catalog additionally exposes **313** Pomegranate-derived definitions; the
-combined raw catalog contains **381** unique definition IDs.
+Start with the curated catalogue. In UKBAnalytica 1.0.0, the curated library
+contains **86** analysis-ready disease definitions. The source-aware catalog
+also exposes **313** Pomegranate-derived definitions. The expanded union of
+curated and Pomegranate definitions currently contains **331** usable disease
+keys; the conservative intersection contains **56** shared keys.
 
 ```r
 defs_all <- get_predefined_diseases()
@@ -214,7 +217,32 @@ present — warn the user before they request that source downstream.
 
 ### Phase 3 — Extract cases (one disease, one source, or many of each)
 
-#### 3a. The flexible primitive — `extract_cases_by_source()`
+#### 3a. Single-disease diagnosis table — `extract_disease_diagnosis()`
+
+Use this when the user wants a compact diagnosis table before building a full
+survival dataset.
+
+```r
+mi_def <- get_predefined_diseases(
+  source = "both",
+  merge_type = "union",
+  disease = "MI"
+)
+
+mi_dx <- extract_disease_diagnosis(
+  dt                  = dt,
+  disease             = "MI",
+  disease_definitions = mi_def,
+  sources             = c("ICD10", "ICD9", "Death"),
+  censor_date         = as.Date("2023-10-31"),
+  baseline_col        = "p53_i0",
+  include_all         = TRUE
+)
+# Columns: eid, disease, diagnosed, prevalent_case, incident_case,
+# earliest_date, diagnosis_source, status, surv_time
+```
+
+#### 3b. The flexible primitive — `extract_cases_by_source()`
 
 ```r
 cases_long <- extract_cases_by_source(
@@ -235,7 +263,7 @@ str(cases_long)
 gave the earliest valid date). For `"Algorithm"`, it is further refined to
 `"Algorithm_<source-code>"`.
 
-#### 3b. The history-only helper — `extract_disease_history()`
+#### 3c. The history-only helper — `extract_disease_history()`
 
 For "did the participant ever have disease X (per the chosen sources)?":
 
@@ -250,7 +278,7 @@ history <- extract_disease_history(
 #> Adds columns: Hypertension_history (0/1), Diabetes_history (0/1)
 ```
 
-#### 3c. Sensitivity variants — `extract_disease_history_sensitivity()`
+#### 3d. Sensitivity variants — `extract_disease_history_sensitivity()`
 
 For pre-baked sensitivity strata (ICD-10-only, ICD-10+ICD-9, all sources):
 
@@ -264,7 +292,7 @@ sens <- extract_disease_history_sensitivity(
 #> Adds: Diabetes_history_ICD10, Diabetes_history_hospital, Diabetes_history_all
 ```
 
-#### 3d. Source-by-source comparison — `compare_data_sources()`
+#### 3e. Source-by-source comparison — `compare_data_sources()`
 
 QC tool. Returns a per-disease table of how many cases each source uncovers
 and how much they overlap:
@@ -277,7 +305,28 @@ qc <- compare_data_sources(
 )
 ```
 
-### Phase 4 — Build the Cox-ready survival dataset
+### Phase 4 — Build reusable time skeleton, then Cox-ready dataset
+
+For prospective analyses, first standardize the time backbone once and reuse
+it across disease endpoints.
+
+```r
+time_skel <- ukb_time_skeleton(
+  data                 = dt,
+  id_col               = "eid",
+  baseline_col         = "p53_i0",
+  birth_year_col       = "p34",
+  birth_month_col      = "p52",
+  age_col              = "p21022",
+  death_date_cols      = "^(participant\\.)?p40000_i[0-9]+$",
+  lost_to_followup_col = "p191",
+  admin_censor_date    = as.Date("2023-10-31")
+)
+```
+
+`admin_censor_date` remains the database-level administrative censoring date.
+`followup_end_date` is participant-specific and uses the earliest of death,
+loss-to-follow-up, and administrative censoring.
 
 The main entry point. Most user requests should resolve here.
 
@@ -289,6 +338,7 @@ cohort <- build_survival_dataset(
   outcome_sources     = c("ICD10", "ICD9", "Death"),
   censor_date         = as.Date("2023-10-31"),
   baseline_col        = "p53_i0",
+  time_skeleton       = time_skel,
   primary_disease     = "AA",          # which disease drives outcome_*
   output              = "wide",        # or "long"
   include_all         = TRUE,
@@ -398,6 +448,8 @@ Pause and ask before generating code if any of these is ambiguous:
 | `extract_disease_history(dt, diseases, defs, sources, baseline_col)` | Boolean history flags | data.table |
 | `extract_disease_history_sensitivity(dt, diseases, defs, baseline_col)` | Pre-baked sensitivity flags | data.table |
 | `compare_data_sources(dt, defs, baseline_col)` | Source-overlap QC | data.table |
+| `extract_disease_diagnosis(dt, disease, disease_definitions, sources, ...)` | Diagnosis table for selected diseases | data.table |
+| `ukb_time_skeleton(data, id_col, baseline_col, ..., admin_censor_date)` | Reusable time backbone | data.table |
 | `build_survival_dataset(dt, defs, prevalent_sources, outcome_sources, ..., primary_disease, ..., show_flow, dt_threads)` | **Main** Cox-ready dataset | data.table (+ `attr "participant_flow"`) |
 | `select_incident_by_years(df, n_years, ...)` | Stratify by follow-up years | data.table or list |
 

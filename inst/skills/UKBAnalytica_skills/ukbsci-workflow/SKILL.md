@@ -4,9 +4,10 @@ description: >
   End-to-end orchestrator for a UK Biobank Research Analysis Platform (RAP)
   study using the UKBAnalytica R package. Plans, sequences, and supervises the
   full pipeline — from RAP phenotype extraction, through disease-cohort
-  construction, variable preprocessing, baseline tables, multiple imputation,
-  regression / survival / propensity / mediation / subgroup-sensitivity
-  analyses, machine learning, and final publication-ready plots — by routing
+  construction with reusable time skeletons, variable preprocessing, baseline
+  tables, multiple imputation, regression / survival / propensity / mediation /
+  subgroup-sensitivity analyses, machine learning, omics workflows, and final
+  publication-ready plots — by routing
   each phase to the right specialist skill (ukbsci-rap-extract, ukbsci-cohort,
   ukbsci-preprocess, ukbsci-baseline, ukbsci-imputation, ukbsci-regression,
   ukbsci-survival, ukbsci-propensity, ukbsci-mediation,
@@ -85,10 +86,12 @@ All outputs live inside RAP project storage. The canonical tree:
 │   ├── 10-ml.R                      # optional
 │   └── 11-plots.R
 ├── 02-extract/                       # outputs from ukbsci-rap-extract
+│   ├── env_check.rds
 │   ├── manifest.csv
 │   └── pheno.csv                    # stays on RAP
 ├── 03-cohort/                        # outputs from ukbsci-cohort
 │   ├── cohort.csv
+│   ├── time_skeleton.rds
 │   ├── cohort_flow.csv              # aggregate — shareable with agent
 │   └── source_compare.csv
 ├── 04-results/
@@ -217,6 +220,8 @@ Hand off to `ukbsci-rap-extract`. Pass:
 - The field IDs / variable sets derived from the plan.
 - The chosen mode (`sync` vs `job`) based on `plan$n_columns`.
 - The exact output path (`/mnt/project/<area>/02-extract/pheno.csv`).
+- A RAP environment check and field manifest:
+  `ukb_check_rap_env()` + `ukb_create_extraction_manifest()`.
 
 Verify before continuing:
 
@@ -228,7 +233,10 @@ stopifnot(file.exists("/mnt/project/<area>/02-extract/pheno.csv"))
 
 Hand off to `ukbsci-cohort`. Confirm the four decision points
 (primary disease, prevalent/outcome source sets, censor date) with the user
-**before** the script runs. After it runs, present the attrition flow.
+**before** the script runs. Prefer `ukb_time_skeleton()` first, then
+`build_survival_dataset(time_skeleton = ...)`. After it runs, present the
+aggregate attrition flow; for custom inclusion/exclusion rules use
+`ukb_participant_flow()`.
 
 ### Phase 3 — Preprocessing
 
@@ -258,6 +266,10 @@ Hand off to one or more of:
 - `ukbsci-subgroup-sensitivity` (interaction tests, exclusion criteria)
 
 The exact subset depends on the study design. Confirm with the user.
+
+Before running expensive models, generate a small simulated-data smoke test or
+use package demo data to validate function signatures. Never expose real
+participant rows to the local agent for debugging.
 
 ### Phase 7 — Machine learning (optional)
 
@@ -311,7 +323,7 @@ message").
 ###############################################################################
 # UKBAnalytica Citation:
 # He N. UKBAnalytica: Scalable Phenotyping and Statistical Pipeline for
-# UK Biobank RAP Data. R package version 0.6.2.2.
+# UK Biobank RAP Data. R package version 1.0.0.
 # https://github.com/Hinna0818/UKBAnalytica
 ###############################################################################
 ```

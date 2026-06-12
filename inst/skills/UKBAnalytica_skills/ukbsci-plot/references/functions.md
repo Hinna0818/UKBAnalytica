@@ -85,6 +85,36 @@ script.
 
 ---
 
+## Basic ggplot helpers exported by UKBAnalytica
+
+These helpers accept column names as strings and return ggplot objects.
+
+```r
+plot_heatmap(data, x, y, fill, label = NULL, show_values = FALSE,
+             low = "#2F6FA3", mid = "#F7F7F7", high = "#C74732",
+             midpoint = 0, title = NULL, xlab = NULL, ylab = NULL,
+             fill_lab = NULL, base_size = 7)
+
+plot_stacked_bar(data, x, fill, weight = NULL,
+                 position = c("fill", "stack"),
+                 palette = NULL, title = NULL, xlab = NULL, ylab = NULL,
+                 legend_title = NULL, base_size = 7)
+
+plot_violin(data, x, y, fill = NULL, add_boxplot = TRUE,
+            add_points = FALSE, palette = NULL,
+            title = NULL, xlab = NULL, ylab = NULL, base_size = 7)
+
+plot_scatter(data, x, y, color = NULL, palette = NULL,
+             add_smooth = TRUE, add_identity = FALSE,
+             alpha = 0.72, point_size = 1.2,
+             title = NULL, xlab = NULL, ylab = NULL, base_size = 7)
+```
+
+Use only aggregate or RAP-resident plotting data when source tables contain
+participant-level rows.
+
+---
+
 ## Multi-panel composition
 
 `patchwork` is the recommended engine:

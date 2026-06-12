@@ -5,7 +5,8 @@
 ```r
 run_subgroup_analysis(data, exposure, outcome = NULL,
                       subgroup_var, covariates = NULL,
-                      model_type = c("cox","logistic","linear"),
+                      model_type = c("cox","logistic","linear","glm","negbin"),
+                      family = "poisson",
                       endpoint  = NULL,
                       ref_level = NULL)
 ```
@@ -14,7 +15,8 @@ run_subgroup_analysis(data, exposure, outcome = NULL,
 |-----|---------|
 | `exposure` | exposure column |
 | `subgroup_var` | categorical modifier |
-| `model_type` | one of `cox`, `logistic`, `linear` |
+| `model_type` | one of `cox`, `logistic`, `linear`, `glm`, `negbin` |
+| `family` | GLM family for `model_type = "glm"` |
 | `endpoint` | length-2 for Cox |
 | `ref_level` | reference level for subgroup factor |
 
@@ -34,7 +36,8 @@ repeated across rows of the same `subgroup_var`.
 run_multi_subgroup(data, exposure, outcome = NULL,
                    subgroup_vars,
                    covariates = NULL,
-                   model_type = c("cox","logistic","linear"),
+                   model_type = c("cox","logistic","linear","glm","negbin"),
+                   family = "poisson",
                    endpoint   = NULL)
 ```
 
@@ -78,3 +81,40 @@ Complete-case filter. `stepwise = TRUE` records per-variable attrition.
 
 Prefer multiple-imputation (`ukbsci-imputation`) over complete-case for
 primary analysis; this function is a sensitivity check.
+
+---
+
+## `ukb_participant_flow()` and `plot_participant_flow()`
+
+```r
+ukb_participant_flow(data, steps, id_col = NULL,
+                     outcome_col = NULL, event_value = 1,
+                     start_label = "Initial population")
+
+plot_participant_flow(flow, show_removed = TRUE,
+                      show_events = TRUE, fill = "#2F6FA3")
+```
+
+`steps` is a named list of one-sided formulas, functions, logical vectors, or
+character vectors of complete-case variables. Returns an aggregate flow table
+with retained/removed counts and event counts. The plotter returns a ggplot.
+
+---
+
+## `ukb_sensitivity_suite()`
+
+```r
+ukb_sensitivity_suite(data,
+                      exposure,
+                      covariates = NULL,
+                      endpoint = c("outcome_surv_time", "outcome_status"),
+                      early_event_years = c(2, 4, 6),
+                      complete_case_covariates = NULL,
+                      additional_covariate_sets = NULL,
+                      conf_level = 0.95,
+                      verbose = TRUE)
+```
+
+Fits a primary Cox model and common sensitivity models with the same endpoint
+and exposure. Returns a `ukb_sensitivity_suite` list with `summary`, `models`,
+`flows`, and `settings`.

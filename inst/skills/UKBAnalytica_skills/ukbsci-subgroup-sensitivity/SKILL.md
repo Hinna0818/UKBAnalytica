@@ -7,7 +7,9 @@ description: >
   linear / GLM / negative-binomial effects + interaction p-value),
   sensitivity_exclude_early_events (drop events within N years of baseline
   to guard against reverse causation), and sensitivity_exclude_missing_covariates
-  (complete-case analysis with optional flow tracking). Use this skill when
+  (complete-case analysis with optional flow tracking), ukb_participant_flow /
+  plot_participant_flow for cohort attrition, and ukb_sensitivity_suite for
+  common Cox sensitivity runs. Use this skill when
   the user asks for subgroup analysis, interaction tests, effect modification,
   complete-case sensitivity, or early-event exclusion sensitivity. Subgroup
   analysis now supports all model families: cox, logistic, linear, glm
@@ -44,6 +46,8 @@ back with the agent. See `../references/agent-privacy-boundary.md`.
 - Sweep over multiple potential modifiers in one go.
 - Drop events in the first N years (lag analysis for reverse-causation).
 - Complete-case re-run, optionally with a participant-flow trace.
+- Record sequential inclusion/exclusion counts for a flow diagram.
+- Run a compact Cox sensitivity suite with early-event and covariate-adjustment variants.
 
 ## 2. When NOT to load
 
@@ -63,6 +67,26 @@ stopifnot(all(c("outcome_status", "outcome_surv_time") %in% colnames(cohort)))
 ---
 
 ## 4. Pipeline
+
+### Phase 0 — Participant flow table
+
+Use `ukb_participant_flow()` when the user needs a transparent attrition table
+before modeling. The output is aggregate and can be shared with the local
+agent.
+
+```r
+flow <- ukb_participant_flow(
+  data = cohort,
+  steps = list(
+    "Complete primary covariates" = c("age", "sex", "bmi", "smoking_status"),
+    "Positive follow-up time"     = ~ outcome_surv_time > 0
+  ),
+  id_col      = "eid",
+  outcome_col = "outcome_status"
+)
+
+plot_participant_flow(flow)
+```
 
 ### Phase 1 — Single-modifier subgroup analysis
 
@@ -184,6 +208,26 @@ When the user has multiply-imputed data, prefer pooled MI analysis
 (`ukbsci-imputation`) over complete-case. Complete-case is a sensitivity
 check, not the main analysis.
 
+### Phase 5 — Compact Cox sensitivity suite
+
+Use `ukb_sensitivity_suite()` when the user wants the standard Cox sensitivity
+bundle with one exposure and shared covariates.
+
+```r
+sens <- ukb_sensitivity_suite(
+  data = cohort,
+  exposure = "exposure",
+  covariates = c("age", "sex", "bmi", "smoking_status"),
+  endpoint = c("outcome_surv_time", "outcome_status"),
+  early_event_years = c(2, 4, 6),
+  complete_case_covariates = c("age", "sex", "bmi", "smoking_status"),
+  additional_covariate_sets = list(extra = c("education", "TDI")),
+  verbose = FALSE
+)
+
+sens$summary
+```
+
 ---
 
 ## 5. Common pitfalls
@@ -213,10 +257,13 @@ check, not the main analysis.
 
 | Function | Returns |
 |----------|---------|
+| `ukb_participant_flow(data, steps, id_col, outcome_col)` | aggregate attrition table |
+| `plot_participant_flow(flow)` | ggplot |
 | `run_subgroup_analysis(data, exposure, outcome = NULL, subgroup_var, covariates = NULL, model_type = c("cox","logistic","linear","glm","negbin"), family = "poisson", endpoint = NULL, ref_level = NULL)` | data.frame: per-level estimates + `p_interaction` |
 | `run_multi_subgroup(..., subgroup_vars, model_type, family)` | concatenated long table |
 | `sensitivity_exclude_early_events(data, endpoint, n_years, copy = TRUE, verbose = TRUE)` | filtered data + `sensitivity_info` attr |
 | `sensitivity_exclude_missing_covariates(data, covariates, copy = TRUE, stepwise = FALSE, verbose = TRUE)` | filtered data + `sensitivity_info` (+ `complete_case_flow` if stepwise) |
+| `ukb_sensitivity_suite(data, exposure, covariates, endpoint, early_event_years, complete_case_covariates, additional_covariate_sets)` | list with `summary`, `models`, `flows`, `settings` |
 
 **`model_type` effect estimate column mapping:**
 

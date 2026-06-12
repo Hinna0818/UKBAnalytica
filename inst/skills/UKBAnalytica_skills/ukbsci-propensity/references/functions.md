@@ -1,6 +1,6 @@
 # `ukbsci-propensity` — function reference
 
-All signatures verbatim from `UKBAnalytica` ≥ 0.6.2.2.
+All signatures reflect `UKBAnalytica` 1.0.0.
 
 ---
 

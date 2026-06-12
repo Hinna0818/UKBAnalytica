@@ -5,8 +5,10 @@ description: >
   authenticated UK Biobank Research Analysis Platform (RAP) session using the
   UKBAnalytica R package (rap_find_dataset, rap_list_fields, rap_plan_extract,
   rap_extract_pheno, rap_submit_extract, ukb_metadata_setup, ukb_search_fields,
-  ukb_field_info, ukb_extract_fields, ukb_decode). Use this skill when the user
-  asks to search UKB fields, plan/run a phenotype extraction on RAP, choose
+  ukb_field_info, ukb_extract_fields, ukb_decode, ukb_check_rap_env,
+  ukb_create_extraction_manifest, ukb_write_extraction_manifest). Use this
+  skill when the user asks to search UKB fields, check the RAP environment,
+  plan/run a phenotype extraction on RAP, create an extraction manifest, choose
   between dx extract_dataset (sync) and table-exporter (async), decode RAP
   column names or coded values, or build the upstream phenotype table that
   feeds ukbsci-cohort. Triggers: UK Biobank RAP extract, dx extract_dataset,
@@ -89,9 +91,8 @@ dir.create(extract_dir, showWarnings = FALSE, recursive = TRUE)
 install.packages("UKBAnalytica")   # or devtools::install_github("Hinna0818/UKBAnalytica")
 library(UKBAnalytica)
 
-# Confirm dx CLI is available
-Sys.which("dx")                    # must be non-empty
-system2("dx", c("whoami"))         # must succeed
+# Confirm RAP signals and dx availability before extraction
+env <- ukb_check_rap_env(require_rap = TRUE, require_dx = TRUE, verbose = TRUE)
 ```
 
 If the user is *not* on RAP and asks "can I just try this locally?" — explain
@@ -103,7 +104,19 @@ the public Data Dictionary) work offline, but **extraction functions
 
 ## 4. Pipeline (4 phases)
 
-### Phase 0 — Decide on extraction scale
+### Phase 0 — Check RAP environment and decide extraction scale
+
+Start every extraction script with a RAP environment check. This fails early
+when the user accidentally runs RAP-only extraction code on a local machine.
+
+```r
+env <- ukb_check_rap_env(
+  require_rap = TRUE,
+  require_dx  = TRUE,
+  check_auth  = TRUE,
+  verbose     = TRUE
+)
+```
 
 Ask the user (or estimate) the **number of fields** and the **number of
 participants** needed.
@@ -208,6 +221,23 @@ plan$unmatched      # any unresolved requests (handle before running!)
 If `length(plan$unmatched) > 0`, **stop and report to the user** — do not
 proceed with a partial extraction.
 
+For protocol-grade runs, also write a reusable extraction manifest. This is
+safe to share because it contains field-level metadata, not participant rows.
+
+```r
+manifest <- ukb_create_extraction_manifest(
+  field_id  = c(31, 53, 21022, 21000, 21001),
+  variables = c("sex", "age", "ethnicity", "bmi"),
+  purpose   = "baseline cohort construction"
+)
+
+ukb_write_extraction_manifest(
+  manifest,
+  path   = "/mnt/project/<area>/02-extract/manifest.csv",
+  format = "csv"
+)
+```
+
 ### Phase 4 — Execute the extraction
 
 #### 4a. Synchronous (small jobs)
@@ -293,6 +323,9 @@ dt <- ukb_decode(dt, metadata = meta,
 
 | Function | Purpose | Mode | Returns |
 |----------|---------|------|---------|
+| `ukb_check_rap_env()` | Detect RAP signals, dx, auth/write status | offline + optional dx | list |
+| `ukb_create_extraction_manifest()` | Create reproducible field manifest | offline | S3 `ukb_extraction_manifest` |
+| `ukb_write_extraction_manifest()` | Save manifest to CSV/RDS | offline | output path |
 | `rap_find_dataset()` | Locate the `.dataset` file | RAP-required | `character` (file name) |
 | `rap_list_fields()` | List all RAP fields, optional regex filter | RAP-required | `data.frame` (field_name, title) |
 | `ukb_metadata_setup()` | Build searchable metadata object | RAP / files / auto | S3 `ukb_metadata` |

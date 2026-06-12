@@ -51,6 +51,31 @@ must equal `first_occurrence_fields`.
 
 ---
 
+## 1b. `ukb_time_skeleton()`
+
+```r
+ukb_time_skeleton(data,
+                  id_col = "eid",
+                  baseline_col = "p53_i0",
+                  birth_year_col = "p34",
+                  birth_month_col = "p52",
+                  age_col = "p21022",
+                  death_date_cols = "^(participant\\.)?p40000_i[0-9]+$",
+                  lost_to_followup_col = "p191",
+                  admin_censor_date = as.Date("2023-10-31"),
+                  keep_source_dates = TRUE)
+```
+
+Builds a reusable participant-level time backbone. It standardizes baseline
+date, approximate birth date, age at baseline, death date, loss-to-follow-up
+date, administrative censoring date, participant-specific `followup_end_date`,
+and follow-up time.
+
+**Returns:** `data.table`, one row per participant. It does not define disease
+outcomes; pass it to `build_survival_dataset(time_skeleton = ...)`.
+
+---
+
 ## 2. `get_predefined_diseases()`
 
 ```r
@@ -176,7 +201,28 @@ extract_cases_by_source(
 
 ---
 
-## 6. `extract_disease_history()`
+## 6b. `extract_disease_diagnosis()` — selected disease diagnosis table
+
+```r
+extract_disease_diagnosis(dt,
+                          disease,
+                          disease_definitions = NULL,
+                          sources = c("ICD10", "ICD9", "Self-report", "Death"),
+                          censor_date = as.Date("2023-10-31"),
+                          baseline_col = "p53_i0",
+                          include_all = TRUE)
+```
+
+Extracts diagnosis status for one or more selected diseases. If
+`disease_definitions = NULL`, it uses `get_predefined_diseases()`.
+
+**Returns:** `data.table` with `eid`, `disease`, `diagnosed`,
+`prevalent_case`, `incident_case`, `earliest_date`, `diagnosis_source`,
+`status`, and `surv_time`.
+
+---
+
+## 7. `extract_disease_history()`
 
 ```r
 extract_disease_history(
@@ -196,7 +242,7 @@ Adds one boolean column per disease — `<Disease>_history` — to the wide
 
 ---
 
-## 7. `extract_disease_history_sensitivity()`
+## 8. `extract_disease_history_sensitivity()`
 
 ```r
 extract_disease_history_sensitivity(
@@ -219,7 +265,7 @@ Used to power downstream `ukbsci-subgroup-sensitivity` analyses.
 
 ---
 
-## 8. `compare_data_sources()`
+## 9. `compare_data_sources()`
 
 ```r
 compare_data_sources(
@@ -236,7 +282,7 @@ for `build_survival_dataset()`.
 
 ---
 
-## 9. `build_survival_dataset()` — main entry point
+## 10. `build_survival_dataset()` — main entry point
 
 ```r
 build_survival_dataset(
@@ -246,6 +292,7 @@ build_survival_dataset(
   outcome_sources   = c("ICD10", "ICD9", "Death"),
   censor_date       = as.Date("2023-10-31"),
   baseline_col      = "p53_i0",
+  time_skeleton     = NULL,
   primary_disease   = NULL,
   output            = c("wide", "long"),
   include_all       = TRUE,
@@ -258,6 +305,7 @@ build_survival_dataset(
 |-----|------|---------|
 | `prevalent_sources` | char vector | Sources used to mark prevalent cases. Broader by default. |
 | `outcome_sources` | char vector | Sources used for incident outcome. Excludes Self-report by default (imprecise dates). |
+| `time_skeleton` | data.frame / NULL | Optional output from `ukb_time_skeleton()`. |
 | `primary_disease` | char | Disease key whose incident timing drives `outcome_*`. Defaults to first in `disease_definitions`. |
 | `output` | char | `"wide"` (default) or `"long"`. |
 | `include_all` | logical | If `output = "long"`, include non-cases with `status = 0`. |
@@ -282,7 +330,7 @@ If `show_flow = TRUE`, the attrition table is stored at
 
 ---
 
-## 10. `select_incident_by_years()`
+## 11. `select_incident_by_years()`
 
 ```r
 select_incident_by_years(
