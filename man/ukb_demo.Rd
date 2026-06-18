@@ -2,29 +2,29 @@
 % Please edit documentation in R/example_data.R
 \name{ukb_demo}
 \alias{ukb_demo}
-\title{Load the simulated UK Biobank-style demo dataset}
+\title{Generate a small synthetic UK Biobank-style demo dataset}
 \usage{
-ukb_demo(n = NULL)
+ukb_demo(n = NULL, seed = 20260618L)
 }
 \arguments{
-\item{n}{Optional number of rows to return. If \code{NULL}, all 5,000 simulated
-rows are returned.}
+\item{n}{Optional number of rows to return. If \code{NULL}, 500 rows are returned.}
+
+\item{seed}{Integer random seed used to generate the toy data. The default
+provides reproducible examples. Use \code{NULL} to avoid setting a seed.}
 }
 \value{
-A data.frame of simulated cohort variables with missing values
+A data.frame of synthetic cohort variables with missing values
 retained.
 }
 \description{
-Returns a fully simulated demo dataset generated for documentation and
-smoke-test workflows. The packaged object preserves the original column names
-of a RAP-style cohort table, including \code{eid}, raw field columns, date
-columns, and diagnosis-code columns, and includes additional raw-style air
-pollution fields used by package examples. Values were created by column-wise
-resampling or independent simulation, so the object does not contain UK
-Biobank participant-level source records.
+Generates a small fully synthetic toy dataset for documentation and
+smoke-test workflows. The data are created at runtime from parametric and
+categorical toy distributions and are not stored in the package as
+participant-level records.
 }
 \examples{
 demo <- ukb_demo(100)
+demo2 <- ukb_demo(100, seed = 1)
 dim(demo)
 names(demo)
 }

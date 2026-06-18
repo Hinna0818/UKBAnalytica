@@ -17,14 +17,15 @@ knitr::opts_chunk$set(
 ```
 
 This document demonstrates an end-to-end UKBAnalytica workflow using
-`ukb_demo()` as a RAP-style raw table. The case study evaluates associations
-between air pollution exposure and incident cardiac arrhythmia. The workflow
-covers raw field extraction, phenotype definition, baseline preprocessing,
-participant flow, baseline table generation, Cox regression, and sensitivity
-analyses.
+`ukb_demo()` to generate a RAP-style toy table at runtime. The case study
+evaluates associations between air pollution exposure and incident cardiac
+arrhythmia. The workflow covers raw field extraction, phenotype definition,
+baseline preprocessing, participant flow, baseline table generation, Cox
+regression, and sensitivity analyses.
 
-The demo data are synthetic and do not contain UK Biobank participant-level
-source records. Results are for workflow illustration only.
+The demo data are fully synthetic, generated from toy random distributions, and
+do not contain UK Biobank participant-level source records. Results are for
+workflow illustration only.
 
 ## Load demo data
 
@@ -32,7 +33,7 @@ source records. Results are for workflow illustration only.
 library(UKBAnalytica)
 library(data.table)
 
-demo_raw <- ukb_demo()
+demo_raw <- ukb_demo(seed = 20260618)
 dim(demo_raw)
 names(demo_raw)[1:12]
 ```
@@ -280,4 +281,3 @@ cox_results_2010 <- fit_pollution_cox(
 cox_results_2010$p_bh <- p.adjust(cox_results_2010$pvalue, method = "BH")
 cox_results_2010
 ```
-

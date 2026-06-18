@@ -15,8 +15,8 @@ phenotyping, survival-ready datasets, scalable preprocessing, and downstream ana
 
 **Attention**
 The package **does not ship UK Biobank participant-level source records**; examples
-use field IDs, simulated toy data, or user-provided tables that remain within
-RAP-controlled storage.
+use field IDs, runtime-generated fully synthetic toy data, or user-provided
+tables that remain within RAP-controlled storage.
 
 **For details, please visit**: [Full documentation for UKBAnalytica](https://hinna0818.github.io/UKBAnalytica/)
 
