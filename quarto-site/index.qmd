@@ -139,8 +139,7 @@ UKBAnalytica is developed and maintained by **Nan He (Hinna)** from the Departme
 ::: {.g-col-12 .g-col-md-5}
 ### Citation
 If you use UKBAnalytica in your study, please cite:
-```bash
-DOI pending
-```
+
+> He N, Mo K, Yu G, He F. UKBAnalytica: an integrated R package for scalable phenotyping and reproducible epidemiological analysis within the UK Biobank Research Analysis Platform. medRxiv. 2026.06.19.26356057. doi: https://doi.org/10.64898/2026.06.19.26356057
 :::
 :::

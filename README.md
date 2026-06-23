@@ -24,35 +24,46 @@ tables that remain within RAP-controlled storage.
 
 
 ## Installation
-You can install the development version of `UKBAnalytica` from GitHub with:
+You can install the development version of `UKBAnalytica` from GitHub, which is recommended:
 
 ```r
 # install.packages("devtools")
 devtools::install_github("Hinna0818/UKBAnalytica")
 ```
 
+## Citation
+
+If you use UKBAnalytica in your study, please cite:
+
+> He N, Mo K, Yu G, He F. UKBAnalytica: an integrated R package for scalable phenotyping and reproducible epidemiological analysis within the UK Biobank Research Analysis Platform. medRxiv. 2026.06.19.26356057. doi: https://doi.org/10.64898/2026.06.19.26356057
+
+
 ## Quick start
 
 ```r
 library(UKBAnalytica)
-library(data.table)
 
-## suppose a participant-level table is available within your approved RAP project
-ukb_data <- fread("population.csv")
+## Runtime-generated fully synthetic toy data for examples
+## In RAP, replace this with your approved project table
+ukb_raw <- ukb_demo(n = 200, seed = 42)
 
-diseases <- get_predefined_diseases()[
-  c("AA", "Hypertension", "Diabetes")
-]
+## Retrieve a predefined disease definition.
+copd_def <- get_predefined_diseases()["COPD"]
 
-analysis_dt <- build_survival_dataset(
-  dt = ukb_data,
-  disease_definitions = diseases,
-  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
-  outcome_sources = c("ICD10", "ICD9", "Death"),
-  primary_disease = "AA",
-  show_flow = TRUE,
-  dt_threads = 8
+## Build a prospective, survival-ready cohort.
+surv_dt <- build_survival_dataset(
+  dt = ukb_raw,
+  disease_definitions = copd_def,
+  prevalent_sources = "ICD10",
+  outcome_sources = "ICD10",
+  primary_disease = "COPD",
+  baseline_col = "p53_i0",
+  censor_date = as.Date("2023-10-31"), # replace your censor date
+  show_flow = TRUE
 )
+
+table(surv_dt$outcome_status, useNA = "ifany")
+attr(surv_dt, "participant_flow")
 ```
 
 ## Disease Definition Sources
@@ -106,28 +117,6 @@ dt <- ukb_clean_missing(dt, action = "na")
 ukb_snapshot(dt, "Clinical core extracted and cleaned")
 ```
 
-
-## Basic Survival Dataset
-
-```r
-disease_defs <- get_predefined_diseases()[c("Hypertension", "Diabetes", "Stroke")]
-
-analysis_dt <- build_survival_dataset(
-  dt = analysis_input,
-  disease_definitions = disease_defs,
-  primary_disease = "Stroke",
-  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death", "FirstOccurrence"),
-  outcome_sources = c("ICD10", "ICD9", "Death", "FirstOccurrence"),
-  baseline_col = "p53_i0",
-  show_flow = TRUE
-)
-```
-
-Here `analysis_input` should already contain baseline variables and the
-diagnosis/date columns required by the selected sources. The output contains one
-`*_history` column per disease, one `*_incident` column per disease, and for the
-primary disease a standard survival endpoint: `outcome_status` and
-`outcome_surv_time`.
 
 ## AI Agent Skills for UKB data analyses
 
