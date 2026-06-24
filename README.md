@@ -35,7 +35,7 @@ devtools::install_github("Hinna0818/UKBAnalytica")
 
 If you use UKBAnalytica in your study, please cite:
 
-> He N, Mo K, Yu G, He F. UKBAnalytica: an integrated R package for scalable phenotyping and reproducible epidemiological analysis within the UK Biobank Research Analysis Platform. medRxiv. 2026.06.19.26356057. doi: https://doi.org/10.64898/2026.06.19.26356057
+> N He, M Ke, G Yu, F He. UKBAnalytica: an integrated R package for scalable phenotyping and reproducible epidemiological analysis within the UK Biobank Research Analysis Platform. medRxiv. 2026.06.19.26356057. doi: https://doi.org/10.64898/2026.06.19.26356057
 
 
 ## Quick start
