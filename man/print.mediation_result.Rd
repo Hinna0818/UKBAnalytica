@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments passed to summary.}
 }
+\value{
+Invisibly returns \code{x}, the original mediation result object.
+}
 \description{
 Print mediation analysis results.
 }

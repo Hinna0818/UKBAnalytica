@@ -33,15 +33,3 @@ Fit Cox proportional hazards models for each main variable separately.
 When \code{covariates} is \code{NULL}, univariate models are fitted.
 Otherwise, multivariate models adjusting for the specified covariates are fitted.
 }
-\examples{
-\dontrun{
-library(survival)
-# Univariate Cox
-res <- runmulti_cox(lung, main_var = c("age", "sex"), endpoint = c("time", "status"))
-
-# Multivariate Cox
-res <- runmulti_cox(lung, main_var = c("age", "sex"),
-                    covariates = c("ph.ecog"), endpoint = c("time", "status"))
-}
-
-}

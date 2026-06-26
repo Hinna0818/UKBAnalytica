@@ -26,21 +26,6 @@
 #'   columns. When RAP field metadata is available, the result also includes the
 #'   matching RAP column names and the number of approved RAP columns per field.
 #'
-#' @examples
-#' \dontrun{
-#' # Use a UKB data dictionary metadata file available in the current session
-#' meta <- get_field_metadata(
-#'   query = "blood pressure",
-#'   ukb_data_dict = "Data_Dictionary_Showcase.tsv"
-#' )
-#'
-#' # Combine the data dictionary with the current RAP-approved field list
-#' meta <- get_field_metadata(
-#'   field_id = c(31, 53, 21022, 4080),
-#'   ukb_data_dict = "Data_Dictionary_Showcase.tsv"
-#' )
-#' }
-#'
 #' @importFrom xml2 read_html xml_find_all xml_text
 #' @export
 get_field_metadata <- function(field_id = NULL,

@@ -32,10 +32,3 @@ A ggplot2 object.
 \description{
 Visualize the distribution of propensity scores by treatment group.
 }
-\examples{
-\dontrun{
-ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-plot_ps_distribution(ps_data, treatment = "treated", type = "mirror")
-}
-
-}

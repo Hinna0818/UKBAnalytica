@@ -19,13 +19,3 @@ A thin wrapper around \code{TCMDATA::gglollipop()} for enrichment results. This
 function accepts either a raw \code{enrichResult} object or a list returned by one
 of the proteomics ORA helpers in this package.
 }
-\examples{
-\dontrun{
-go_res <- run_protein_ora(
-  c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"),
-  ont = "ALL"
-)
-plot_enrichment_lollipop(go_res)
-}
-
-}

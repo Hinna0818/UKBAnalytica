@@ -49,16 +49,6 @@
 #'
 #' @importFrom mice mice complete
 #'
-#' @examples
-#' \dontrun{
-#' library(data.table)
-#' dt <- data.table(eid = 1:100, x = rnorm(100), y = rnorm(100))
-#' dt[sample.int(100, 10), x := NA]
-#'
-#' res <- impute_mice_merge(dt, vars = c("x", "y"), m = 2, maxit = 2)
-#' imputed_dt1 <- res$data_list[[1]]
-#' }
-#'
 #' @export
 run_imputation <- function(data,
                               id_col = "eid",

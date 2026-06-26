@@ -33,15 +33,3 @@ An object of class \code{mi_pooled_result}.
 Combines custom parameter estimates (not limited to regression coefficients)
 from multiply imputed datasets using Rubin's Rules.
 }
-\examples{
-\dontrun{
-estimates <- list(c(effect = 0.5), c(effect = 0.6), c(effect = 0.4))
-variances <- list(
-  matrix(0.01, nrow = 1),
-  matrix(0.012, nrow = 1),
-  matrix(0.011, nrow = 1)
-)
-pooled <- pool_custom_estimates(estimates, variances, labels = "effect")
-}
-
-}

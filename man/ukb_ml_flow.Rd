@@ -107,17 +107,3 @@ analyses. The function can create or consume a frozen train/test split, tune
 model hyperparameters, learn a binary threshold, fit the final model, evaluate
 the frozen test set, prepare ROC data, and optionally compute SHAP values.
 }
-\examples{
-\dontrun{
-flow <- ukb_ml_flow(
-  copd ~ age + bmi + protein_1 + protein_2,
-  train_data = train,
-  test_data = validation,
-  id_col = "eid",
-  model = "xgboost",
-  threshold_method = "youden"
-)
-plot(flow, type = "roc")
-}
-
-}

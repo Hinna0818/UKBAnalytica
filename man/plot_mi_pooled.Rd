@@ -39,11 +39,3 @@ A ggplot2 object.
 \description{
 Creates a forest plot for pooled estimates from multiple imputation analysis.
 }
-\examples{
-\dontrun{
-pooled <- pool_mi_models(models, model_type = "cox")
-plot_mi_pooled(pooled)
-plot_mi_pooled(pooled, exponentiate = TRUE, show_fmi = TRUE)
-}
-
-}

@@ -33,10 +33,3 @@ A list with components \code{graph} and \code{table}.
 \description{
 A thin wrapper around \code{TCMDATA::rank_ppi_nodes()}.
 }
-\examples{
-\dontrun{
-rank_res <- rank_protein_ppi_nodes(ppi_metrics)
-head(rank_res$table)
-}
-
-}

@@ -41,14 +41,3 @@ A data.frame with balance statistics:
 Assess balance of covariates between treatment groups before and after
 matching or weighting.
 }
-\examples{
-\dontrun{
-balance <- assess_balance(
-  data = ps_data,
-  treatment = "treated",
-  covariates = c("age", "sex", "bmi"),
-  method = "unmatched"
-)
-}
-
-}

@@ -37,29 +37,6 @@ NULL
 #'     \item{p_interaction}{P-value for interaction between exposure and subgroup}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' library(survival)
-#' # Cox model subgroup analysis
-#' result <- run_subgroup_analysis(
-#'   data = lung,
-#'   exposure = "ph.ecog",
-#'   subgroup_var = "sex",
-#'   model_type = "cox",
-#'   endpoint = c("time", "status")
-#' )
-#'
-#' # Logistic regression subgroup analysis
-#' mtcars$am_binary <- ifelse(mtcars$am == 1, 1, 0)
-#' result <- run_subgroup_analysis(
-#'   data = mtcars,
-#'   exposure = "hp",
-#'   outcome = "am_binary",
-#'   subgroup_var = "cyl",
-#'   model_type = "logistic"
-#' )
-#' }
-#'
 #' @importFrom stats as.formula glm binomial lm coef confint qnorm
 #' @export
 run_subgroup_analysis <- function(data,
@@ -367,18 +344,6 @@ run_subgroup_analysis <- function(data,
 #' @param subgroup_vars Character vector of subgroup variable names.
 #'
 #' @return A data.frame with results from all subgroup analyses combined.
-#'
-#' @examples
-#' \dontrun{
-#' library(survival)
-#' result <- run_multi_subgroup(
-#'   data = lung,
-#'   exposure = "ph.ecog",
-#'   subgroup_vars = c("sex"),
-#'   model_type = "cox",
-#'   endpoint = c("time", "status")
-#' )
-#' }
 #'
 #' @export
 run_multi_subgroup <- function(data,

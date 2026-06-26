@@ -74,16 +74,3 @@ estimate column (for example \code{HR} or \code{OR}), and the y-axis shows
 \code{-log10(P)}. Points can be highlighted by an adjusted p-value column, while
 labels are selected from the largest and smallest highlighted effects.
 }
-\examples{
-\dontrun{
-cox_res$p_bonferroni <- p.adjust(cox_res$pvalue, method = "bonferroni")
-plot_regression_volcano(
-  cox_res,
-  effect_col = "HR",
-  p_col = "pvalue",
-  adjusted_p_col = "p_bonferroni",
-  label_col = "gene_symbol"
-)
-}
-
-}

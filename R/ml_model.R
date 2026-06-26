@@ -256,26 +256,6 @@ if (length(predictors) == 1 && predictors == ".") {
 #'   \item metrics: Model performance metrics
 #' }
 #'
-#' @examples
-#' \dontrun{
-#' # Random Forest classification
-#' ml_rf <- ukb_ml_model(
-#'   diabetes ~ age + bmi + sbp + smoking,
-#'   data = ukb_data,
-#'   model = "rf",
-#'   task = "classification"
-#' )
-#'
-#' # XGBoost with custom parameters
-#' ml_xgb <- ukb_ml_model(
-#'   bmi ~ age + sex + income,
-#'   data = ukb_data,
-#'   model = "xgboost",
-#'   task = "regression",
-#'   params = list(nrounds = 100, max_depth = 6)
-#' )
-#' }
-#'
 #' @export
 ukb_ml_model <- function(formula,
                          data,

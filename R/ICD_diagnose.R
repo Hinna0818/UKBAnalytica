@@ -20,12 +20,6 @@
 #' ICD-9 codes in UKB follow the format: 3-5 digits, optionally prefixed with V or E.
 #' The function handles logical NA columns that may occur when all values are missing.
 #'
-#' @examples
-#' \dontrun{
-#' ukb_data <- data.table::fread("ukb_data.csv")
-#' icd9_long <- parse_icd9_diagnoses(ukb_data)
-#' }
-#'
 #' @import data.table
 #' @importFrom stringi stri_extract_all_regex
 #' @export
@@ -184,12 +178,6 @@ aggregate_icd9_earliest <- function(icd9_filtered) {
 #'   \item Join codes and dates by eid and positional index
 #' }
 #'
-#' @examples
-#' \dontrun{
-#' ukb_data <- data.table::fread("ukb_data.csv")
-#' icd10_long <- parse_icd10_diagnoses(ukb_data)
-#' }
-#'
 #' @import data.table
 #' @importFrom stringi stri_extract_all_regex
 #' @export
@@ -262,12 +250,6 @@ parse_icd10_diagnoses <- function(dt) {
 #' @param disease_label Disease name label to assign to matched records.
 #'
 #' @return A data.table with filtered records and added \code{disease} column.
-#'
-#' @examples
-#' \dontrun{
-#' icd10_long <- parse_icd10_diagnoses(ukb_data)
-#' aa_cases <- filter_icd10_codes(icd10_long, "^I71", "Aortic_Aneurysm")
-#' }
 #'
 #' @keywords internal
 filter_icd10_codes <- function(icd10_long, pattern, disease_label) {

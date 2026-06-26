@@ -1623,19 +1623,6 @@ ukb_ml_evaluate_test <- function(object,
 #'   \code{threshold}, \code{final_model}, \code{test_eval},
 #'   \code{metrics}, \code{predictions}, \code{roc}, and optional \code{shap}.
 #'
-#' @examples
-#' \dontrun{
-#' flow <- ukb_ml_flow(
-#'   copd ~ age + bmi + protein_1 + protein_2,
-#'   train_data = train,
-#'   test_data = validation,
-#'   id_col = "eid",
-#'   model = "xgboost",
-#'   threshold_method = "youden"
-#' )
-#' plot(flow, type = "roc")
-#' }
-#'
 #' @export
 ukb_ml_flow <- function(formula = NULL,
                         data = NULL,
@@ -2013,21 +2000,6 @@ plot.ukb_ml_flow <- function(x, type = c("roc", "shap_beeswarm"), ...) {
 #'   \code{metrics}, \code{comparison}, \code{predictions}, \code{roc}, and
 #'   \code{thresholds}.
 #'
-#' @examples
-#' \dontrun{
-#' cmp <- ukb_ml_compare_flows(
-#'   split = split,
-#'   outcome = "copd",
-#'   feature_sets = list(
-#'     clinical = c("age", "sex", "bmi"),
-#'     combined = c("age", "sex", "bmi", protein_vars)
-#'   ),
-#'   models = c("logistic", "xgboost"),
-#'   compare = "both"
-#' )
-#' plot(cmp)
-#' }
-#'
 #' @export
 ukb_ml_compare_flows <- function(formula = NULL,
                                  data = NULL,
@@ -2279,21 +2251,6 @@ plot.ukb_ml_flow_compare <- function(x, type = c("roc"), ...) {
 #'
 #' @return A \code{ukb_ml_feature_set_compare} object containing per-feature-set
 #'   models and unified result tables.
-#'
-#' @examples
-#' \dontrun{
-#' res <- ukb_ml_compare_feature_sets(
-#'   split = split,
-#'   feature_sets = list(
-#'     proteins = protein_vars,
-#'     clinical = covariates,
-#'     combined = c(protein_vars, covariates)
-#'   ),
-#'   model = "xgboost",
-#'   threshold_method = "youden"
-#' )
-#' plot_ml_roc_compare(res$roc)
-#' }
 #'
 #' @export
 ukb_ml_compare_feature_sets <- function(split,

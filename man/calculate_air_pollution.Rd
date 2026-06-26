@@ -18,9 +18,3 @@ A data.table with averaged pollution columns
 \description{
 Computes averaged air pollution exposures from multiple time points.
 }
-\examples{
-\dontrun{
-result <- calculate_air_pollution(ukb_data, c("NO2", "PM2.5"))
-}
-
-}

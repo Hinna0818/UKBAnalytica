@@ -82,21 +82,3 @@ containing ICD-10/ICD-9 patterns, self-report codes, UK Biobank First
 Occurrence fields, and optionally a UK Biobank algorithmically-defined
 outcome date field.
 }
-\examples{
-\dontrun{
-aa_def <- create_disease_definition(
-  name = "Aortic Aneurysm",
-  icd10_pattern = "^I71",
-  icd9_pattern = "^441"
-)
-
-copd_def <- create_disease_definition(
-  name = "COPD",
-  icd10_pattern = "^(J40|J41|J42|J43|J44)",
-  icd9_pattern = "^(491|492|4932|496)",
-  sr_codes = c(1112, 1113, 1472),
-  algo_date_field = 42016
-)
-}
-
-}

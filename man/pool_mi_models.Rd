@@ -59,28 +59,3 @@ An object of class \code{mi_pooled_result} containing:
 Combines results of regression analyses performed on multiply imputed datasets
 using Rubin's Rules via the mitools package.
 }
-\examples{
-\dontrun{
-# Method 1: Pool pre-fitted models
-models <- lapply(mi_datasets, function(d) {
-  glm(outcome ~ exposure + age + sex, data = d, family = binomial())
-})
-pooled <- pool_mi_models(models, model_type = "logistic")
-summary(pooled)
-
-# Method 2: Fit and pool in one step
-pooled <- pool_mi_models(
-  datasets = mi_datasets,
-  formula = outcome ~ exposure + age + sex,
-  model_type = "logistic"
-)
-
-# Cox regression
-pooled_cox <- pool_mi_models(
-  datasets = mi_datasets,
-  formula = Surv(time, status) ~ treatment + age,
-  model_type = "cox"
-)
-}
-
-}

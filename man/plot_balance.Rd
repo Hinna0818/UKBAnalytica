@@ -29,11 +29,3 @@ A ggplot2 object.
 \description{
 Create a Love plot comparing standardized mean differences before and after matching/weighting.
 }
-\examples{
-\dontrun{
-balance_before <- assess_balance(data, "treated", c("age", "sex"), method = "unmatched")
-balance_after <- assess_balance(matched_data, "treated", c("age", "sex"), method = "matched")
-plot_balance(balance_before, balance_after)
-}
-
-}

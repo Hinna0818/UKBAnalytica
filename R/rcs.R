@@ -472,26 +472,6 @@ NULL
 #'   \item{aic_table}{data.frame with columns \code{knots} and \code{AIC}.}
 #' }
 #'
-#' @examples
-#' \dontrun{
-#' set.seed(1)
-#' n <- 500
-#' df <- data.frame(
-#'   time   = rexp(n, 0.05),
-#'   status = rbinom(n, 1, 0.4),
-#'   no2    = rnorm(n, 40, 10),
-#'   age    = rnorm(n, 55, 10),
-#'   sex    = rbinom(n, 1, 0.5)
-#' )
-#' fit <- run_rcs(df, exposure = "no2",
-#'                covariates = c("age", "sex"),
-#'                model_type = "cox",
-#'                endpoint   = c("time", "status"))
-#' fit$p_overall
-#' fit$aic_table
-#' plot_rcs(fit, xlab = "NO2 (ug/m3)", ylab = "HR (95% CI)")
-#' }
-#'
 #' @importFrom stats quantile complete.cases
 #' @export
 run_rcs <- function(data,
@@ -588,13 +568,6 @@ run_rcs <- function(data,
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' fit <- run_rcs(df, exposure = "no2", model_type = "cox",
-#'                endpoint = c("time", "status"))
-#' plot_rcs(fit, xlab = "NO2 (ug/m3)")
-#' }
 #'
 #' @importFrom ggplot2 ggplot aes geom_ribbon geom_line geom_hline geom_point
 #'   geom_rect geom_rug annotate labs theme_classic theme element_text

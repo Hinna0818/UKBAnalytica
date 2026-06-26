@@ -46,12 +46,3 @@ UK Biobank evidence sources. This is the recommended public helper when the
 goal is disease ascertainment rather than construction of a full survival
 cohort. For survival-ready endpoints, use \code{\link{build_survival_dataset}}.
 }
-\examples{
-\dontrun{
-asthma <- extract_disease_diagnosis(
-  dt = ukb_data,
-  disease = "Asthma",
-  sources = c("ICD10", "ICD9", "Self-report")
-)
-}
-}

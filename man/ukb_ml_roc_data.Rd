@@ -43,14 +43,3 @@ Converts binary outcome predictions into a tidy ROC curve table with AUC and
 optional 95\% confidence interval. This helper is useful for plotting one or
 more model ROC curves without re-running model evaluation.
 }
-\examples{
-\dontrun{
-roc_df <- ukb_ml_roc_data(
-  truth = test$case,
-  prob = pred_prob,
-  model_label = "XGBoost"
-)
-plot_ml_roc_compare(roc_df)
-}
-
-}

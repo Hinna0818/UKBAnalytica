@@ -55,16 +55,3 @@ A ukb_shap object containing:
 Calculate SHAP values for model interpretation. SHAP values explain
 each feature's contribution to individual predictions.
 }
-\examples{
-\dontrun{
-# Recommended workflow object
-ml <- ukb_ml_workflow(diabetes ~ age + bmi + sbp, data, model = "rf")
-
-# Compute SHAP values on the frozen test set
-shap <- ukb_shap(ml, sample_n = 500)
-
-# Summary plot
-ukb_shap_summary(shap)
-}
-
-}

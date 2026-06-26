@@ -44,11 +44,3 @@ Creates a publication-ready ROC curve plot from one or more data frames
 returned by \code{\link{ukb_ml_roc_data}}. AUC and 95\% confidence interval
 values are included in the legend when available.
 }
-\examples{
-\dontrun{
-roc1 <- ukb_ml_roc_data(y, p1, model_label = "Model 1")
-roc2 <- ukb_ml_roc_data(y, p2, model_label = "Model 2")
-plot_ml_roc_compare(list(roc1, roc2))
-}
-
-}

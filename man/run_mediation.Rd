@@ -91,18 +91,6 @@ Valeri & VanderWeele (2013, 2015).
 \item \code{pm}: Proportion Mediated = NIE / TE
 }
 }
-\examples{
-\dontrun{
-result <- run_mediation(
-  data = mydata,
-  exposure = "treatment",
-  mediator = "bmi",
-  outcome = "blood_pressure"
-)
-summary(result)
-}
-
-}
 \references{
 Valeri L, VanderWeele TJ. Mediation analysis allowing for exposure-mediator
 interactions and causal interpretation. Psychological Methods. 2013;18(2):137-150.

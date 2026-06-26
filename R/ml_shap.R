@@ -41,18 +41,6 @@ NULL
 #'   \item feature_values: Original feature values
 #' }
 #'
-#' @examples
-#' \dontrun{
-#' # Recommended workflow object
-#' ml <- ukb_ml_workflow(diabetes ~ age + bmi + sbp, data, model = "rf")
-#'
-#' # Compute SHAP values on the frozen test set
-#' shap <- ukb_shap(ml, sample_n = 500)
-#'
-#' # Summary plot
-#' ukb_shap_summary(shap)
-#' }
-#'
 #' @export
 ukb_shap <- function(object,
                      data = NULL,

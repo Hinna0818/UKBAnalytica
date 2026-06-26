@@ -38,24 +38,3 @@ A data.table with original data plus processed variable columns
 A unified function to preprocess UKB baseline characteristics with automatic
 field mapping and standardized transformations.
 }
-\examples{
-\dontrun{
-# Process predefined variables
-result <- preprocess_baseline(ukb_data, 
-                              variables = c("sex", "age", "ethnicity", "bmi"))
-
-# Use custom variable mapping
-custom <- list(
-  my_biomarker = list(ukb_col = "p30000_i0", description = "Custom biomarker")
-)
-result <- preprocess_baseline(ukb_data, 
-                              variables = c("sex", "my_biomarker"),
-                              custom_mapping = custom)
-
-# Drop rows with missing values
-result <- preprocess_baseline(ukb_data, 
-                              variables = c("sex", "age"),
-                              missing_action = "drop")
-}
-
-}

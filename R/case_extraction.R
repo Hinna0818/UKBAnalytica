@@ -55,18 +55,6 @@
 #' \code{1902-02-02}, \code{1903-03-03}, \code{1909-09-09}, and
 #' \code{2037-07-07}) are excluded.
 #'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
-#'
-#' # Main analysis: ICD-10 only
-#' main <- extract_cases_by_source(dt, diseases, sources = "ICD10")
-#'
-#' # Sensitivity: All sources including algorithm
-#' sens <- extract_cases_by_source(dt, diseases,
-#'                                  sources = c("ICD10", "ICD9", "Self-report", "Algorithm"))
-#' }
-#'
 #' @import data.table
 #' @export
 extract_cases_by_source <- function(dt,
@@ -287,14 +275,6 @@ extract_cases_by_source <- function(dt,
 #'   fields returned by \code{\link{extract_cases_by_source}} where available.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' asthma <- extract_disease_diagnosis(
-#'   dt = ukb_data,
-#'   disease = "Asthma",
-#'   sources = c("ICD10", "ICD9", "Self-report")
-#' )
-#' }
 extract_disease_diagnosis <- function(dt,
                                       disease,
                                       disease_definitions = NULL,
@@ -525,16 +505,6 @@ generate_wide_format_dual_source <- function(dt,
 #'     \item{{Disease}_date}{(Optional) Earliest diagnosis date}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()[c("AA", "Hypertension", "Diabetes")]
-#'
-#' # For Cox regression:
-#' # - Use _history columns as covariates
-#' # - Use _incident column of primary outcome as event indicator
-#' wide_dt <- generate_wide_format(dt, diseases, sources = "ICD10")
-#' }
-#'
 #' @noRd
 generate_wide_format <- function(dt,
                                   disease_definitions,
@@ -597,13 +567,6 @@ generate_wide_format <- function(dt,
 #' @param baseline_col Column name for baseline date.
 #'
 #' @return A data.table with case counts by source and combination.
-#'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
-#' comparison <- compare_data_sources(dt, diseases)
-#' print(comparison)
-#' }
 #'
 #' @export
 compare_data_sources <- function(dt,
@@ -684,21 +647,6 @@ compare_data_sources <- function(dt,
 #'     \item{outcome_status}{Primary outcome event indicator}
 #'     \item{outcome_surv_time}{Follow-up time for primary outcome}
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()[c("AA", "Hypertension", "Diabetes")]
-#'
-#' # AA as primary outcome, adjusting for hypertension and diabetes history
-#' analysis_dt <- prepare_analysis_dataset(
-#'   dt, diseases, primary_outcome = "AA", sources = "ICD10"
-#' )
-#'
-#' # Cox regression
-#' library(survival)
-#' coxph(Surv(outcome_surv_time, outcome_status) ~
-#'       Hypertension_history + Diabetes_history, data = analysis_dt)
-#' }
 #'
 #' @noRd
 prepare_analysis_dataset <- function(dt,
@@ -798,26 +746,6 @@ prepare_analysis_dataset <- function(dt,
 #'
 #' The function only returns history (prevalent) columns, not incident columns,
 #' to clearly separate covariate extraction from outcome definition.
-#'
-#' @examples
-#' \dontrun{
-#' # Extract hypertension and diabetes history using ICD-10 only
-#' history_icd10 <- extract_disease_history(
-#'   dt = ukb_data,
-#'   diseases = c("Hypertension", "Diabetes"),
-#'   sources = "ICD10"
-#' )
-#'
-#' # Sensitivity: Include self-reported conditions
-#' history_all <- extract_disease_history(
-#'   dt = ukb_data,
-#'   diseases = c("Hypertension", "Diabetes"),
-#'   sources = c("ICD10", "ICD9", "Self-report")
-#' )
-#'
-#' # Merge with main analysis dataset
-#' analysis_dt <- merge(outcome_data, history_icd10, by = "eid")
-#' }
 #'
 #' @export
 extract_disease_history <- function(dt,
@@ -933,15 +861,6 @@ extract_disease_history <- function(dt,
 #' This is a baseline classification helper and does not redefine incident
 #' event logic. Type 1 has priority when both T1 and T2 evidence are present.
 #'
-#' @examples
-#' \dontrun{
-#' dm_base <- extract_diabetes_subtype_baseline(
-#'   dt = ukb_data,
-#'   sources = c("ICD10", "ICD9", "Self-report"),
-#'   include_hba1c = TRUE
-#' )
-#' }
-#'
 #' @export
 extract_diabetes_subtype_baseline <- function(dt,
                                               disease_definitions = NULL,
@@ -1035,17 +954,6 @@ extract_diabetes_subtype_baseline <- function(dt,
 #'     \item{{Disease}_history_hospital}{Prevalent case using ICD-10 + ICD-9}
 #'     \item{{Disease}_history_all}{Prevalent case using all sources}
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' # Get all sensitivity variants at once
-#' history_comparison <- extract_disease_history_sensitivity(
-#'   dt = ukb_data,
-#'   diseases = c("Hypertension", "Diabetes")
-#' )
-#'
-#' # Compare: Hypertension_history_ICD10 vs Hypertension_history_all
-#' }
 #'
 #' @export
 extract_disease_history_sensitivity <- function(dt,

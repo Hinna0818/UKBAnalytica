@@ -30,9 +30,3 @@ An \code{igraph} object with additional vertex attributes.
 \description{
 A thin wrapper around \code{TCMDATA::compute_nodeinfo()}.
 }
-\examples{
-\dontrun{
-ppi_metrics <- compute_protein_ppi_metrics(ppi_filtered, weight_attr = "score")
-}
-
-}

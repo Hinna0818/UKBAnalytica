@@ -63,10 +63,3 @@ A ggplot2 object (or a list with plot and risk table if risk_table = TRUE).
 \description{
 Create a Kaplan-Meier survival curve with optional risk table and log-rank p-value.
 }
-\examples{
-\dontrun{
-library(survival)
-plot_km_curve(lung, time_col = "time", status_col = "status", group_col = "sex")
-}
-
-}

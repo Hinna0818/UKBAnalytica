@@ -53,9 +53,3 @@ result back into R within the active RAP session. This is intended for small
 to medium extractions. For large phenotype pulls, use
 \code{rap_submit_extract()}.
 }
-\examples{
-\dontrun{
-dt <- rap_extract_pheno(field_id = c(31, 53, 21022))
-dt <- rap_extract_pheno(variables = c("sex", "age", "bmi"))
-}
-}

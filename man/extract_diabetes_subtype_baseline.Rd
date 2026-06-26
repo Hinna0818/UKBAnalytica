@@ -56,13 +56,3 @@ classification using baseline HbA1c.
 This is a baseline classification helper and does not redefine incident
 event logic. Type 1 has priority when both T1 and T2 evidence are present.
 }
-\examples{
-\dontrun{
-dm_base <- extract_diabetes_subtype_baseline(
-  dt = ukb_data,
-  sources = c("ICD10", "ICD9", "Self-report"),
-  include_hba1c = TRUE
-)
-}
-
-}

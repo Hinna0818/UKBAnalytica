@@ -32,14 +32,3 @@ A data.table with the original data plus:
 \description{
 Calculate propensity scores using logistic regression or gradient boosting.
 }
-\examples{
-\dontrun{
-# Using logistic regression
-ps_data <- estimate_propensity_score(
-  data = mydata,
-  treatment = "treated",
-  covariates = c("age", "sex", "bmi")
-)
-}
-
-}

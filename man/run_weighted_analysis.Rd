@@ -38,17 +38,3 @@ A data.frame with effect estimates and confidence intervals.
 \description{
 Fit regression models using IPTW weights with robust standard errors.
 }
-\examples{
-\dontrun{
-weighted_data <- calculate_weights(ps_data, treatment = "treated", weight_type = "ATE")
-result <- run_weighted_analysis(
-  data = weighted_data,
-  exposure = "treated",
-  outcome = "outcome",
-  weight_col = "weight",
-  model_type = "logistic",
-  robust_se = TRUE
-)
-}
-
-}

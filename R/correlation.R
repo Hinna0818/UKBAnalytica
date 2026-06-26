@@ -73,23 +73,6 @@ run_correlation <- function(df,
 #'   theme_minimal theme element_text element_blank coord_fixed labs
 #' @return A \code{ggplot2} object. Can be further customized with \code{ggplot2} functions.
 #'
-#' @examples
-#' \dontrun{
-#' library(data.table)
-#' dt <- data.table(x = rnorm(100), y = rnorm(100), z = rnorm(100))
-#' corr_mat <- run_correlation(dt, vars = c("x", "y", "z"))
-#'
-#' # Basic heatmap
-#' plot_correlation(corr_mat)
-#'
-#' # Upper triangle only without values
-#' plot_correlation(
-#'   corr_mat,
-#'   show_values = FALSE,
-#'   upper_triangle = TRUE
-#' )
-#' }
-#'
 #' @export
 
 plot_correlation <- function(corr_matrix,

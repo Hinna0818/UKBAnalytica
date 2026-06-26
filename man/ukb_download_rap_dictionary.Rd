@@ -32,8 +32,3 @@ Runs \code{dx extract_dataset -ddd} inside UK Biobank RAP and returns the
 generated official data dictionary CSV path. This function checks that it is
 being executed in a RAP-like environment before calling \code{dx}.
 }
-\examples{
-\dontrun{
-dict <- ukb_download_rap_dictionary()
-}
-}

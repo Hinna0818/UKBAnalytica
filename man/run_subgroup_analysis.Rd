@@ -59,27 +59,3 @@ A data.frame with columns:
 Perform subgroup analysis by fitting regression models within each level of a
 subgroup variable and calculating interaction p-values.
 }
-\examples{
-\dontrun{
-library(survival)
-# Cox model subgroup analysis
-result <- run_subgroup_analysis(
-  data = lung,
-  exposure = "ph.ecog",
-  subgroup_var = "sex",
-  model_type = "cox",
-  endpoint = c("time", "status")
-)
-
-# Logistic regression subgroup analysis
-mtcars$am_binary <- ifelse(mtcars$am == 1, 1, 0)
-result <- run_subgroup_analysis(
-  data = mtcars,
-  exposure = "hp",
-  outcome = "am_binary",
-  subgroup_var = "cyl",
-  model_type = "logistic"
-)
-}
-
-}

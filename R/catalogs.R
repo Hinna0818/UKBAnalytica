@@ -112,13 +112,6 @@ get_medication_catalog <- function(medication = NULL,
 #' @return A data.frame.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' portal_codes <- load_pomegranate_portal_coding(
-#'   "ukb_pomegranate_portal_coding_evidence.csv"
-#' )
-#' head(portal_codes)
-#' }
 load_pomegranate_portal_coding <- function(path = NULL) {
   if (is.null(path)) {
     stop(

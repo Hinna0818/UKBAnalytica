@@ -30,12 +30,3 @@ Unified interface for community detection in STRING-derived PPI networks.
 New analyses should call this function and choose the algorithm with
 \code{method}. Method-specific helper functions are retained internally.
 }
-\examples{
-\dontrun{
-ppi_clustered <- run_protein_ppi_clustering(
-  ppi,
-  method = "fastgreedy",
-  n_clusters = 4
-)
-}
-}

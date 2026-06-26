@@ -42,21 +42,3 @@ A \code{ggplot2} object. Can be further customized with \code{ggplot2} functions
 Create an annotated heatmap of a correlation matrix with customizable appearance.
 This helps identify patterns, multicollinearity, and variable relationships visually.
 }
-\examples{
-\dontrun{
-library(data.table)
-dt <- data.table(x = rnorm(100), y = rnorm(100), z = rnorm(100))
-corr_mat <- run_correlation(dt, vars = c("x", "y", "z"))
-
-# Basic heatmap
-plot_correlation(corr_mat)
-
-# Upper triangle only without values
-plot_correlation(
-  corr_mat,
-  show_values = FALSE,
-  upper_triangle = TRUE
-)
-}
-
-}

@@ -46,19 +46,3 @@ names available in the current project.
 This is intended to be a simple entry point for users who want to inspect UKB
 field metadata in R before planning an extraction.
 }
-\examples{
-\dontrun{
-# Use a UKB data dictionary metadata file available in the current session
-meta <- get_field_metadata(
-  query = "blood pressure",
-  ukb_data_dict = "Data_Dictionary_Showcase.tsv"
-)
-
-# Combine the data dictionary with the current RAP-approved field list
-meta <- get_field_metadata(
-  field_id = c(31, 53, 21022, 4080),
-  ukb_data_dict = "Data_Dictionary_Showcase.tsv"
-)
-}
-
-}

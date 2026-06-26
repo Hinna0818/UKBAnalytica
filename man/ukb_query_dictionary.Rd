@@ -65,9 +65,3 @@ This function is intended for RAP use. By default it requires a RAP-like
 environment; set \code{require_rap = FALSE} only for package development or
 tests using simulated dictionaries.
 }
-\examples{
-\dontrun{
-res <- ukb_query_dictionary("systolic blood pressure")
-res <- ukb_query_dictionary(c("sex", "21022", "p41270"))
-}
-}

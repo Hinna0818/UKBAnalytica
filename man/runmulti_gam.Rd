@@ -58,19 +58,3 @@ non-linear (\code{edf > 1}).  When \code{smooth = FALSE} the main variable
 enters as a parametric linear term and the output mirrors \code{runmulti_glm}
 (\code{beta}, Wald CI, p-value).
 }
-\examples{
-\dontrun{
-# Smooth GAM (test non-linearity)
-res <- runmulti_gam(mtcars, main_var = c("hp", "wt"), outcome = "mpg")
-
-# Linear GAM (same as runmulti_glm with family = "gaussian")
-res <- runmulti_gam(mtcars, main_var = c("hp", "wt"), outcome = "mpg",
-                    smooth = FALSE)
-
-# Poisson GAM for count outcomes
-mtcars$count <- round(mtcars$mpg)
-res <- runmulti_gam(mtcars, main_var = "hp", outcome = "count",
-                    family = "poisson", covariates = "cyl")
-}
-
-}

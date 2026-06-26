@@ -51,9 +51,3 @@ Submits an asynchronous RAP \code{table-exporter} job. This is the preferred
 interface for large extraction jobs because the work runs on RAP rather than
 inside the current R session.
 }
-\examples{
-\dontrun{
-job <- rap_submit_extract(field_id = c(31, 53, 21022), file = "baseline_core")
-job$job_id
-}
-}

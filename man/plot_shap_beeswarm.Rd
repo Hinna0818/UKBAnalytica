@@ -68,10 +68,3 @@ Creates a SHAP beeswarm plot directly from a \code{ukb_shap} object. The plot
 displays the top features ranked by mean absolute SHAP value, with point color
 representing the normalized feature value.
 }
-\examples{
-\dontrun{
-shap <- ukb_shap(final_model, data = validation_data, method = "xgboost")
-plot_shap_beeswarm(shap, max_features = 20)
-}
-
-}

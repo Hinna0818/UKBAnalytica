@@ -74,9 +74,3 @@ A list with components \code{gene_symbols}, \code{entrez_ids}, \code{mapping},
 Convert protein identifiers to gene symbols, then to Entrez IDs, and run
 over-representation analysis (ORA) with \code{clusterProfiler::enrichKEGG()}.
 }
-\examples{
-\dontrun{
-run_protein_kegg_ora(c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"))
-}
-
-}

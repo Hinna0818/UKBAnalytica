@@ -169,26 +169,6 @@ NULL
 #' @importFrom data.table := data.table copy is.data.table 
 #' @importFrom stats complete.cases 
 #' @return A data.table with original data plus processed variable columns
-#' @examples
-#' \dontrun{
-#' # Process predefined variables
-#' result <- preprocess_baseline(ukb_data, 
-#'                               variables = c("sex", "age", "ethnicity", "bmi"))
-#' 
-#' # Use custom variable mapping
-#' custom <- list(
-#'   my_biomarker = list(ukb_col = "p30000_i0", description = "Custom biomarker")
-#' )
-#' result <- preprocess_baseline(ukb_data, 
-#'                               variables = c("sex", "my_biomarker"),
-#'                               custom_mapping = custom)
-#' 
-#' # Drop rows with missing values
-#' result <- preprocess_baseline(ukb_data, 
-#'                               variables = c("sex", "age"),
-#'                               missing_action = "drop")
-#' }
-#' 
 #' @export
 preprocess_baseline <- function(df, 
                                 variables,
@@ -421,12 +401,6 @@ preprocess_baseline <- function(df,
 #' 
 #' @return A data.table with calculated `sbp` or `dbp` column added
 #' 
-#' @examples
-#' \dontrun{
-#' result <- calculate_blood_pressure(ukb_data, type = "sbp")
-#' result <- calculate_blood_pressure(result, type = "dbp")
-#' }
-#' 
 #' @export
 calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = c("auto", "manual")) {
   type <- match.arg(type)
@@ -502,11 +476,6 @@ calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = c("aut
 #' 
 #' @return A data.table with binary medication columns added (1=Yes, 0=No, NA=Missing)
 #' 
-#' @examples
-#' \dontrun{
-#' result <- extract_medications(ukb_data, c("cholesterol", "blood_pressure"))
-#' }
-#' 
 #' @export
 extract_medications <- function(df, medications = c("cholesterol", "blood_pressure", "insulin")) {
   
@@ -570,11 +539,6 @@ extract_medications <- function(df, medications = c("cholesterol", "blood_pressu
 #'   Available: "NO2", "PM10", "PM2.5", "NOx"
 #' @importFrom data.table := data.table copy is.data.table as.data.table fifelse
 #' @return A data.table with averaged pollution columns
-#' 
-#' @examples
-#' \dontrun{
-#' result <- calculate_air_pollution(ukb_data, c("NO2", "PM2.5"))
-#' }
 #' 
 #' @export
 calculate_air_pollution <- function(df, pollutants = c("NO2", "PM10", "PM2.5", "NOx")) {
@@ -746,16 +710,6 @@ calculate_diet_score <- function(df,
 #'     "blood_pressure", "medications", "biomarkers", "pollution", "diet"
 #' @importFrom data.table data.table
 #' @return A data.frame with variable information
-#' 
-#' @examples
-#' \dontrun{
-#' # See all available variables
-#' get_variable_info()
-#' 
-#' # Filter by category
-#' get_variable_info("demographics")
-#' get_variable_info("lifestyle")
-#' }
 #' 
 #' @export
 get_variable_info <- function(category = "all") {

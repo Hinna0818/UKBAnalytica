@@ -35,10 +35,3 @@ Processing pipeline:
 \item Join codes and dates by eid and positional index
 }
 }
-\examples{
-\dontrun{
-ukb_data <- data.table::fread("ukb_data.csv")
-icd10_long <- parse_icd10_diagnoses(ukb_data)
-}
-
-}

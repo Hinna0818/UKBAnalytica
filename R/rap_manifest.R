@@ -67,7 +67,8 @@ ukb_check_rap_env <- function(output_dir = NULL,
     message = if (isTRUE(check_auth)) NA_character_ else "Authentication was not checked."
   )
 
-  checks <- data.frame(
+  checks_env <- new.env(parent = emptyenv())
+  checks_env$checks <- data.frame(
     check = character(),
     status = character(),
     message = character(),
@@ -77,8 +78,8 @@ ukb_check_rap_env <- function(output_dir = NULL,
     if (is.null(status)) {
       status <- if (isTRUE(skipped)) "skip" else if (isTRUE(ok)) "pass" else "fail"
     }
-    checks <<- rbind(
-      checks,
+    checks_env$checks <- rbind(
+      checks_env$checks,
       data.frame(
         check = check,
         status = status,
@@ -189,7 +190,7 @@ ukb_check_rap_env <- function(output_dir = NULL,
     job_id = unname(env_vars[["DX_JOB_ID"]]),
     run_id = unname(env_vars[["DX_RUN_ID"]]),
     output = output_info,
-    checks = checks
+    checks = checks_env$checks
   )
   class(out) <- c("ukb_rap_env", class(out))
 

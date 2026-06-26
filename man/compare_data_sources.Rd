@@ -20,11 +20,3 @@ A data.table with case counts by source and combination.
 Generates a summary table comparing case counts from different data sources.
 Useful for methods sections and sensitivity analysis planning.
 }
-\examples{
-\dontrun{
-diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
-comparison <- compare_data_sources(dt, diseases)
-print(comparison)
-}
-
-}

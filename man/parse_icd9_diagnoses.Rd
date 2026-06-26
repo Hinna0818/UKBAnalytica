@@ -28,10 +28,3 @@ in p41281_a*) into a standardized long-format data.table.
 ICD-9 codes in UKB follow the format: 3-5 digits, optionally prefixed with V or E.
 The function handles logical NA columns that may occur when all values are missing.
 }
-\examples{
-\dontrun{
-ukb_data <- data.table::fread("ukb_data.csv")
-icd9_long <- parse_icd9_diagnoses(ukb_data)
-}
-
-}

@@ -32,11 +32,3 @@ A ggplot2 object
 \description{
 Create SHAP summary plot (beeswarm or bar) for feature importance.
 }
-\examples{
-\dontrun{
-ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-shap <- ukb_shap(ml)
-plot_shap_summary(shap)
-}
-
-}

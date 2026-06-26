@@ -54,17 +54,3 @@ A data.frame with mediation results for each mediator, including:
 Perform mediation analysis for multiple potential mediators, testing each one
 separately.
 }
-\examples{
-\dontrun{
-results <- run_multi_mediator(
-  data = mydata,
-  exposure = "smoking",
-  mediators = c("bmi", "blood_pressure", "ldl", "hba1c"),
-  outcome = "cvd_time",
-  covariates = c("age", "sex"),
-  outcome_type = "cox",
-  endpoint = c("cvd_time", "cvd_status")
-)
-}
-
-}

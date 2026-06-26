@@ -19,13 +19,3 @@ A thin wrapper around \code{TCMDATA::go_barplot()} for GO enrichment results.
 This function accepts either a raw \code{enrichResult} object or a list returned
 by \code{run_protein_ora()}.
 }
-\examples{
-\dontrun{
-go_res <- run_protein_ora(
-  c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"),
-  ont = "ALL"
-)
-plot_go_ora_bar(go_res)
-}
-
-}

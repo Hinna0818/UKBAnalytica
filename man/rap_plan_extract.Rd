@@ -46,9 +46,3 @@ requests, dataset, entity, and column counts.
 \description{
 Plan a RAP Phenotype Extraction
 }
-\examples{
-\dontrun{
-plan <- rap_plan_extract(field_id = c(31, 53, 21022))
-plan <- rap_plan_extract(variables = c("sex", "age", "bmi"))
-}
-}

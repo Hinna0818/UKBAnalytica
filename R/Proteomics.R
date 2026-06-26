@@ -32,21 +32,6 @@ NULL
 #' @return A data.frame with columns `protein`, `gene_symbol`, and
 #'   `mapping_source`.
 #'
-#' @examples
-#' \dontrun{
-#' protein_to_gene_symbol(c("olink_instance_0.eno2", "olink_instance_0.tnf"))
-#'
-#' custom_map <- data.frame(
-#'   protein = c("P02768", "P01375"),
-#'   gene_symbol = c("ALB", "TNF")
-#' )
-#' protein_to_gene_symbol(
-#'   c("P02768", "P01375"),
-#'   from_type = "UNIPROT",
-#'   mapping_table = custom_map
-#' )
-#' }
-#'
 #' @export
 protein_to_gene_symbol <- function(proteins,
                                    protein_col = NULL,
@@ -160,11 +145,6 @@ protein_to_gene_symbol <- function(proteins,
 #' @return A list with components `gene_symbols`, `mapping`, `universe_symbols`,
 #'   and `ora_result`.
 #'
-#' @examples
-#' \dontrun{
-#' run_protein_ora(c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"))
-#' }
-#'
 #' @export
 run_protein_ora <- function(proteins,
                             protein_col = NULL,
@@ -233,11 +213,6 @@ run_protein_ora <- function(proteins,
 #'
 #' @return A list with components `gene_symbols`, `entrez_ids`, `mapping`,
 #'   `universe_symbols`, `universe_entrez_ids`, and `ora_result`.
-#'
-#' @examples
-#' \dontrun{
-#' run_protein_kegg_ora(c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"))
-#' }
 #'
 #' @export
 run_protein_kegg_ora <- function(proteins,
@@ -336,13 +311,6 @@ run_protein_kegg_ora <- function(proteins,
 #' @return A list with components `source`, `gene_symbols`, `mapping`, and
 #'   `ppi`.
 #'
-#' @examples
-#' \dontrun{
-#' ppi_res <- get_protein_ppi(
-#'   c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp")
-#' )
-#' }
-#'
 #' @export
 get_protein_ppi <- function(proteins,
                             protein_col = NULL,
@@ -419,12 +387,6 @@ get_protein_ppi <- function(proteins,
 #'
 #' @return An `igraph` object.
 #'
-#' @examples
-#' \dontrun{
-#' ppi_res <- get_protein_ppi(c("IL6", "TNF", "CRP"))
-#' ppi_filtered <- subset_protein_ppi(ppi_res, score_cutoff = 0.7, n = 100)
-#' }
-#'
 #' @export
 subset_protein_ppi <- function(ppi,
                                n = NULL,
@@ -458,11 +420,6 @@ subset_protein_ppi <- function(ppi,
 #'
 #' @return An `igraph` object with additional vertex attributes.
 #'
-#' @examples
-#' \dontrun{
-#' ppi_metrics <- compute_protein_ppi_metrics(ppi_filtered, weight_attr = "score")
-#' }
-#'
 #' @export
 compute_protein_ppi_metrics <- function(ppi,
                                         weight_attr = "score",
@@ -493,12 +450,6 @@ compute_protein_ppi_metrics <- function(ppi,
 #'   Default is `TRUE`.
 #'
 #' @return A list with components `graph` and `table`.
-#'
-#' @examples
-#' \dontrun{
-#' rank_res <- rank_protein_ppi_nodes(ppi_metrics)
-#' head(rank_res$table)
-#' }
 #'
 #' @export
 rank_protein_ppi_nodes <- function(ppi,
@@ -548,14 +499,6 @@ rank_protein_ppi_nodes <- function(ppi,
 #' @return An \code{igraph} object with method-specific cluster attributes.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' ppi_clustered <- run_protein_ppi_clustering(
-#'   ppi,
-#'   method = "fastgreedy",
-#'   n_clusters = 4
-#' )
-#' }
 run_protein_ppi_clustering <- function(ppi,
                                        method = c("fastgreedy", "louvain", "mcode", "mcl"),
                                        ...) {
@@ -581,11 +524,6 @@ run_protein_ppi_clustering <- function(ppi,
 #' @param weights Optional edge weights.
 #'
 #' @return An `igraph` object with a `louvain_cluster` vertex attribute.
-#'
-#' @examples
-#' \dontrun{
-#' ppi_louvain <- run_protein_ppi_louvain(ppi_metrics)
-#' }
 #'
 #' @noRd
 run_protein_ppi_louvain <- function(ppi,
@@ -619,11 +557,6 @@ run_protein_ppi_louvain <- function(ppi,
 #' @param prefix Character prefix for cluster labels. Default is `"FG"`.
 #'
 #' @return An `igraph` object with a fast greedy cluster vertex attribute.
-#'
-#' @examples
-#' \dontrun{
-#' ppi_fg <- run_protein_ppi_fastgreedy(ppi_graph, n_clusters = 4)
-#' }
 #'
 #' @noRd
 run_protein_ppi_fastgreedy <- function(ppi,
@@ -692,11 +625,6 @@ run_protein_ppi_fastgreedy <- function(ppi,
 #'
 #' @return An `igraph` object with MCODE-related vertex attributes.
 #'
-#' @examples
-#' \dontrun{
-#' ppi_mcode <- run_protein_ppi_mcode(ppi_metrics)
-#' }
-#'
 #' @noRd
 run_protein_ppi_mcode <- function(ppi,
                                   vwp = 0.2,
@@ -734,11 +662,6 @@ run_protein_ppi_mcode <- function(ppi,
 #'
 #' @return A data.frame containing node-level MCODE results.
 #'
-#' @examples
-#' \dontrun{
-#' mcode_res <- get_protein_mcode_res(ppi_mcode, only_clusters = TRUE)
-#' }
-#'
 #' @noRd
 get_protein_mcode_res <- function(ppi, only_clusters = FALSE) {
   .require_package("TCMDATA")
@@ -761,11 +684,6 @@ get_protein_mcode_res <- function(ppi, only_clusters = FALSE) {
 #'   `FALSE`.
 #'
 #' @return An `igraph` object with an `MCL_cluster` vertex attribute.
-#'
-#' @examples
-#' \dontrun{
-#' ppi_mcl <- run_protein_ppi_mcl(ppi_metrics)
-#' }
 #'
 #' @noRd
 run_protein_ppi_mcl <- function(ppi,
@@ -796,11 +714,6 @@ run_protein_ppi_mcl <- function(ppi,
 #' @param min_size Integer. Minimum cluster size to retain. Default is `3`.
 #'
 #' @return A data.frame containing cluster scores.
-#'
-#' @examples
-#' \dontrun{
-#' louvain_scores <- score_protein_ppi_clusters(ppi_louvain)
-#' }
 #'
 #' @export
 score_protein_ppi_clusters <- function(ppi,
@@ -844,14 +757,6 @@ score_protein_ppi_clusters <- function(ppi,
 #' @param seed Integer random seed. Default is `42`.
 #'
 #' @return A list with components `targets`, `mapping`, and `robustness`.
-#'
-#' @examples
-#' \dontrun{
-#' robustness_res <- run_protein_ppi_robustness(
-#'   ppi_metrics,
-#'   targets = c("olink_instance_0.il6", "olink_instance_0.tnf")
-#' )
-#' }
 #'
 #' @export
 run_protein_ppi_robustness <- function(ppi,
@@ -914,15 +819,6 @@ run_protein_ppi_robustness <- function(ppi,
 #'
 #' @return A `ggplot2` object.
 #'
-#' @examples
-#' \dontrun{
-#' go_res <- run_protein_ora(
-#'   c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"),
-#'   ont = "ALL"
-#' )
-#' plot_go_ora_bar(go_res)
-#' }
-#'
 #' @export
 plot_go_ora_bar <- function(x, ...) {
   .require_package("TCMDATA")
@@ -942,15 +838,6 @@ plot_go_ora_bar <- function(x, ...) {
 #' @param ... Additional arguments passed to `TCMDATA::gglollipop()`.
 #'
 #' @return A `ggplot2` object.
-#'
-#' @examples
-#' \dontrun{
-#' go_res <- run_protein_ora(
-#'   c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"),
-#'   ont = "ALL"
-#' )
-#' plot_enrichment_lollipop(go_res)
-#' }
 #'
 #' @export
 plot_enrichment_lollipop <- function(x, ...) {

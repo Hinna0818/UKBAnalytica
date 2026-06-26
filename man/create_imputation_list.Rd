@@ -19,10 +19,3 @@ An \code{imputationList} object.
 Converts a list of data.frames to a \code{imputationList} object for use
 with mitools functions.
 }
-\examples{
-\dontrun{
-mi_list <- create_imputation_list(list(data1, data2, data3))
-models <- with(mi_list, lm(y ~ x))
-}
-
-}

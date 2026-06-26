@@ -50,30 +50,6 @@ NULL
 #'     \item{call}{The function call}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' # Method 1: Pool pre-fitted models
-#' models <- lapply(mi_datasets, function(d) {
-#'   glm(outcome ~ exposure + age + sex, data = d, family = binomial())
-#' })
-#' pooled <- pool_mi_models(models, model_type = "logistic")
-#' summary(pooled)
-#'
-#' # Method 2: Fit and pool in one step
-#' pooled <- pool_mi_models(
-#'   datasets = mi_datasets,
-#'   formula = outcome ~ exposure + age + sex,
-#'   model_type = "logistic"
-#' )
-#'
-#' # Cox regression
-#' pooled_cox <- pool_mi_models(
-#'   datasets = mi_datasets,
-#'   formula = Surv(time, status) ~ treatment + age,
-#'   model_type = "cox"
-#' )
-#' }
-#'
 #' @export
 pool_mi_models <- function(models = NULL,
                            datasets = NULL,
@@ -178,15 +154,6 @@ if (is.null(models) && is.null(datasets)) {
 #'
 #' @return A list of fitted model objects.
 #'
-#' @examples
-#' \dontrun{
-#' models <- fit_mi_models(
-#'   datasets = mi_datasets,
-#'   formula = y ~ x1 + x2,
-#'   model_type = "lm"
-#' )
-#' }
-#'
 #' @export
 fit_mi_models <- function(datasets,
                           formula,
@@ -257,12 +224,6 @@ fit_mi_models <- function(datasets,
 #'
 #' @return An \code{imputationList} object.
 #'
-#' @examples
-#' \dontrun{
-#' mi_list <- create_imputation_list(list(data1, data2, data3))
-#' models <- with(mi_list, lm(y ~ x))
-#' }
-#'
 #' @export
 create_imputation_list <- function(datasets, validate = TRUE) {
   if (!is.list(datasets) || length(datasets) < 2) {
@@ -309,17 +270,6 @@ create_imputation_list <- function(datasets, validate = TRUE) {
 #'   names are taken from the first estimate vector or generated as "est1", "est2", etc.
 #'
 #' @return An object of class \code{mi_pooled_result}.
-#'
-#' @examples
-#' \dontrun{
-#' estimates <- list(c(effect = 0.5), c(effect = 0.6), c(effect = 0.4))
-#' variances <- list(
-#'   matrix(0.01, nrow = 1),
-#'   matrix(0.012, nrow = 1),
-#'   matrix(0.011, nrow = 1)
-#' )
-#' pooled <- pool_custom_estimates(estimates, variances, labels = "effect")
-#' }
 #'
 #' @export
 pool_custom_estimates <- function(estimates,

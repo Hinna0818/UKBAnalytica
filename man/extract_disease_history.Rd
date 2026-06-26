@@ -51,24 +51,3 @@ epidemiological studies. Common use cases:
 The function only returns history (prevalent) columns, not incident columns,
 to clearly separate covariate extraction from outcome definition.
 }
-\examples{
-\dontrun{
-# Extract hypertension and diabetes history using ICD-10 only
-history_icd10 <- extract_disease_history(
-  dt = ukb_data,
-  diseases = c("Hypertension", "Diabetes"),
-  sources = "ICD10"
-)
-
-# Sensitivity: Include self-reported conditions
-history_all <- extract_disease_history(
-  dt = ukb_data,
-  diseases = c("Hypertension", "Diabetes"),
-  sources = c("ICD10", "ICD9", "Self-report")
-)
-
-# Merge with main analysis dataset
-analysis_dt <- merge(outcome_data, history_icd10, by = "eid")
-}
-
-}

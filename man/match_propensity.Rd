@@ -42,18 +42,3 @@ A data.table with matched data, including:
 \description{
 Perform propensity score matching using nearest neighbor or optimal matching.
 }
-\examples{
-\dontrun{
-# First estimate PS
-ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-
-# Then match
-matched_data <- match_propensity(
-  ps_data,
-  treatment = "treated",
-  ratio = 1,
-  caliper = 0.2
-)
-}
-
-}

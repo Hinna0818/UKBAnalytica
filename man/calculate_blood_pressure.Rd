@@ -27,10 +27,3 @@ automated readings are primary and manual readings are used as fallback when
 automated measurements are unavailable. Returns the mean of the two available
 readings.
 }
-\examples{
-\dontrun{
-result <- calculate_blood_pressure(ukb_data, type = "sbp")
-result <- calculate_blood_pressure(result, type = "dbp")
-}
-
-}

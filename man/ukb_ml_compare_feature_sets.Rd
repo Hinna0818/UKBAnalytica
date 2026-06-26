@@ -71,19 +71,3 @@ by cross-validation, learn a threshold on training-development predictions,
 refit the final model, evaluate the frozen test set, and return unified
 metrics, prediction, threshold, and ROC tables.
 }
-\examples{
-\dontrun{
-res <- ukb_ml_compare_feature_sets(
-  split = split,
-  feature_sets = list(
-    proteins = protein_vars,
-    clinical = covariates,
-    combined = c(protein_vars, covariates)
-  ),
-  model = "xgboost",
-  threshold_method = "youden"
-)
-plot_ml_roc_compare(res$roc)
-}
-
-}

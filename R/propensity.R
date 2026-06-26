@@ -14,16 +14,6 @@
 #'     \item{ps}{Propensity score (probability of treatment)}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' # Using logistic regression
-#' ps_data <- estimate_propensity_score(
-#'   data = mydata,
-#'   treatment = "treated",
-#'   covariates = c("age", "sex", "bmi")
-#' )
-#' }
-#'
 #' @import data.table
 #' @importFrom stats glm binomial predict as.formula
 #' @importFrom survival Surv coxph
@@ -145,20 +135,6 @@ estimate_propensity_score <- function(data,
 #'     \item{match_distance}{Distance between matched pairs}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' # First estimate PS
-#' ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-#'
-#' # Then match
-#' matched_data <- match_propensity(
-#'   ps_data,
-#'   treatment = "treated",
-#'   ratio = 1,
-#'   caliper = 0.2
-#' )
-#' }
-#'
 #' @import data.table
 #' @export
 match_propensity <- function(data,
@@ -276,12 +252,6 @@ match_propensity <- function(data,
 #'
 #' Stabilized weights multiply by the marginal probability of treatment.
 #'
-#' @examples
-#' \dontrun{
-#' ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-#' weighted_data <- calculate_weights(ps_data, treatment = "treated", weight_type = "ATE")
-#' }
-#'
 #' @import data.table
 #' @export
 calculate_weights <- function(data,
@@ -379,16 +349,6 @@ calculate_weights <- function(data,
 #'     \item{variance_ratio}{Variance ratio (treated/control)}
 #'     \item{balanced}{Whether SMD < threshold}
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' balance <- assess_balance(
-#'   data = ps_data,
-#'   treatment = "treated",
-#'   covariates = c("age", "sex", "bmi"),
-#'   method = "unmatched"
-#' )
-#' }
 #'
 #' @importFrom stats weighted.mean var
 #' @export
@@ -499,19 +459,6 @@ assess_balance <- function(data,
 #' @param robust_se Logical; whether to use robust standard errors. Default TRUE.
 #'
 #' @return A data.frame with effect estimates and confidence intervals.
-#'
-#' @examples
-#' \dontrun{
-#' weighted_data <- calculate_weights(ps_data, treatment = "treated", weight_type = "ATE")
-#' result <- run_weighted_analysis(
-#'   data = weighted_data,
-#'   exposure = "treated",
-#'   outcome = "outcome",
-#'   weight_col = "weight",
-#'   model_type = "logistic",
-#'   robust_se = TRUE
-#' )
-#' }
 #'
 #' @importFrom stats as.formula glm binomial lm coef confint vcov qnorm
 #' @export

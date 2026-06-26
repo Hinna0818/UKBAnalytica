@@ -117,20 +117,3 @@ Follow-up time calculation (controlled by primary_disease):
 \item Censored: (min(death_date, censor_date) - baseline_date) / 365.25
 }
 }
-\examples{
-\dontrun{
-ukb_data <- data.table::fread("ukb_data.csv")
-diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
-
-# Use self-report for prevalent exclusion, but not for outcome
-surv_data <- build_survival_dataset(
-  ukb_data,
-  diseases,
-  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
-  outcome_sources = c("ICD10", "Death"),
-  primary_disease = "AA",
-  dt_threads = 8
-)
-}
-
-}

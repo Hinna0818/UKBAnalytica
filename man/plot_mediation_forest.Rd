@@ -31,11 +31,3 @@ A ggplot2 object.
 \description{
 Create a forest plot to visualize results from multiple mediator analysis.
 }
-\examples{
-\dontrun{
-multi_results <- run_multi_mediator(data, "exposure",
-                                     c("bmi", "bp", "ldl"), "outcome")
-plot_mediation_forest(multi_results, effect_type = "tnie")
-}
-
-}

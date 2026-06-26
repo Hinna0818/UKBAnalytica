@@ -40,18 +40,6 @@
 #'   scale_x_continuous scale_y_continuous expansion labs theme_classic theme
 #'   element_line element_blank geom_hline geom_text
 #'
-#' @examples
-#' \dontrun{
-#' cox_res$p_bonferroni <- p.adjust(cox_res$pvalue, method = "bonferroni")
-#' plot_regression_volcano(
-#'   cox_res,
-#'   effect_col = "HR",
-#'   p_col = "pvalue",
-#'   adjusted_p_col = "p_bonferroni",
-#'   label_col = "gene_symbol"
-#' )
-#' }
-#'
 #' @export
 plot_regression_volcano <- function(data,
                                     effect_col = NULL,

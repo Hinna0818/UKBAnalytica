@@ -72,9 +72,3 @@ Convert protein identifiers to gene symbols and run over-representation
 analysis (ORA) with \code{clusterProfiler::enrichGO()}. This is the GO-specific
 interface for proteomics hits extracted from UK Biobank RAP Olink data.
 }
-\examples{
-\dontrun{
-run_protein_ora(c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp"))
-}
-
-}

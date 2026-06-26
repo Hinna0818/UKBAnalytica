@@ -64,24 +64,3 @@ An object of class "ukb_ml" containing:
 Unified interface for training machine learning models on UK Biobank data.
 Supports random forest, XGBoost, elastic net, SVM, and neural networks.
 }
-\examples{
-\dontrun{
-# Random Forest classification
-ml_rf <- ukb_ml_model(
-  diabetes ~ age + bmi + sbp + smoking,
-  data = ukb_data,
-  model = "rf",
-  task = "classification"
-)
-
-# XGBoost with custom parameters
-ml_xgb <- ukb_ml_model(
-  bmi ~ age + sex + income,
-  data = ukb_data,
-  model = "xgboost",
-  task = "regression",
-  params = list(nrounds = 100, max_depth = 6)
-)
-}
-
-}

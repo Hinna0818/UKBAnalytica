@@ -82,10 +82,11 @@ get_variable_set <- function(set,
 }
 
 .get_variable_set_catalog <- function() {
-  rows <- list()
+  rows_env <- new.env(parent = emptyenv())
+  rows_env$rows <- list()
   add <- function(set, category, variable, field_id, ukb_col = NULL,
                   label = NULL, role = "raw_field", notes = NA_character_) {
-    rows[[length(rows) + 1L]] <<- data.frame(
+    rows_env$rows[[length(rows_env$rows) + 1L]] <- data.frame(
       set = set,
       category = category,
       variable = variable,
@@ -247,7 +248,7 @@ get_variable_set <- function(set,
     add("genetic_pcs_20", "genetics", paste0("genetic_pc_", i), 22009, paste0("p22009_a", i), paste0("Genetic principal component ", i))
   }
 
-  out <- do.call(rbind, rows)
+  out <- do.call(rbind, rows_env$rows)
   out[order(out$category, out$set, out$variable), , drop = FALSE]
 }
 

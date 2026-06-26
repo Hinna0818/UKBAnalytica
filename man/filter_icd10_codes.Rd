@@ -19,11 +19,4 @@ A data.table with filtered records and added \code{disease} column.
 \description{
 Filters ICD-10 diagnosis records using regular expression pattern matching.
 }
-\examples{
-\dontrun{
-icd10_long <- parse_icd10_diagnoses(ukb_data)
-aa_cases <- filter_icd10_codes(icd10_long, "^I71", "Aortic_Aneurysm")
-}
-
-}
 \keyword{internal}

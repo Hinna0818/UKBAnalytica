@@ -23,12 +23,6 @@
 #' diagnosis fields: the k-th procedure code in \code{p41272} corresponds to the
 #' date stored in \code{p41282_a(k-1)} (0-indexed).
 #'
-#' @examples
-#' \dontrun{
-#' ukb_data <- data.table::fread("ukb_data.csv")
-#' opcs4_long <- parse_opcs4_procedures(ukb_data)
-#' }
-#'
 #' @export
 parse_opcs4_procedures <- function(dt) {
   if (!data.table::is.data.table(dt)) {

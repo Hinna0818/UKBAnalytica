@@ -60,12 +60,3 @@ A list with components \code{targets}, \code{mapping}, and \code{robustness}.
 Convert target protein identifiers to gene symbols and run STRING-network
 robustness analysis via \code{TCMDATA::ppi_knock()}.
 }
-\examples{
-\dontrun{
-robustness_res <- run_protein_ppi_robustness(
-  ppi_metrics,
-  targets = c("olink_instance_0.il6", "olink_instance_0.tnf")
-)
-}
-
-}

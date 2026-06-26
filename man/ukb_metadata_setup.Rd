@@ -56,13 +56,3 @@ fields, a UK Biobank data dictionary, and coding/encoding tables. This is the
 recommended first step before searching fields, inspecting field definitions,
 extracting phenotype columns, or decoding RAP exports.
 }
-\examples{
-\dontrun{
-meta <- ukb_metadata_setup(source = "auto")
-
-meta <- ukb_metadata_setup(
-  data_dict = "app123.data_dictionary.csv",
-  codings = "Codings.tsv"
-)
-}
-}

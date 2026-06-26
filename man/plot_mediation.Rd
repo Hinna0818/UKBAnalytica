@@ -41,11 +41,3 @@ A ggplot2 object.
 Create visualizations for mediation analysis results, including path diagrams,
 effect bar charts, and decomposition plots.
 }
-\examples{
-\dontrun{
-med_result <- run_mediation(data, "exposure", "mediator", "outcome")
-plot_mediation(med_result, type = "effects")
-plot_mediation(med_result, type = "decomposition")
-}
-
-}

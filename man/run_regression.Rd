@@ -66,35 +66,3 @@ A unified wrapper around \code{runmulti_cox}, \code{runmulti_lm},
 \code{runmulti_logit}, \code{runmulti_glm}, \code{runmulti_negbin}, and
 \code{runmulti_gam}.  Select the model family with \code{type}.
 }
-\examples{
-\dontrun{
-library(survival)
-run_regression(lung, main_var = c("age", "sex"),
-               type = "cox", endpoint = c("time", "status"))
-
-run_regression(mtcars, main_var = c("hp", "wt"),
-               type = "lm", outcome = "mpg")
-
-mtcars$am_bin <- as.integer(mtcars$am == 1)
-run_regression(mtcars, main_var = c("hp", "wt"),
-               type = "logit", outcome = "am_bin")
-
-run_regression(mtcars, main_var = "hp", type = "lm", outcome = "mpg",
-               covariate_sets = list(
-                 crude = NULL,
-                 model1 = c("cyl"),
-                 model2 = c("cyl", "wt")
-               ))
-
-mtcars$count <- round(mtcars$mpg)
-run_regression(mtcars, main_var = c("hp", "wt"),
-               type = "glm", family = "poisson", outcome = "count")
-
-run_regression(mtcars, main_var = c("hp", "wt"),
-               type = "negbin", outcome = "count")
-
-run_regression(mtcars, main_var = c("hp", "wt"),
-               type = "gam", outcome = "mpg")
-}
-
-}

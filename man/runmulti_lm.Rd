@@ -25,14 +25,3 @@ Fit linear regression models (\code{lm}) for each main variable separately.
 When \code{covariates} is \code{NULL}, univariate models are fitted.
 Otherwise, multivariate models adjusting for the specified covariates are fitted.
 }
-\examples{
-\dontrun{
-# Univariate linear regression
-res <- runmulti_lm(mtcars, main_var = c("hp", "wt"), outcome = "mpg")
-
-# Multivariate linear regression
-res <- runmulti_lm(mtcars, main_var = c("hp", "wt"),
-                   covariates = c("cyl"), outcome = "mpg")
-}
-
-}

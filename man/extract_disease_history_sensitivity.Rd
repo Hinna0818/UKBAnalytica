@@ -34,15 +34,3 @@ Extracts prevalent case status from multiple data source combinations
 simultaneously for sensitivity analysis comparison. Returns a table
 with separate columns for each source definition.
 }
-\examples{
-\dontrun{
-# Get all sensitivity variants at once
-history_comparison <- extract_disease_history_sensitivity(
-  dt = ukb_data,
-  diseases = c("Hypertension", "Diabetes")
-)
-
-# Compare: Hypertension_history_ICD10 vs Hypertension_history_all
-}
-
-}

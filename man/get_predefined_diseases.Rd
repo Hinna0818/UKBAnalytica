@@ -63,16 +63,3 @@ gastrointestinal, neurologic, psychiatric, eye, skin, musculoskeletal, and
 cancer endpoints used in UKB epidemiology workflows}
 }
 }
-\examples{
-\dontrun{
-diseases <- get_predefined_diseases()
-my_diseases <- diseases[c("AA", "Hypertension", "Diabetes")]
-pom <- get_predefined_diseases(source = "pomegranate")
-shared <- get_predefined_diseases(source = "both")
-expanded <- get_predefined_diseases(source = "both", merge_type = "union")
-copd_expanded <- get_predefined_diseases(
-  source = "both", merge_type = "union", disease = "COPD"
-)
-}
-
-}

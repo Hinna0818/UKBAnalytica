@@ -47,17 +47,3 @@ survival analysis. New analyses should use
 \code{\link{ukb_ml_survival_workflow}}, which freezes the test set before
 feature selection, tuning, final refit, and evaluation.
 }
-\examples{
-\dontrun{
-# Random Survival Forest
-surv_rf <- ukb_ml_survival(
-  Surv(time, event) ~ age + sex + bmi + smoking,
-  data = ukb_data,
-  model = "rsf"
-)
-
-# Prediction
-pred <- ukb_ml_survival_predict(surv_rf, times = c(1, 3, 5))
-}
-
-}

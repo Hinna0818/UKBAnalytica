@@ -30,10 +30,3 @@ Death causes serve as definitive diagnosis confirmation. If a participant
 died from a specific disease, the death date becomes the diagnosis date
 for that condition (if not previously diagnosed).
 }
-\examples{
-\dontrun{
-ukb_data <- data.table::fread("ukb_data.csv")
-death_long <- parse_death_records(ukb_data)
-}
-
-}

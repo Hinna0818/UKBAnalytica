@@ -20,14 +20,3 @@ A data.frame with variable information
 \description{
 Returns a data.frame describing all predefined variables available for preprocessing.
 }
-\examples{
-\dontrun{
-# See all available variables
-get_variable_info()
-
-# Filter by category
-get_variable_info("demographics")
-get_variable_info("lifestyle")
-}
-
-}

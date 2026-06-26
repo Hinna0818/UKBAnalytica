@@ -32,10 +32,3 @@ unmeasured confounder.
 A robust mediation effect should remain significant across a range of
 plausible rho values.
 }
-\examples{
-\dontrun{
-med_result <- run_mediation(data, "exposure", "mediator", "outcome")
-sensitivity <- run_sensitivity_mediation(med_result)
-}
-
-}

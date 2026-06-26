@@ -29,9 +29,3 @@ A data.frame with columns \code{field_name} and \code{title}.
 \description{
 List Approved RAP Dataset Fields
 }
-\examples{
-\dontrun{
-fields <- rap_list_fields()
-rap_list_fields(pattern = "blood pressure|^participant\\\\.p4080")
-}
-}

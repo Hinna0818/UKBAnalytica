@@ -18,8 +18,3 @@ A character scalar naming the detected \code{.dataset} file.
 \description{
 Find the RAP Dataset File in the Current Project
 }
-\examples{
-\dontrun{
-rap_find_dataset()
-}
-}

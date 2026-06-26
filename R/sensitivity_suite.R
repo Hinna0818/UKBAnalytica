@@ -80,7 +80,7 @@ ukb_sensitivity_suite <- function(data,
   flows <- list()
   summaries <- list()
 
-  fit_and_store <- function(label, fit_data, fit_covariates, sensitivity_type, detail = NA_character_) {
+  fit_one <- function(label, fit_data, fit_covariates, sensitivity_type, detail = NA_character_) {
     fit <- .ukb_fit_sensitivity_cox(
       data = fit_data,
       exposure = exposure,
@@ -88,19 +88,24 @@ ukb_sensitivity_suite <- function(data,
       endpoint = endpoint,
       conf_level = conf_level
     )
-    models[[label]] <<- fit$model
-    summaries[[label]] <<- cbind(
-      data.frame(
-        analysis = label,
-        sensitivity_type = sensitivity_type,
-        detail = detail,
-        stringsAsFactors = FALSE
+    list(
+      model = fit$model,
+      summary = cbind(
+        data.frame(
+          analysis = label,
+          sensitivity_type = sensitivity_type,
+          detail = detail,
+          stringsAsFactors = FALSE
+        ),
+        fit$summary
       ),
-      fit$summary
+      label = label
     )
   }
 
-  fit_and_store("primary", data, covariates, "primary")
+  primary_fit <- fit_one("primary", data, covariates, "primary")
+  models[[primary_fit$label]] <- primary_fit$model
+  summaries[[primary_fit$label]] <- primary_fit$summary
 
   if (!is.null(complete_case_covariates)) {
     cc_data <- sensitivity_exclude_missing_covariates(
@@ -110,13 +115,15 @@ ukb_sensitivity_suite <- function(data,
       verbose = FALSE
     )
     flows[["complete_case"]] <- attr(cc_data, "complete_case_flow")
-    fit_and_store(
+    cc_fit <- fit_one(
       "complete_case",
       cc_data,
       covariates,
       "complete_case",
       paste(complete_case_covariates, collapse = "+")
     )
+    models[[cc_fit$label]] <- cc_fit$model
+    summaries[[cc_fit$label]] <- cc_fit$summary
   }
 
   if (!is.null(early_event_years) && length(early_event_years) > 0) {
@@ -129,7 +136,9 @@ ukb_sensitivity_suite <- function(data,
       )
       label <- paste0("exclude_events_le_", yr, "y")
       flows[[label]] <- attr(lag_data, "sensitivity_info")
-      fit_and_store(label, lag_data, covariates, "early_event_exclusion", paste0(yr, " years"))
+      lag_fit <- fit_one(label, lag_data, covariates, "early_event_exclusion", paste0(yr, " years"))
+      models[[lag_fit$label]] <- lag_fit$model
+      summaries[[lag_fit$label]] <- lag_fit$summary
     }
   }
 
@@ -145,13 +154,15 @@ ukb_sensitivity_suite <- function(data,
       if (!is.character(extra) || anyNA(extra)) {
         stop("Each additional covariate set must be a character vector.", call. = FALSE)
       }
-      fit_and_store(
+      adj_fit <- fit_one(
         paste0("adjust_", nm),
         data,
         unique(c(covariates, extra)),
         "additional_adjustment",
         paste(extra, collapse = "+")
       )
+      models[[adj_fit$label]] <- adj_fit$model
+      summaries[[adj_fit$label]] <- adj_fit$summary
     }
   }
 

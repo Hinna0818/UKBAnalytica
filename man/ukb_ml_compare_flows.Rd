@@ -83,19 +83,3 @@ combination, making the output suitable for comparing different feature
 groups, different machine-learning algorithms, or the full
 feature-set-by-model grid.
 }
-\examples{
-\dontrun{
-cmp <- ukb_ml_compare_flows(
-  split = split,
-  outcome = "copd",
-  feature_sets = list(
-    clinical = c("age", "sex", "bmi"),
-    combined = c("age", "sex", "bmi", protein_vars)
-  ),
-  models = c("logistic", "xgboost"),
-  compare = "both"
-)
-plot(cmp)
-}
-
-}

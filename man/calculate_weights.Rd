@@ -46,10 +46,3 @@ Weight formulas:
 
 Stabilized weights multiply by the marginal probability of treatment.
 }
-\examples{
-\dontrun{
-ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-weighted_data <- calculate_weights(ps_data, treatment = "treated", weight_type = "ATE")
-}
-
-}

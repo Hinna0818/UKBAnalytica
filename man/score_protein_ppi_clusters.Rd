@@ -21,9 +21,3 @@ A data.frame containing cluster scores.
 \description{
 A thin wrapper around \code{TCMDATA::add_cluster_score()}.
 }
-\examples{
-\dontrun{
-louvain_scores <- score_protein_ppi_clusters(ppi_louvain)
-}
-
-}

@@ -57,17 +57,6 @@
 #' Valeri L, VanderWeele TJ. Mediation analysis allowing for exposure-mediator
 #' interactions and causal interpretation. Psychological Methods. 2013;18(2):137-150.
 #'
-#' @examples
-#' \dontrun{
-#' result <- run_mediation(
-#'   data = mydata,
-#'   exposure = "treatment",
-#'   mediator = "bmi",
-#'   outcome = "blood_pressure"
-#' )
-#' summary(result)
-#' }
-#'
 #' @export
 run_mediation <- function(data,
                           exposure,
@@ -276,19 +265,6 @@ run_mediation <- function(data,
 #'     \item{pm_se}{Standard error of proportion mediated}
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' results <- run_multi_mediator(
-#'   data = mydata,
-#'   exposure = "smoking",
-#'   mediators = c("bmi", "blood_pressure", "ldl", "hba1c"),
-#'   outcome = "cvd_time",
-#'   covariates = c("age", "sex"),
-#'   outcome_type = "cox",
-#'   endpoint = c("cvd_time", "cvd_status")
-#' )
-#' }
-#'
 #' @export
 run_multi_mediator <- function(data,
                                 exposure,
@@ -406,12 +382,6 @@ run_multi_mediator <- function(data,
 #'
 #' A robust mediation effect should remain significant across a range of
 #' plausible rho values.
-#'
-#' @examples
-#' \dontrun{
-#' med_result <- run_mediation(data, "exposure", "mediator", "outcome")
-#' sensitivity <- run_sensitivity_mediation(med_result)
-#' }
 #'
 #' @export
 run_sensitivity_mediation <- function(mediation_result,
@@ -620,9 +590,12 @@ confint.mediation_result <- function(object, parm = NULL, level = 0.95, ...) {
 #' @param x An object of class "mediation_result".
 #' @param ... Additional arguments passed to summary.
 #'
+#' @return Invisibly returns \code{x}, the original mediation result object.
+#'
 #' @export
 print.mediation_result <- function(x, ...) {
   summary(x, ...)
+  invisible(x)
 }
 
 

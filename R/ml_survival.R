@@ -36,19 +36,6 @@ NULL
 #'   \item train_data, test_data: Split datasets
 #' }
 #'
-#' @examples
-#' \dontrun{
-#' # Random Survival Forest
-#' surv_rf <- ukb_ml_survival(
-#'   Surv(time, event) ~ age + sex + bmi + smoking,
-#'   data = ukb_data,
-#'   model = "rsf"
-#' )
-#'
-#' # Prediction
-#' pred <- ukb_ml_survival_predict(surv_rf, times = c(1, 3, 5))
-#' }
-#'
 #' @export
 ukb_ml_survival <- function(formula,
                             data,

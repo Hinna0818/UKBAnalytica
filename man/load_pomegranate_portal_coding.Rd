@@ -20,11 +20,3 @@ built into the package from the public GitHub YAML algorithms; the portal
 audit table is not required for endpoint construction and is not shipped in
 the CRAN build.
 }
-\examples{
-\dontrun{
-portal_codes <- load_pomegranate_portal_coding(
-  "ukb_pomegranate_portal_coding_evidence.csv"
-)
-head(portal_codes)
-}
-}

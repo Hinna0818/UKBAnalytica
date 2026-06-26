@@ -42,23 +42,6 @@
 #'
 #' @return A list containing the disease definition parameters.
 #'
-#' @examples
-#' \dontrun{
-#' aa_def <- create_disease_definition(
-#'   name = "Aortic Aneurysm",
-#'   icd10_pattern = "^I71",
-#'   icd9_pattern = "^441"
-#' )
-#'
-#' copd_def <- create_disease_definition(
-#'   name = "COPD",
-#'   icd10_pattern = "^(J40|J41|J42|J43|J44)",
-#'   icd9_pattern = "^(491|492|4932|496)",
-#'   sr_codes = c(1112, 1113, 1472),
-#'   algo_date_field = 42016
-#' )
-#' }
-#'
 #' @export
 create_disease_definition <- function(name = NULL,
                                       icd10_pattern = NULL,
@@ -199,18 +182,6 @@ create_disease_definition <- function(name = NULL,
 #'   \item{Additional chronic diseases}{Common respiratory, renal,
 #'   gastrointestinal, neurologic, psychiatric, eye, skin, musculoskeletal, and
 #'   cancer endpoints used in UKB epidemiology workflows}
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()
-#' my_diseases <- diseases[c("AA", "Hypertension", "Diabetes")]
-#' pom <- get_predefined_diseases(source = "pomegranate")
-#' shared <- get_predefined_diseases(source = "both")
-#' expanded <- get_predefined_diseases(source = "both", merge_type = "union")
-#' copd_expanded <- get_predefined_diseases(
-#'   source = "both", merge_type = "union", disease = "COPD"
-#' )
 #' }
 #'
 #' @export
@@ -804,15 +775,6 @@ get_predefined_diseases <- function(source = c("curated", "pomegranate", "both")
 #' @param name Name for the composite outcome.
 #'
 #' @return A combined disease definition object.
-#'
-#' @examples
-#' \dontrun{
-#' diseases <- get_predefined_diseases()
-#' mace <- combine_disease_definitions(
-#'   diseases$MI, diseases$Stroke, diseases$HF,
-#'   name = "MACE"
-#' )
-#' }
 #'
 #' @export
 combine_disease_definitions <- function(..., name = "Combined") {

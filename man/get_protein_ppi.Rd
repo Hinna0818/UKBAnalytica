@@ -65,11 +65,3 @@ A list with components \code{source}, \code{gene_symbols}, \code{mapping}, and
 Convert protein identifiers to gene symbols and retrieve a protein-protein
 interaction network from STRING via \code{clusterProfiler::getPPI()}.
 }
-\examples{
-\dontrun{
-ppi_res <- get_protein_ppi(
-  c("olink_instance_0.il6", "olink_instance_0.tnf", "olink_instance_0.crp")
-)
-}
-
-}

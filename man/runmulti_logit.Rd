@@ -25,17 +25,3 @@ Fit logistic regression models (\code{glm} with \code{family = binomial}) for ea
 When \code{covariates} is \code{NULL}, univariate models are fitted.
 Otherwise, multivariate models adjusting for the specified covariates are fitted.
 }
-\examples{
-\dontrun{
-# Create binary outcome
-mtcars$am_bin <- ifelse(mtcars$am == 1, 1, 0)
-
-# Univariate logistic regression
-res <- runmulti_logit(mtcars, main_var = c("hp", "wt"), outcome = "am_bin")
-
-# Multivariate logistic regression
-res <- runmulti_logit(mtcars, main_var = c("hp", "wt"),
-                      covariates = c("cyl"), outcome = "am_bin")
-}
-
-}

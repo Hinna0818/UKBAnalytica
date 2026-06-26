@@ -58,12 +58,3 @@ A ggplot2 object.
 Create a forest plot to visualize subgroup analysis results with effect estimates
 and confidence intervals.
 }
-\examples{
-\dontrun{
-results <- run_multi_subgroup(data, exposure = "smoking",
-                              subgroup_vars = c("sex", "age_group"),
-                              model_type = "cox", endpoint = c("time", "status"))
-plot_forest(results)
-}
-
-}

@@ -21,11 +21,3 @@ A ggplot2 object
 \description{
 Create ROC curve plot for one or more ML models.
 }
-\examples{
-\dontrun{
-ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-roc_result <- ukb_ml_roc(ml)
-plot(roc_result)
-}
-
-}

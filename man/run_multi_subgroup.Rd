@@ -43,16 +43,3 @@ A data.frame with results from all subgroup analyses combined.
 \description{
 Perform subgroup analyses across multiple subgroup variables.
 }
-\examples{
-\dontrun{
-library(survival)
-result <- run_multi_subgroup(
-  data = lung,
-  exposure = "ph.ecog",
-  subgroup_vars = c("sex"),
-  model_type = "cox",
-  endpoint = c("time", "status")
-)
-}
-
-}

@@ -32,10 +32,3 @@ A ggplot2 object
 \description{
 Create a bar plot of variable importance from a trained ML model.
 }
-\examples{
-\dontrun{
-ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-plot_ml_importance(ml, n_features = 15)
-}
-
-}

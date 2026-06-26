@@ -29,20 +29,6 @@ a list containing table one information.
 \description{
 Create a baseline table comparing cases and controls under different conditions.
 }
-\examples{
-\dontrun{
-data(pbc, package = "survival")
-vars <- names(pbc)[-1]
-table1 <- create_baseline_table(
-  data = pbc,
-  case_col = "trt",
-  factor_cols = c("status", "edema", "stage"))
-
-# export to csv file
-tab1Mat <- print(table1, quote = TRUE)
-write.csv(tab1Mat, file = "baseline_table1.csv")
-}
-}
 \references{
 https://github.com/kaz-yos/tableone
 }

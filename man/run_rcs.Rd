@@ -87,24 +87,3 @@ regression. Returns prediction curves, confidence intervals, overall and
 nonlinear P values, and the AIC-selected knot count. The returned object
 is passed directly to \code{plot_rcs()} for publication-ready figures.
 }
-\examples{
-\dontrun{
-set.seed(1)
-n <- 500
-df <- data.frame(
-  time   = rexp(n, 0.05),
-  status = rbinom(n, 1, 0.4),
-  no2    = rnorm(n, 40, 10),
-  age    = rnorm(n, 55, 10),
-  sex    = rbinom(n, 1, 0.5)
-)
-fit <- run_rcs(df, exposure = "no2",
-               covariates = c("age", "sex"),
-               model_type = "cox",
-               endpoint   = c("time", "status"))
-fit$p_overall
-fit$aic_table
-plot_rcs(fit, xlab = "NO2 (ug/m3)", ylab = "HR (95\% CI)")
-}
-
-}

@@ -17,17 +17,6 @@
 #'   \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
 #'   \code{pvalue}, \code{n}, and \code{n_event}.
 #'
-#' @examples
-#' \dontrun{
-#' library(survival)
-#' # Univariate Cox
-#' res <- runmulti_cox(lung, main_var = c("age", "sex"), endpoint = c("time", "status"))
-#'
-#' # Multivariate Cox
-#' res <- runmulti_cox(lung, main_var = c("age", "sex"),
-#'                     covariates = c("ph.ecog"), endpoint = c("time", "status"))
-#' }
-#'
 #' @export
 runmulti_cox <- function(data,
                          main_var,
@@ -95,16 +84,6 @@ runmulti_cox <- function(data,
 #' @importFrom stats as.formula lm confint coef
 #' @return A data.frame with columns: \code{variable}, \code{beta}, \code{lower95}, \code{upper95}, \code{pvalue}.
 #'
-#' @examples
-#' \dontrun{
-#' # Univariate linear regression
-#' res <- runmulti_lm(mtcars, main_var = c("hp", "wt"), outcome = "mpg")
-#'
-#' # Multivariate linear regression
-#' res <- runmulti_lm(mtcars, main_var = c("hp", "wt"),
-#'                    covariates = c("cyl"), outcome = "mpg")
-#' }
-#'
 #' @export
 runmulti_lm <- function(data,
                         main_var,
@@ -165,19 +144,6 @@ runmulti_lm <- function(data,
 #'
 #' @importFrom stats as.formula glm binomial confint coef
 #' @return A data.frame with columns: \code{variable}, \code{OR}, \code{lower95}, \code{upper95}, \code{pvalue}.
-#'
-#' @examples
-#' \dontrun{
-#' # Create binary outcome
-#' mtcars$am_bin <- ifelse(mtcars$am == 1, 1, 0)
-#'
-#' # Univariate logistic regression
-#' res <- runmulti_logit(mtcars, main_var = c("hp", "wt"), outcome = "am_bin")
-#'
-#' # Multivariate logistic regression
-#' res <- runmulti_logit(mtcars, main_var = c("hp", "wt"),
-#'                       covariates = c("cyl"), outcome = "am_bin")
-#' }
 #'
 #' @export
 runmulti_logit <- function(data,
@@ -267,22 +233,6 @@ runmulti_logit <- function(data,
 #'   \code{n}.  For log- or logit-link families \code{exp(beta)} gives the
 #'   ratio-scale effect (IRR, rate ratio, etc.).
 #'
-#' @examples
-#' \dontrun{
-#' # Poisson regression (IRR = exp(beta))
-#' mtcars$count <- round(mtcars$mpg)
-#' res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-#'                     family = "poisson", outcome = "count")
-#'
-#' # Quasi-Poisson (overdispersed counts, Wald CI)
-#' res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-#'                     family = "quasipoisson", outcome = "count")
-#'
-#' # Gamma with log link
-#' res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-#'                     family = stats::Gamma(link = "log"), outcome = "mpg")
-#' }
-#'
 #' @export
 runmulti_glm <- function(data,
                          main_var,
@@ -369,18 +319,6 @@ runmulti_glm <- function(data,
 #'   \code{theta} is the estimated negative-binomial dispersion parameter
 #'   (larger values indicate less overdispersion).
 #'
-#' @examples
-#' \dontrun{
-#' mtcars$count <- round(mtcars$mpg)
-#'
-#' # Univariate
-#' res <- runmulti_negbin(mtcars, main_var = c("hp", "wt"), outcome = "count")
-#'
-#' # Adjusted
-#' res <- runmulti_negbin(mtcars, main_var = c("hp", "wt"),
-#'                        covariates = "cyl", outcome = "count")
-#' }
-#'
 #' @export
 runmulti_negbin <- function(data,
                             main_var,
@@ -462,21 +400,6 @@ runmulti_negbin <- function(data,
 #'   \code{family}, \code{link}, \code{n}.
 #'   When \code{smooth = FALSE}: \code{variable}, \code{beta}, \code{lower95},
 #'   \code{upper95}, \code{pvalue}, \code{family}, \code{link}, \code{n}.
-#'
-#' @examples
-#' \dontrun{
-#' # Smooth GAM (test non-linearity)
-#' res <- runmulti_gam(mtcars, main_var = c("hp", "wt"), outcome = "mpg")
-#'
-#' # Linear GAM (same as runmulti_glm with family = "gaussian")
-#' res <- runmulti_gam(mtcars, main_var = c("hp", "wt"), outcome = "mpg",
-#'                     smooth = FALSE)
-#'
-#' # Poisson GAM for count outcomes
-#' mtcars$count <- round(mtcars$mpg)
-#' res <- runmulti_gam(mtcars, main_var = "hp", outcome = "count",
-#'                     family = "poisson", covariates = "cyl")
-#' }
 #'
 #' @export
 runmulti_gam <- function(data,
@@ -603,37 +526,6 @@ runmulti_gam <- function(data,
 #'   \item{negbin}{variable, IRR, lower95, upper95, pvalue, theta, n}
 #'   \item{gam (smooth)}{variable, edf, ref_df, F, pvalue, family, link, n}
 #'   \item{gam (linear)}{variable, beta, lower95, upper95, pvalue, family, link, n}
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' library(survival)
-#' run_regression(lung, main_var = c("age", "sex"),
-#'                type = "cox", endpoint = c("time", "status"))
-#'
-#' run_regression(mtcars, main_var = c("hp", "wt"),
-#'                type = "lm", outcome = "mpg")
-#'
-#' mtcars$am_bin <- as.integer(mtcars$am == 1)
-#' run_regression(mtcars, main_var = c("hp", "wt"),
-#'                type = "logit", outcome = "am_bin")
-#'
-#' run_regression(mtcars, main_var = "hp", type = "lm", outcome = "mpg",
-#'                covariate_sets = list(
-#'                  crude = NULL,
-#'                  model1 = c("cyl"),
-#'                  model2 = c("cyl", "wt")
-#'                ))
-#'
-#' mtcars$count <- round(mtcars$mpg)
-#' run_regression(mtcars, main_var = c("hp", "wt"),
-#'                type = "glm", family = "poisson", outcome = "count")
-#'
-#' run_regression(mtcars, main_var = c("hp", "wt"),
-#'                type = "negbin", outcome = "count")
-#'
-#' run_regression(mtcars, main_var = c("hp", "wt"),
-#'                type = "gam", outcome = "mpg")
 #' }
 #'
 #' @export

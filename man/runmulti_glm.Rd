@@ -50,20 +50,3 @@ confidence intervals because profile-likelihood CIs are not available for
 quasi-likelihood models.  All other families use profile-likelihood CIs via
 \code{stats::confint}.
 }
-\examples{
-\dontrun{
-# Poisson regression (IRR = exp(beta))
-mtcars$count <- round(mtcars$mpg)
-res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-                    family = "poisson", outcome = "count")
-
-# Quasi-Poisson (overdispersed counts, Wald CI)
-res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-                    family = "quasipoisson", outcome = "count")
-
-# Gamma with log link
-res <- runmulti_glm(mtcars, main_var = c("hp", "wt"),
-                    family = stats::Gamma(link = "log"), outcome = "mpg")
-}
-
-}

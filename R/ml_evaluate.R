@@ -29,16 +29,6 @@ NULL
 #' @return A data.frame with specificity, sensitivity, false-positive rate,
 #'   threshold, AUC, and optional confidence interval columns.
 #'
-#' @examples
-#' \dontrun{
-#' roc_df <- ukb_ml_roc_data(
-#'   truth = test$case,
-#'   prob = pred_prob,
-#'   model_label = "XGBoost"
-#' )
-#' plot_ml_roc_compare(roc_df)
-#' }
-#'
 #' @export
 ukb_ml_roc_data <- function(truth,
                             prob,

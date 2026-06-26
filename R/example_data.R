@@ -95,17 +95,14 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
   }
   if ("p189" %in% cols) out$p189 <- tdi
 
-  .assign_if_present <- function(col, value) {
-    if (col %in% cols) out[[col]] <<- value
-  }
-  .assign_if_present("p24016", round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2))
-  .assign_if_present("p24018", round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2))
-  .assign_if_present("p24017", round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2))
-  .assign_if_present("p24003", round(pmax(no2_base + stats::rnorm(n, 0, 1.8), 1), 2))
-  .assign_if_present("p24004", round(pmax(nox_base, 1), 2))
-  .assign_if_present("p24006", round(pmax(pm25_base, 1), 2))
-  .assign_if_present("p24019", round(pmax(pm10_base + stats::rnorm(n, 0, 1.0), 1), 2))
-  .assign_if_present("p24005", round(pmax(pm10_base + stats::rnorm(n, 0, 1.4), 1), 2))
+  if ("p24016" %in% cols) out[["p24016"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
+  if ("p24018" %in% cols) out[["p24018"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
+  if ("p24017" %in% cols) out[["p24017"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
+  if ("p24003" %in% cols) out[["p24003"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.8), 1), 2)
+  if ("p24004" %in% cols) out[["p24004"]] <- round(pmax(nox_base, 1), 2)
+  if ("p24006" %in% cols) out[["p24006"]] <- round(pmax(pm25_base, 1), 2)
+  if ("p24019" %in% cols) out[["p24019"]] <- round(pmax(pm10_base + stats::rnorm(n, 0, 1.0), 1), 2)
+  if ("p24005" %in% cols) out[["p24005"]] <- round(pmax(pm10_base + stats::rnorm(n, 0, 1.4), 1), 2)
 
   for (col in grep("^p22009_a[0-9]+$", cols, value = TRUE)) {
     pc <- as.integer(sub("^p22009_a", "", col))
@@ -131,11 +128,13 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
     icd10_codes[copd_idx] <- "['J44']"
     icd10_dates[copd_idx] <- baseline[copd_idx] + sample(30:2500, length(copd_idx), replace = TRUE)
   }
-  .assign_if_present("p41270", icd10_codes)
+  if ("p41270" %in% cols) out[["p41270"]] <- icd10_codes
   icd10_date_cols <- grep("^p41280_a[0-9]+$", cols, value = TRUE)
   if (length(icd10_date_cols) > 0L) out[[icd10_date_cols[[1L]]]] <- icd10_dates
 
-  .assign_if_present("p41271", sample(c("", "4273", "496"), n, replace = TRUE, prob = c(0.92, 0.05, 0.03)))
+  if ("p41271" %in% cols) {
+    out[["p41271"]] <- sample(c("", "4273", "496"), n, replace = TRUE, prob = c(0.92, 0.05, 0.03))
+  }
   icd9_date_cols <- grep("^p41281_a[0-9]+$", cols, value = TRUE)
   if (length(icd9_date_cols) > 0L) {
     has_icd9 <- nzchar(out$p41271)

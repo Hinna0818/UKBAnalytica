@@ -29,13 +29,3 @@ A list of fitted model objects.
 \description{
 Fits the specified regression model on each imputed dataset.
 }
-\examples{
-\dontrun{
-models <- fit_mi_models(
-  datasets = mi_datasets,
-  formula = y ~ x1 + x2,
-  model_type = "lm"
-)
-}
-
-}

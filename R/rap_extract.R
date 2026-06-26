@@ -364,10 +364,6 @@ NULL
 #' @return A character scalar naming the detected \code{.dataset} file.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' rap_find_dataset()
-#' }
 rap_find_dataset <- function(refresh = FALSE, timeout = 30) {
   .rap_check_logical(refresh, "refresh")
 
@@ -404,11 +400,6 @@ rap_find_dataset <- function(refresh = FALSE, timeout = 30) {
 #' @return A data.frame with columns \code{field_name} and \code{title}.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' fields <- rap_list_fields()
-#' rap_list_fields(pattern = "blood pressure|^participant\\.p4080")
-#' }
 rap_list_fields <- function(dataset = NULL,
                             pattern = NULL,
                             entity = "participant",
@@ -474,11 +465,6 @@ rap_list_fields <- function(dataset = NULL,
 #'   requests, dataset, entity, and column counts.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' plan <- rap_plan_extract(field_id = c(31, 53, 21022))
-#' plan <- rap_plan_extract(variables = c("sex", "age", "bmi"))
-#' }
 rap_plan_extract <- function(field_id = NULL,
                              field_names = NULL,
                              variables = NULL,
@@ -551,11 +537,6 @@ rap_plan_extract <- function(field_id = NULL,
 #'   In dry-run mode, returns a \code{rap_extract_plan}.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' dt <- rap_extract_pheno(field_id = c(31, 53, 21022))
-#' dt <- rap_extract_pheno(variables = c("sex", "age", "bmi"))
-#' }
 rap_extract_pheno <- function(field_id = NULL,
                               field_names = NULL,
                               variables = NULL,
@@ -644,11 +625,6 @@ rap_extract_pheno <- function(field_id = NULL,
 #'   In dry-run mode, returns a \code{rap_extract_plan}.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' job <- rap_submit_extract(field_id = c(31, 53, 21022), file = "baseline_core")
-#' job$job_id
-#' }
 rap_submit_extract <- function(field_id = NULL,
                                field_names = NULL,
                                variables = NULL,

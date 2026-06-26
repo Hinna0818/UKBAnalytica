@@ -32,9 +32,3 @@ A ggplot2 object.
 \description{
 Create a calibration plot comparing predicted probabilities to observed outcomes.
 }
-\examples{
-\dontrun{
-plot_calibration(data, predicted = "pred_prob", observed = "outcome")
-}
-
-}

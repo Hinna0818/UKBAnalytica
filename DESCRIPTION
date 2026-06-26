@@ -13,7 +13,8 @@ Description: Provides an integrated workflow for UK Biobank Research
     imputation, propensity score analysis, mediation analysis, subgroup and
     sensitivity analyses, machine learning, proteomics enrichment and
     protein-protein interaction analysis, and publication-oriented
-    visualization.
+    visualization. The package workflow is described in He et al. (2026)
+    <doi:10.64898/2026.06.19.26356057>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -52,19 +52,3 @@ such as \code{"IL6;Interleukin-6"}, and RAP-exported Olink column names such as
 \code{"olink_instance_0.eno2"} are parsed automatically. Multi-target Olink
 symbols such as \code{"IL12A_IL12B"} are expanded into one row per gene symbol.
 }
-\examples{
-\dontrun{
-protein_to_gene_symbol(c("olink_instance_0.eno2", "olink_instance_0.tnf"))
-
-custom_map <- data.frame(
-  protein = c("P02768", "P01375"),
-  gene_symbol = c("ALB", "TNF")
-)
-protein_to_gene_symbol(
-  c("P02768", "P01375"),
-  from_type = "UNIPROT",
-  mapping_table = custom_map
-)
-}
-
-}

@@ -73,16 +73,3 @@ UKB special date coding 819 (\code{1900-01-01}, \code{1901-01-01},
 \code{1902-02-02}, \code{1903-03-03}, \code{1909-09-09}, and
 \code{2037-07-07}) are excluded.
 }
-\examples{
-\dontrun{
-diseases <- get_predefined_diseases()[c("AA", "Hypertension")]
-
-# Main analysis: ICD-10 only
-main <- extract_cases_by_source(dt, diseases, sources = "ICD10")
-
-# Sensitivity: All sources including algorithm
-sens <- extract_cases_by_source(dt, diseases,
-                                 sources = c("ICD10", "ICD9", "Self-report", "Algorithm"))
-}
-
-}

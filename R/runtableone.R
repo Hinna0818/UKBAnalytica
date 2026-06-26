@@ -8,19 +8,6 @@
 #' @return a list containing table one information.
 #' @import data.table
 #' @importFrom tableone CreateTableOne
-#' @examples
-#' \dontrun{
-#' data(pbc, package = "survival")
-#' vars <- names(pbc)[-1]
-#' table1 <- create_baseline_table(
-#'   data = pbc,
-#'   case_col = "trt",
-#'   factor_cols = c("status", "edema", "stage"))
-#' 
-#' # export to csv file
-#' tab1Mat <- print(table1, quote = TRUE)
-#' write.csv(tab1Mat, file = "baseline_table1.csv")
-#' }
 #' @export
 create_baseline_table <- function(data, case_col, factor_cols = NULL, continuous_cols = NULL, test = FALSE) {
   if (!data.table::is.data.table(data)) {

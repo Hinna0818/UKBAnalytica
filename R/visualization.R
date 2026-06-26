@@ -34,14 +34,6 @@ NULL
 #'
 #' @return A ggplot2 object.
 #'
-#' @examples
-#' \dontrun{
-#' results <- run_multi_subgroup(data, exposure = "smoking",
-#'                               subgroup_vars = c("sex", "age_group"),
-#'                               model_type = "cox", endpoint = c("time", "status"))
-#' plot_forest(results)
-#' }
-#'
 #' @export
 plot_forest <- function(results,
                          estimate_col = "estimate",
@@ -176,12 +168,6 @@ plot_forest <- function(results,
 #' @param break_time Numeric value for x-axis tick interval. Default NULL.
 #'
 #' @return A ggplot2 object (or a list with plot and risk table if risk_table = TRUE).
-#'
-#' @examples
-#' \dontrun{
-#' library(survival)
-#' plot_km_curve(lung, time_col = "time", status_col = "status", group_col = "sex")
-#' }
 #'
 #' @importFrom stats as.formula
 #' @export
@@ -396,12 +382,6 @@ plot_km_curve <- function(data,
 #'
 #' @return A ggplot2 object.
 #'
-#' @examples
-#' \dontrun{
-#' ps_data <- estimate_propensity_score(mydata, "treated", c("age", "sex"))
-#' plot_ps_distribution(ps_data, treatment = "treated", type = "mirror")
-#' }
-#'
 #' @export
 plot_ps_distribution <- function(data,
                                    ps_col = "ps",
@@ -502,13 +482,6 @@ plot_ps_distribution <- function(data,
 #'
 #' @return A ggplot2 object.
 #'
-#' @examples
-#' \dontrun{
-#' balance_before <- assess_balance(data, "treated", c("age", "sex"), method = "unmatched")
-#' balance_after <- assess_balance(matched_data, "treated", c("age", "sex"), method = "matched")
-#' plot_balance(balance_before, balance_after)
-#' }
-#'
 #' @export
 plot_balance <- function(balance_before,
                           balance_after,
@@ -581,11 +554,6 @@ plot_balance <- function(balance_before,
 #' @param conf_int Logical; whether to show confidence intervals. Default TRUE.
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' plot_calibration(data, predicted = "pred_prob", observed = "outcome")
-#' }
 #'
 #' @importFrom stats quantile binom.test
 #' @export
@@ -693,13 +661,6 @@ plot_calibration <- function(data,
 #' @param colors Character vector of colors. Default NULL uses package defaults.
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' med_result <- run_mediation(data, "exposure", "mediator", "outcome")
-#' plot_mediation(med_result, type = "effects")
-#' plot_mediation(med_result, type = "decomposition")
-#' }
 #'
 #' @export
 plot_mediation <- function(mediation_result,
@@ -940,13 +901,6 @@ plot_mediation <- function(mediation_result,
 #'
 #' @return A ggplot2 object.
 #'
-#' @examples
-#' \dontrun{
-#' multi_results <- run_multi_mediator(data, "exposure",
-#'                                      c("bmi", "bp", "ldl"), "outcome")
-#' plot_mediation_forest(multi_results, effect_type = "tnie")
-#' }
-#'
 #' @export
 plot_mediation_forest <- function(multi_mediation_result,
                                    effect_type = c("tnie", "pnde", "te", "pm"),
@@ -1070,13 +1024,6 @@ plot_mediation_forest <- function(multi_mediation_result,
 #'   as point size or annotation. Default TRUE.
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' pooled <- pool_mi_models(models, model_type = "cox")
-#' plot_mi_pooled(pooled)
-#' plot_mi_pooled(pooled, exponentiate = TRUE, show_fmi = TRUE)
-#' }
 #'
 #' @export
 plot_mi_pooled <- function(mi_result,
@@ -1222,12 +1169,6 @@ plot_mi_pooled <- function(mi_result,
 #' @param title Character string for plot title. If NULL, auto-generated.
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' pooled <- pool_mi_models(models, model_type = "logistic")
-#' plot_mi_diagnostics(pooled, type = "fmi")
-#' }
 #'
 #' @export
 plot_mi_diagnostics <- function(mi_result,
@@ -1396,12 +1337,6 @@ plot_mi_diagnostics <- function(mi_result,
 #'
 #' @return A ggplot2 object
 #'
-#' @examples
-#' \dontrun{
-#' ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-#' plot_ml_importance(ml, n_features = 15)
-#' }
-#'
 #' @export
 plot_ml_importance <- function(object,
                                n_features = 20,
@@ -1471,13 +1406,6 @@ plot_ml_importance <- function(object,
 #'
 #' @return A ggplot2 object
 #'
-#' @examples
-#' \dontrun{
-#' ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-#' roc_result <- ukb_ml_roc(ml)
-#' plot(roc_result)
-#' }
-#'
 #' @export
 plot_ml_roc <- function(object,
                         ci_alpha = 0.2,
@@ -1545,13 +1473,6 @@ plot_ml_roc <- function(object,
 #' @param ... Additional arguments reserved for future use.
 #'
 #' @return A ggplot2 object.
-#'
-#' @examples
-#' \dontrun{
-#' roc1 <- ukb_ml_roc_data(y, p1, model_label = "Model 1")
-#' roc2 <- ukb_ml_roc_data(y, p2, model_label = "Model 2")
-#' plot_ml_roc_compare(list(roc1, roc2))
-#' }
 #'
 #' @importFrom stats setNames
 #' @export
@@ -1918,12 +1839,6 @@ plot_ml_compare <- function(object,
 #' @return A ggplot2 object, or a list with plot data when
 #'   \code{return_data = TRUE}.
 #'
-#' @examples
-#' \dontrun{
-#' shap <- ukb_shap(final_model, data = validation_data, method = "xgboost")
-#' plot_shap_beeswarm(shap, max_features = 20)
-#' }
-#'
 #' @export
 plot_shap_beeswarm <- function(object,
                                max_features = 20,
@@ -2012,13 +1927,6 @@ plot_shap_beeswarm <- function(object,
 #' @param ... Additional arguments
 #'
 #' @return A ggplot2 object
-#'
-#' @examples
-#' \dontrun{
-#' ml <- ukb_ml_model(outcome ~ ., data, model = "rf")
-#' shap <- ukb_shap(ml)
-#' plot_shap_summary(shap)
-#' }
 #'
 #' @export
 plot_shap_summary <- function(object,

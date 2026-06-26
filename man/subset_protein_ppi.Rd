@@ -35,10 +35,3 @@ An \code{igraph} object.
 A thin wrapper around \code{TCMDATA::ppi_subset()} for STRING-derived PPI
 networks.
 }
-\examples{
-\dontrun{
-ppi_res <- get_protein_ppi(c("IL6", "TNF", "CRP"))
-ppi_filtered <- subset_protein_ppi(ppi_res, score_cutoff = 0.7, n = 100)
-}
-
-}

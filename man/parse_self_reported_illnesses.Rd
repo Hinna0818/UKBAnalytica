@@ -36,10 +36,3 @@ Year-to-date conversion logic:
 \item Special values (-1, -3) indicate "don't know" or "prefer not to answer"
 }
 }
-\examples{
-\dontrun{
-ukb_data <- data.table::fread("ukb_data.csv")
-sr_long <- parse_self_reported_illnesses(ukb_data)
-}
-
-}

@@ -22,9 +22,3 @@ A data.table with binary medication columns added (1=Yes, 0=No, NA=Missing)
 Processes medication fields (6177 for male, 6153 for female) to extract
 specific medication categories.
 }
-\examples{
-\dontrun{
-result <- extract_medications(ukb_data, c("cholesterol", "blood_pressure"))
-}
-
-}

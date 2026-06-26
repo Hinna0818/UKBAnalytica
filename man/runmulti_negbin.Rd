@@ -32,16 +32,3 @@ where the Poisson variance assumption is violated.
 The overdispersion parameter \code{theta} is estimated per model and
 reported alongside the effect estimate.
 }
-\examples{
-\dontrun{
-mtcars$count <- round(mtcars$mpg)
-
-# Univariate
-res <- runmulti_negbin(mtcars, main_var = c("hp", "wt"), outcome = "count")
-
-# Adjusted
-res <- runmulti_negbin(mtcars, main_var = c("hp", "wt"),
-                       covariates = "cyl", outcome = "count")
-}
-
-}

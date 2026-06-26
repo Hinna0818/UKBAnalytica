@@ -29,10 +29,3 @@ A ggplot2 object.
 Creates diagnostic plots for multiple imputation results, including
 fraction of missing information (FMI), variance ratios, and degrees of freedom.
 }
-\examples{
-\dontrun{
-pooled <- pool_mi_models(models, model_type = "logistic")
-plot_mi_diagnostics(pooled, type = "fmi")
-}
-
-}

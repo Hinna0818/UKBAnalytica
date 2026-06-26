@@ -66,11 +66,3 @@ effect curve with a 95\\% confidence ribbon. An optional distribution layer
 (histogram, density, or rug) is drawn behind the curve to show exposure
 density. P values and the knot count are annotated by default.
 }
-\examples{
-\dontrun{
-fit <- run_rcs(df, exposure = "no2", model_type = "cox",
-               endpoint = c("time", "status"))
-plot_rcs(fit, xlab = "NO2 (ug/m3)")
-}
-
-}

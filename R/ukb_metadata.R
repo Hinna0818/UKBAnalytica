@@ -29,15 +29,6 @@
 #' @return An object of class `ukb_metadata`.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' meta <- ukb_metadata_setup(source = "auto")
-#'
-#' meta <- ukb_metadata_setup(
-#'   data_dict = "app123.data_dictionary.csv",
-#'   codings = "Codings.tsv"
-#' )
-#' }
 ukb_metadata_setup <- function(source = c("auto", "files", "rap"),
                                data_dict = NULL,
                                codings = NULL,
@@ -62,13 +53,17 @@ ukb_metadata_setup <- function(source = c("auto", "files", "rap"),
     (!identical(source, "files") && (is.null(fields_df) && (!is.null(dataset) || nzchar(Sys.which("dx")))))
 
   if (is.null(fields_df) && should_try_rap) {
-    fields_df <- tryCatch(
-      rap_list_fields(dataset = dataset, entity = entity, refresh = refresh),
+    rap_attempt <- tryCatch(
+      list(
+        fields_df = rap_list_fields(dataset = dataset, entity = entity, refresh = refresh),
+        error = NULL
+      ),
       error = function(e) {
-        rap_error <<- conditionMessage(e)
-        NULL
+        list(fields_df = NULL, error = conditionMessage(e))
       }
     )
+    fields_df <- rap_attempt$fields_df
+    rap_error <- rap_attempt$error
   }
 
   if (source == "rap" && is.null(fields_df)) {

@@ -19,13 +19,3 @@ Merges multiple disease definitions into a single composite endpoint definition.
 Useful for creating MACE (Major Adverse Cardiovascular Events) or similar
 composite outcomes.
 }
-\examples{
-\dontrun{
-diseases <- get_predefined_diseases()
-mace <- combine_disease_definitions(
-  diseases$MI, diseases$Stroke, diseases$HF,
-  name = "MACE"
-)
-}
-
-}

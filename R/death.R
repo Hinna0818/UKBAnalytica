@@ -22,12 +22,6 @@
 #' died from a specific disease, the death date becomes the diagnosis date
 #' for that condition (if not previously diagnosed).
 #'
-#' @examples
-#' \dontrun{
-#' ukb_data <- data.table::fread("ukb_data.csv")
-#' death_long <- parse_death_records(ukb_data)
-#' }
-#'
 #' @import data.table
 #' @export
 parse_death_records <- function(dt) {

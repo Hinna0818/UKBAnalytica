@@ -15,10 +15,6 @@
 #' @return Path to the generated \code{*.data_dictionary.csv} file.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' dict <- ukb_download_rap_dictionary()
-#' }
 ukb_download_rap_dictionary <- function(dataset = NULL,
                                         output_dir = ".",
                                         delimiter = ",",
@@ -107,11 +103,6 @@ ukb_download_rap_dictionary <- function(dataset = NULL,
 #'   Chinese matches, query metadata, and source paths.
 #' @export
 #'
-#' @examples
-#' \dontrun{
-#' res <- ukb_query_dictionary("systolic blood pressure")
-#' res <- ukb_query_dictionary(c("sex", "21022", "p41270"))
-#' }
 ukb_query_dictionary <- function(query,
                                  official_dict = NULL,
                                  zh_dict = NULL,
