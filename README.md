@@ -24,7 +24,12 @@ tables that remain within RAP-controlled storage.
 
 
 ## Installation
-You can install the development version of `UKBAnalytica` from GitHub, which is recommended:
+`UKBAnalytica` is now available on CRAN, which is stable:
+```r
+install.packages("UKBAnalytica")
+```
+
+You can also install the development version of `UKBAnalytica` from GitHub, which is recommended:
 
 ```r
 # install.packages("devtools")
