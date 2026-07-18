@@ -75,11 +75,32 @@ estimate_propensity_score <- function(data,
   if (is.null(formula)) {
     formula <- stats::as.formula(paste(treatment, "~", paste(covariates, collapse = " + ")))
   }
+  model_vars <- unique(all.vars(formula))
+  missing_formula_vars <- setdiff(model_vars, names(dt))
+  if (length(missing_formula_vars) > 0L) {
+    stop(
+      "Variables in `formula` were not found in data: ",
+      paste(missing_formula_vars, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  complete_idx <- stats::complete.cases(dt[, model_vars, with = FALSE])
+  fit_rows <- which(complete_idx)
+  if (length(fit_rows) == 0L) {
+    stop("No complete rows are available for propensity-score estimation.", call. = FALSE)
+  }
+  fit_data <- as.data.frame(dt[fit_rows])
+  if (length(unique(fit_data[[treatment]])) != 2L) {
+    stop(
+      "Both treatment groups must be present after complete-case filtering.",
+      call. = FALSE
+    )
+  }
 
   if (method == "logistic") {
     # Logistic regression
-    model <- stats::glm(formula, data = dt, family = stats::binomial())
-    dt[, ps := stats::predict(model, type = "response")]
+    model <- stats::glm(formula, data = fit_data, family = stats::binomial())
+    fitted_ps <- stats::predict(model, newdata = fit_data, type = "response")
 
   } else if (method == "gbm") {
     # Gradient boosting
@@ -90,7 +111,7 @@ estimate_propensity_score <- function(data,
     # GBM requires numeric response
     model <- gbm::gbm(
       formula,
-      data = dt,
+      data = fit_data,
       distribution = "bernoulli",
       n.trees = 1000,
       interaction.depth = 3,
@@ -101,15 +122,25 @@ estimate_propensity_score <- function(data,
     )
 
     best_iter <- gbm::gbm.perf(model, method = "cv", plot.it = FALSE)
-    dt[, ps := gbm::predict.gbm(model, newdata = dt, n.trees = best_iter, type = "response")]
+    fitted_ps <- gbm::predict.gbm(
+      model,
+      newdata = fit_data,
+      n.trees = best_iter,
+      type = "response"
+    )
   }
 
   # Ensure PS is within (0, 1)
-  dt[ps < 0.001, ps := 0.001]
-  dt[ps > 0.999, ps := 0.999]
+  ps <- rep(NA_real_, nrow(dt))
+  ps[fit_rows] <- pmax(0.001, pmin(0.999, as.numeric(fitted_ps)))
+  dt[, "ps" := ps]
+  attr(dt, "propensity_model") <- model
+  attr(dt, "ps_complete_rows") <- fit_rows
 
-  message(sprintf("[estimate_propensity_score] Complete. PS range: [%.3f, %.3f]",
-                  min(dt$ps, na.rm = TRUE), max(dt$ps, na.rm = TRUE)))
+  message(sprintf(
+    "[estimate_propensity_score] Complete. Evaluated %d/%d rows; PS range: [%.3f, %.3f]",
+    length(fit_rows), nrow(dt), min(fitted_ps), max(fitted_ps)
+  ))
 
   return(dt)
 }
@@ -186,10 +217,6 @@ match_propensity <- function(data,
   # Convert method name for MatchIt
   matchit_method <- ifelse(method == "optimal", "optimal", "nearest")
 
-  # Calculate caliper in PS units
-  ps_sd <- stats::sd(data[[ps_col]], na.rm = TRUE)
-  caliper_val <- caliper * ps_sd
-
   # Run matching
   match_obj <- MatchIt::matchit(
     formula = stats::as.formula(formula_str),
@@ -197,7 +224,8 @@ match_propensity <- function(data,
     method = matchit_method,
     distance = data[[ps_col]],
     ratio = ratio,
-    caliper = caliper_val,
+    caliper = caliper,
+    std.caliper = TRUE,
     replace = replace,
     exact = exact_match
   )
@@ -213,6 +241,10 @@ match_propensity <- function(data,
   if ("distance" %in% names(matched_dt)) {
     data.table::setnames(matched_dt, "distance", "match_distance")
   }
+  attr(matched_dt, "matching_caliper") <- list(
+    value = caliper,
+    scale = "standard_deviations_of_distance"
+  )
 
   n_matched_treated <- sum(matched_dt[[treatment]] == 1, na.rm = TRUE)
   n_matched_control <- sum(matched_dt[[treatment]] == 0, na.rm = TRUE)
@@ -383,23 +415,17 @@ assess_balance <- function(data,
     stop(sprintf("Weight column '%s' not found in data.", weight_col))
   }
 
+  analysis_data <- as.data.frame(data)
+  treat_values <- analysis_data[[treatment]]
+  if (!all(stats::na.omit(unique(treat_values)) %in% c(0, 1))) {
+    stop("`treatment` must be coded as 0/1.", call. = FALSE)
+  }
+
   # Split data by treatment
-  treated <- data[data[[treatment]] == 1, ]
-  control <- data[data[[treatment]] == 0, ]
+  treated <- analysis_data[!is.na(treat_values) & treat_values == 1, , drop = FALSE]
+  control <- analysis_data[!is.na(treat_values) & treat_values == 0, , drop = FALSE]
 
-  # Calculate balance for each covariate
-  results <- lapply(covariates, function(var) {
-    # Get values
-    x_t <- treated[[var]]
-    x_c <- control[[var]]
-
-    # Handle factors
-    if (is.factor(x_t)) {
-      x_t <- as.numeric(x_t)
-      x_c <- as.numeric(x_c)
-    }
-
-    # Calculate means
+  calculate_one <- function(x_t, x_c, variable, level = NA_character_) {
     if (method == "weighted") {
       w_t <- treated[[weight_col]]
       w_c <- control[[weight_col]]
@@ -415,30 +441,54 @@ assess_balance <- function(data,
       var_c <- stats::var(x_c, na.rm = TRUE)
     }
 
-    # Calculate SMD
     pooled_sd <- sqrt((var_t + var_c) / 2)
-    smd <- (mean_t - mean_c) / pooled_sd
-
-    # Variance ratio
-    var_ratio <- var_t / var_c
+    smd <- if (is.finite(pooled_sd) && pooled_sd > 0) {
+      (mean_t - mean_c) / pooled_sd
+    } else if (isTRUE(all.equal(mean_t, mean_c))) {
+      0
+    } else {
+      sign(mean_t - mean_c) * Inf
+    }
+    var_ratio <- if (is.finite(var_c) && var_c > 0) var_t / var_c else NA_real_
 
     data.frame(
-      variable = var,
+      variable = variable,
+      level = level,
       mean_treated = round(mean_t, 3),
       mean_control = round(mean_c, 3),
       smd = round(smd, 3),
       variance_ratio = round(var_ratio, 3),
-      balanced = abs(smd) < threshold,
+      balanced = is.finite(smd) && abs(smd) < threshold,
       stringsAsFactors = FALSE
     )
+  }
+
+  # Nominal variables are represented by one binary indicator per level.
+  results <- lapply(covariates, function(var) {
+    x_t <- treated[[var]]
+    x_c <- control[[var]]
+    if (is.factor(analysis_data[[var]]) || is.character(analysis_data[[var]])) {
+      levels_all <- sort(unique(c(as.character(x_t), as.character(x_c))))
+      levels_all <- levels_all[!is.na(levels_all)]
+      rows <- lapply(levels_all, function(level) {
+        calculate_one(
+          as.numeric(as.character(x_t) == level),
+          as.numeric(as.character(x_c) == level),
+          variable = var,
+          level = level
+        )
+      })
+      return(do.call(rbind, rows))
+    }
+    calculate_one(as.numeric(x_t), as.numeric(x_c), variable = var)
   })
 
   result_df <- do.call(rbind, results)
   rownames(result_df) <- NULL
 
-  n_balanced <- sum(result_df$balanced)
+  n_balanced <- sum(result_df$balanced, na.rm = TRUE)
   message(sprintf("[assess_balance] %d/%d covariates balanced (|SMD| < %.2f)",
-                  n_balanced, length(covariates), threshold))
+                  n_balanced, nrow(result_df), threshold))
 
   return(result_df)
 }

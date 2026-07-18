@@ -29,13 +29,14 @@
 #'   (Field 40011) to retain.
 #' @param cancer_behaviour Optional integer vector of tumour behaviour codes
 #'   (Field 40012) to retain. Use \code{3L} for malignant tumours.
-#' @param algo_date_field Integer. UKB field ID for the algorithmically-defined
-#'   outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
+#' @param algo_date_field Integer vector. UKB field ID(s) for
+#'   algorithmically-defined outcome dates (Category 42). For example, 42016
+#'   for COPD and 42014 for Asthma.
 #'   The corresponding data column can be \code{p{field}_i0} or \code{p{field}}.
 #'   Records with date \code{1900-01-01} are treated as unknown and excluded.
-#' @param algo_source_field Integer. UKB field ID for the algorithmically-defined
-#'   outcome source (Category 42). For example, 42017 for COPD source and
-#'   42015 for Asthma source. Stored as metadata for source provenance.
+#' @param algo_source_field Optional integer vector paired with
+#'   \code{algo_date_field}. For example, 42017 for COPD source and 42015 for
+#'   Asthma source. Use \code{NA} when a date field has no source field.
 #' @param icd10 Deprecated alias of \code{icd10_pattern}.
 #' @param icd9 Deprecated alias of \code{icd9_pattern}.
 #' @param self_report Deprecated alias of \code{sr_codes}.
@@ -116,6 +117,10 @@ create_disease_definition <- function(name = NULL,
   if (is.null(death_icd10)) {
     death_icd10 <- icd10_pattern
   }
+  algorithm_fields <- .normalize_algorithm_field_pairs(
+    algo_date_field,
+    algo_source_field
+  )
 
   list(
     name = name,
@@ -129,8 +134,66 @@ create_disease_definition <- function(name = NULL,
     cancer_icd10_pattern = cancer_icd10_pattern,
     cancer_histology = .extract_integer_code(cancer_histology),
     cancer_behaviour = .extract_integer_code(cancer_behaviour),
-    algo_date_field = algo_date_field,
-    algo_source_field = algo_source_field
+    algo_date_field = algorithm_fields$date,
+    algo_source_field = algorithm_fields$source
+  )
+}
+
+.normalize_algorithm_field_pairs <- function(date_field, source_field = NULL) {
+  if (is.null(date_field) || length(date_field) == 0L) {
+    if (!is.null(source_field) && length(source_field) > 0L) {
+      stop(
+        "'algo_source_field' cannot be supplied without 'algo_date_field'.",
+        call. = FALSE
+      )
+    }
+    return(list(date = NULL, source = NULL))
+  }
+
+  date_numeric <- suppressWarnings(as.numeric(as.character(date_field)))
+  date_integer <- suppressWarnings(as.integer(date_numeric))
+  if (
+    anyNA(date_integer) ||
+      any(!is.finite(date_numeric)) ||
+      any(date_numeric != date_integer) ||
+      any(date_integer <= 0L)
+  ) {
+    stop("'algo_date_field' must contain positive integer field IDs.", call. = FALSE)
+  }
+
+  if (is.null(source_field) || length(source_field) == 0L) {
+    source_integer <- rep(NA_integer_, length(date_integer))
+  } else {
+    if (length(source_field) != length(date_integer)) {
+      stop(
+        "'algo_source_field' must have the same length as 'algo_date_field'.",
+        call. = FALSE
+      )
+    }
+    source_numeric <- suppressWarnings(as.numeric(as.character(source_field)))
+    source_integer <- suppressWarnings(as.integer(source_numeric))
+    invalid_source <- !is.na(source_field) & (
+      is.na(source_integer) |
+        !is.finite(source_numeric) |
+        source_numeric != source_integer |
+        source_integer <= 0L
+    )
+    if (any(invalid_source)) {
+      stop(
+        "'algo_source_field' must contain positive integer field IDs or NA.",
+        call. = FALSE
+      )
+    }
+  }
+
+  pair_key <- paste(date_integer, ifelse(is.na(source_integer), "NA", source_integer))
+  keep <- !duplicated(pair_key)
+  date_integer <- date_integer[keep]
+  source_integer <- source_integer[keep]
+
+  list(
+    date = date_integer,
+    source = if (all(is.na(source_integer))) NULL else source_integer
   )
 }
 
@@ -810,10 +873,29 @@ combine_disease_definitions <- function(..., name = "Combined") {
     paste0("(", paste(opcs4_patterns, collapse = "|"), ")")
   } else NULL
 
-  # Combine UKB First Occurrence date fields
-  first_occurrence_fields <- unique(unlist(lapply(defs, function(x) x$first_occurrence_fields)))
-  first_occurrence_fields <- first_occurrence_fields[!is.na(first_occurrence_fields)]
-  if (length(first_occurrence_fields) == 0) first_occurrence_fields <- NULL
+  # Combine UKB First Occurrence date/source fields as paired metadata.
+  first_occurrence_pairs <- data.table::rbindlist(lapply(defs, function(x) {
+    date_fields <- x$first_occurrence_fields
+    if (is.null(date_fields) || length(date_fields) == 0L) {
+      return(NULL)
+    }
+    source_fields <- x$first_occurrence_source_fields
+    if (is.null(source_fields)) {
+      source_fields <- date_fields + 1L
+    }
+    data.table::data.table(
+      date_field = as.integer(date_fields),
+      source_field = as.integer(source_fields)
+    )
+  }), use.names = TRUE, fill = TRUE)
+  if (nrow(first_occurrence_pairs) > 0L) {
+    first_occurrence_pairs <- unique(first_occurrence_pairs)
+    first_occurrence_fields <- first_occurrence_pairs$date_field
+    first_occurrence_source_fields <- first_occurrence_pairs$source_field
+  } else {
+    first_occurrence_fields <- NULL
+    first_occurrence_source_fields <- NULL
+  }
 
   # Combine cancer registry definitions. Histology/behaviour restrictions are
   # preserved only when every cancer definition supplies that restriction.
@@ -840,6 +922,30 @@ combine_disease_definitions <- function(..., name = "Combined") {
   sr_codes <- unique(sr_codes[!is.na(sr_codes)])
   if (length(sr_codes) == 0) sr_codes <- NULL
 
+  # Preserve every algorithm date/source pair in composite definitions.
+  algorithm_pairs <- data.table::rbindlist(lapply(defs, function(x) {
+    date_fields <- x$algo_date_field
+    if (is.null(date_fields) || length(date_fields) == 0L) {
+      return(NULL)
+    }
+    source_fields <- x$algo_source_field
+    if (is.null(source_fields)) {
+      source_fields <- rep(NA_integer_, length(date_fields))
+    }
+    data.table::data.table(
+      date_field = as.integer(date_fields),
+      source_field = as.integer(source_fields)
+    )
+  }), use.names = TRUE, fill = TRUE)
+  if (nrow(algorithm_pairs) > 0L) {
+    algorithm_pairs <- unique(algorithm_pairs)
+    algo_date_field <- algorithm_pairs$date_field
+    algo_source_field <- algorithm_pairs$source_field
+  } else {
+    algo_date_field <- NULL
+    algo_source_field <- NULL
+  }
+
   create_disease_definition(
     name = name,
     icd10_pattern = icd10_combined,
@@ -848,8 +954,11 @@ combine_disease_definitions <- function(..., name = "Combined") {
     death_icd10 = death_combined,
     opcs4_pattern = opcs4_combined,
     first_occurrence_fields = first_occurrence_fields,
+    first_occurrence_source_fields = first_occurrence_source_fields,
     cancer_icd10_pattern = cancer_combined,
     cancer_histology = cancer_histology,
-    cancer_behaviour = cancer_behaviour
+    cancer_behaviour = cancer_behaviour,
+    algo_date_field = algo_date_field,
+    algo_source_field = algo_source_field
   )
 }

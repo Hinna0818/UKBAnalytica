@@ -126,12 +126,31 @@ metabolite_to_metaboanalyst_name <- function(metabolites,
       stop("`mapping_table` must contain columns: ", paste(required, collapse = ", "))
     }
     custom <- data.frame(
-      metabolite = .metab_clean_input(mapping_table[[mapping_metabolite_col]]),
-      metaboanalyst_name = .metab_clean_input(mapping_table[[mapping_name_col]]),
+      metabolite = .metab_clean_rows(mapping_table[[mapping_metabolite_col]]),
+      metaboanalyst_name = .metab_clean_rows(mapping_table[[mapping_name_col]]),
       stringsAsFactors = FALSE
     )
-    custom <- custom[!is.na(custom$metabolite) & nzchar(custom$metabolite), , drop = FALSE]
-    custom <- custom[!duplicated(.metab_normalize_key(custom$metabolite)), , drop = FALSE]
+    custom <- custom[
+      !is.na(custom$metabolite) & nzchar(custom$metabolite) &
+        !is.na(custom$metaboanalyst_name) & nzchar(custom$metaboanalyst_name),
+      ,
+      drop = FALSE
+    ]
+    custom <- unique(custom)
+    custom_key <- .metab_normalize_key(custom$metabolite)
+    mapped_name_key <- .metab_normalize_key(custom$metaboanalyst_name)
+    ambiguous <- names(which(vapply(
+      split(mapped_name_key, custom_key),
+      function(x) length(unique(x)) > 1L,
+      logical(1)
+    )))
+    if (length(ambiguous)) {
+      stop(
+        "`mapping_table` contains one-to-many metabolite mappings for: ",
+        paste(utils::head(ambiguous, 10L), collapse = ", ")
+      )
+    }
+    custom <- custom[!duplicated(custom_key), , drop = FALSE]
     custom_idx <- match(key, .metab_normalize_key(custom$metabolite))
     custom_match <- !is.na(custom_idx)
     if (any(custom_match)) {
@@ -182,7 +201,8 @@ metabolite_to_metaboanalyst_name <- function(metabolites,
 #'   `TRUE`.
 #'
 #' @return A list of class `ukb_metabolite_ora` with components `input`,
-#'   `mapping`, `matched`, `unmatched`, `ora_result`, `backend`, and `library`.
+#'   `mapping`, `matched`, `unmatched`, `ora_result`, `backend`, `library`, and
+#'   `mapping_summary`.
 #'
 #' @examples
 #' panel <- load_ukb_metabolite_panel()
@@ -207,13 +227,7 @@ run_metabolite_ora <- function(metabolites,
                                p_adjust_method = "BH",
                                run_subprocess = TRUE) {
   backend <- match.arg(backend)
-  mapping <- metabolite_to_metaboanalyst_name(
-    metabolites,
-    mapping_table = mapping_table,
-    drop_unmapped = FALSE
-  )
-  categories <- classify_metabolites(metabolites)
-  mapping$category <- categories$category[match(mapping$metabolite, categories$metabolite)]
+  mapping <- .metab_prepare_mapping(metabolites, mapping_table = mapping_table)
 
   matched <- unique(stats::na.omit(mapping$metaboanalyst_name[mapping$category == "small_molecule"]))
   unmatched <- mapping$metabolite[is.na(mapping$metaboanalyst_name) | mapping$category != "small_molecule"]
@@ -226,10 +240,25 @@ run_metabolite_ora <- function(metabolites,
   }
 
   if (backend == "custom") {
+    universe_mapping <- NULL
+    mapped_universe <- NULL
+    if (!is.null(universe)) {
+      universe_mapping <- .metab_prepare_mapping(universe, mapping_table = mapping_table)
+      mapped_universe <- unique(stats::na.omit(
+        universe_mapping$metaboanalyst_name[universe_mapping$category == "small_molecule"]
+      ))
+      missing_from_universe <- setdiff(
+        .metab_normalize_key(matched),
+        .metab_normalize_key(mapped_universe)
+      )
+      if (length(missing_from_universe)) {
+        stop("All mapped query metabolites must be present in the mapped `universe`.")
+      }
+    }
     ora_df <- .metab_run_custom_ora(
       matched = matched,
       pathway_db = pathway_db,
-      universe = universe,
+      universe = mapped_universe,
       pathway_col = pathway_col,
       metabolite_col = metabolite_col,
       p_adjust_method = p_adjust_method
@@ -252,7 +281,22 @@ run_metabolite_ora <- function(metabolites,
     ora_result = ora_df,
     backend = backend,
     library = if (backend == "metaboanalyst") library else "custom",
-    p_adjust_method = p_adjust_method
+    p_adjust_method = p_adjust_method,
+    mapping_summary = list(
+      query_input = nrow(mapping),
+      query_mapped = length(matched),
+      query_unmatched = length(unique(unmatched)),
+      universe_input = if (exists("universe_mapping", inherits = FALSE) && !is.null(universe_mapping)) {
+        nrow(universe_mapping)
+      } else {
+        NA_integer_
+      },
+      universe_mapped = if (exists("mapped_universe", inherits = FALSE) && !is.null(mapped_universe)) {
+        length(mapped_universe)
+      } else {
+        NA_integer_
+      }
+    )
   )
   class(result) <- "ukb_metabolite_ora"
   result
@@ -410,9 +454,7 @@ plot_metabolite_ora_barplot <- function(x,
   if (is.null(universe)) {
     universe_key <- unique(db$key)
   } else {
-    universe_map <- metabolite_to_metaboanalyst_name(universe, drop_unmapped = FALSE)
-    universe_key <- unique(.metab_normalize_key(stats::na.omit(universe_map$metaboanalyst_name)))
-    universe_key <- unique(c(universe_key, query_key))
+    universe_key <- unique(.metab_normalize_key(universe))
   }
   universe_key <- universe_key[nzchar(universe_key)]
 
@@ -674,11 +716,29 @@ if (!is.null(mSet$analSet$ora.mat)) {
     )
 }
 
-.metab_clean_input <- function(x) {
+.metab_clean_rows <- function(x) {
   x <- as.character(x)
   x <- trimws(x)
-  x <- x[!is.na(x) & nzchar(x)]
-  unique(x)
+  x[!nzchar(x)] <- NA_character_
+  x
+}
+
+.metab_clean_input <- function(x) {
+  x <- .metab_clean_rows(x)
+  unique(x[!is.na(x)])
+}
+
+.metab_prepare_mapping <- function(metabolites, mapping_table = NULL) {
+  mapping <- metabolite_to_metaboanalyst_name(
+    metabolites,
+    mapping_table = mapping_table,
+    drop_unmapped = FALSE
+  )
+  mapping$category <- vapply(mapping$metabolite, .metab_classify_one, character(1))
+  mapping$category[
+    !is.na(mapping$metaboanalyst_name) & mapping$mapping_source == "custom_table"
+  ] <- "small_molecule"
+  mapping
 }
 
 .metab_normalize_key <- function(x) {

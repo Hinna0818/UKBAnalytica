@@ -16,7 +16,8 @@ run_protein_ppi_robustness(
   n_perm = 100L,
   weight_attr = "score",
   rewire_niter = 10L,
-  seed = 42L
+  seed = 42L,
+  input_format = c("auto", "rap_olink", "symbol", "raw")
 )
 }
 \arguments{
@@ -52,6 +53,9 @@ Default is \code{"score"}.}
 Default is \code{10}.}
 
 \item{seed}{Integer random seed. Default is \code{42}.}
+
+\item{input_format}{Input naming convention passed to
+\code{\link[=protein_to_gene_symbol]{protein_to_gene_symbol()}}.}
 }
 \value{
 A list with components \code{targets}, \code{mapping}, and \code{robustness}.

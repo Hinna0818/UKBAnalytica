@@ -18,6 +18,11 @@ NULL
 #' @param protein_col Optional column name when `proteins` is a data.frame.
 #' @param from_type Character string. Identifier type used by Bioconductor when
 #'   `mapping_table` does not fully resolve the input. Default is `"SYMBOL"`.
+#' @param input_format Input naming convention. `"auto"` parses only recognized
+#'   RAP Olink column names and Olink semicolon coding; `"rap_olink"` explicitly
+#'   extracts the suffix after the final dot; `"symbol"` validates gene-symbol
+#'   style identifiers; and `"raw"` preserves identifiers apart from trimming
+#'   whitespace and converting to upper case.
 #' @param mapping_table Optional data.frame containing custom protein-to-symbol
 #'   mappings.
 #' @param mapping_protein_col Column name in `mapping_table` containing protein
@@ -30,7 +35,8 @@ NULL
 #'   symbol. Default is `TRUE`.
 #'
 #' @return A data.frame with columns `protein`, `gene_symbol`, and
-#'   `mapping_source`.
+#'   `mapping_source`. Its `mapping_summary` attribute reports input, mapped,
+#'   and unmapped protein counts.
 #'
 #' @export
 protein_to_gene_symbol <- function(proteins,
@@ -40,10 +46,12 @@ protein_to_gene_symbol <- function(proteins,
                                    mapping_protein_col = "protein",
                                    mapping_symbol_col = "gene_symbol",
                                    organism_db = "org.Hs.eg.db",
-                                   drop_unmapped = TRUE) {
+                                   drop_unmapped = TRUE,
+                                   input_format = c("auto", "rap_olink", "symbol", "raw")) {
   from_type <- toupper(from_type)
+  input_format <- match.arg(input_format)
   protein_vec <- .extract_protein_identifiers(proteins, protein_col)
-  protein_vec <- .normalize_identifiers(protein_vec)
+  protein_vec <- .normalize_identifiers(protein_vec, input_format = input_format)
 
   if (!length(protein_vec)) {
     stop("No valid protein identifiers were provided.")
@@ -72,18 +80,34 @@ protein_to_gene_symbol <- function(proteins,
     }
 
     map_df <- data.frame(
-      protein = .normalize_identifiers(mapping_table[[mapping_protein_col]]),
+      protein = .normalize_identifier_rows(
+        mapping_table[[mapping_protein_col]],
+        input_format = input_format
+      ),
       gene_symbol = .normalize_gene_symbols(mapping_table[[mapping_symbol_col]]),
       stringsAsFactors = FALSE
     )
-    map_df <- map_df[!is.na(map_df$protein) & nzchar(map_df$protein), , drop = FALSE]
-    map_df <- map_df[!duplicated(map_df$protein), , drop = FALSE]
+    map_df <- map_df[
+      !is.na(map_df$protein) & nzchar(map_df$protein) &
+        !is.na(map_df$gene_symbol) & nzchar(map_df$gene_symbol),
+      ,
+      drop = FALSE
+    ]
+    map_df <- unique(map_df)
 
-    matched_idx <- match(result$protein, map_df$protein)
-    has_match <- !is.na(matched_idx)
-    if (any(has_match)) {
-      result$gene_symbol[has_match] <- map_df$gene_symbol[matched_idx[has_match]]
-      result$mapping_source[has_match] <- "custom_table"
+    if (nrow(map_df)) {
+      input_order <- match(map_df$protein, result$protein)
+      custom_hits <- map_df[!is.na(input_order), , drop = FALSE]
+      custom_hits$input_order <- input_order[!is.na(input_order)]
+      custom_hits$mapping_source <- "custom_table"
+      custom_hits <- custom_hits[
+        order(custom_hits$input_order),
+        c("protein", "gene_symbol", "mapping_source"),
+        drop = FALSE
+      ]
+
+      unmatched <- result[!result$protein %in% custom_hits$protein, , drop = FALSE]
+      result <- rbind(custom_hits, unmatched)
     }
   }
 
@@ -105,6 +129,11 @@ protein_to_gene_symbol <- function(proteins,
 
   result <- unique(result)
   rownames(result) <- NULL
+  attr(result, "mapping_summary") <- list(
+    input = length(protein_vec),
+    mapped = length(unique(result$protein[!is.na(result$gene_symbol)])),
+    unmapped = length(setdiff(protein_vec, result$protein[!is.na(result$gene_symbol)]))
+  )
   result
 }
 
@@ -121,6 +150,8 @@ protein_to_gene_symbol <- function(proteins,
 #' @param protein_col Optional column name when `proteins` is a data.frame.
 #' @param from_type Character string describing the input identifier type for
 #'   Bioconductor-based mapping. Default is `"SYMBOL"`.
+#' @param input_format Input naming convention passed to
+#'   [protein_to_gene_symbol()].
 #' @param mapping_table Optional data.frame containing custom protein-to-symbol
 #'   mappings.
 #' @param mapping_protein_col Column name in `mapping_table` containing protein
@@ -142,8 +173,8 @@ protein_to_gene_symbol <- function(proteins,
 #' @param readable Logical. Passed to `clusterProfiler::enrichGO()`. Default is
 #'   `TRUE`.
 #'
-#' @return A list with components `gene_symbols`, `mapping`, `universe_symbols`,
-#'   and `ora_result`.
+#' @return A list with components `gene_symbols`, `mapping`, `mapping_summary`,
+#'   `universe_symbols`, and `ora_result`.
 #'
 #' @export
 run_protein_ora <- function(proteins,
@@ -160,13 +191,16 @@ run_protein_ora <- function(proteins,
                             pAdjustMethod = "BH",
                             minGSSize = 10,
                             maxGSSize = 500,
-                            readable = TRUE) {
+                            readable = TRUE,
+                            input_format = c("auto", "rap_olink", "symbol", "raw")) {
   .require_package("clusterProfiler")
+  input_format <- match.arg(input_format)
 
   enrich_input <- .prepare_protein_enrichment_input(
     proteins = proteins,
     protein_col = protein_col,
     from_type = from_type,
+    input_format = input_format,
     mapping_table = mapping_table,
     mapping_protein_col = mapping_protein_col,
     mapping_symbol_col = mapping_symbol_col,
@@ -194,6 +228,7 @@ run_protein_ora <- function(proteins,
     database = "GO",
     gene_symbols = enrich_input$gene_symbols,
     mapping = enrich_input$mapping,
+    mapping_summary = enrich_input$mapping_summary,
     universe_symbols = enrich_input$universe_symbols,
     ora_result = ora_result
   )
@@ -212,7 +247,8 @@ run_protein_ora <- function(proteins,
 #'   Default is `FALSE`.
 #'
 #' @return A list with components `gene_symbols`, `entrez_ids`, `mapping`,
-#'   `universe_symbols`, `universe_entrez_ids`, and `ora_result`.
+#'   `mapping_summary`, `universe_symbols`, `universe_entrez_ids`, and
+#'   `ora_result`.
 #'
 #' @export
 run_protein_kegg_ora <- function(proteins,
@@ -230,13 +266,16 @@ run_protein_kegg_ora <- function(proteins,
                                  minGSSize = 10,
                                  maxGSSize = 500,
                                  readable = TRUE,
-                                 use_internal_data = FALSE) {
+                                 use_internal_data = FALSE,
+                                 input_format = c("auto", "rap_olink", "symbol", "raw")) {
   .require_package("clusterProfiler")
+  input_format <- match.arg(input_format)
 
   enrich_input <- .prepare_protein_enrichment_input(
     proteins = proteins,
     protein_col = protein_col,
     from_type = from_type,
+    input_format = input_format,
     mapping_table = mapping_table,
     mapping_protein_col = mapping_protein_col,
     mapping_symbol_col = mapping_symbol_col,
@@ -271,6 +310,7 @@ run_protein_kegg_ora <- function(proteins,
     gene_symbols = enrich_input$gene_symbols,
     entrez_ids = enrich_input$target_ids,
     mapping = enrich_input$mapping,
+    mapping_summary = enrich_input$mapping_summary,
     universe_symbols = enrich_input$universe_symbols,
     universe_entrez_ids = enrich_input$universe_target_ids,
     ora_result = ora_result
@@ -289,6 +329,8 @@ run_protein_kegg_ora <- function(proteins,
 #' @param protein_col Optional column name when `proteins` is a data.frame.
 #' @param from_type Character string describing the input identifier type for
 #'   Bioconductor-based mapping. Default is `"SYMBOL"`.
+#' @param input_format Input naming convention passed to
+#'   [protein_to_gene_symbol()].
 #' @param mapping_table Optional data.frame containing custom protein-to-symbol
 #'   mappings.
 #' @param mapping_protein_col Column name in `mapping_table` containing protein
@@ -324,14 +366,17 @@ get_protein_ppi <- function(proteins,
                             network_type = "functional",
                             add_nodes = 0,
                             show_query_node_labels = 0,
-                            output = c("igraph", "data.frame")) {
+                            output = c("igraph", "data.frame"),
+                            input_format = c("auto", "rap_olink", "symbol", "raw")) {
   .require_package("clusterProfiler")
   output <- match.arg(output)
+  input_format <- match.arg(input_format)
 
   mapping <- protein_to_gene_symbol(
     proteins = proteins,
     protein_col = protein_col,
     from_type = from_type,
+    input_format = input_format,
     mapping_table = mapping_table,
     mapping_protein_col = mapping_protein_col,
     mapping_symbol_col = mapping_symbol_col,
@@ -741,6 +786,8 @@ score_protein_ppi_clusters <- function(ppi,
 #' @param target_col Optional column name when `targets` is a data.frame.
 #' @param from_type Character string describing the input identifier type for
 #'   Bioconductor-based mapping. Default is `"SYMBOL"`.
+#' @param input_format Input naming convention passed to
+#'   [protein_to_gene_symbol()].
 #' @param mapping_table Optional data.frame containing custom protein-to-symbol
 #'   mappings.
 #' @param mapping_protein_col Column name in `mapping_table` containing protein
@@ -770,14 +817,17 @@ run_protein_ppi_robustness <- function(ppi,
                                        n_perm = 100L,
                                        weight_attr = "score",
                                        rewire_niter = 10L,
-                                       seed = 42L) {
+                                       seed = 42L,
+                                       input_format = c("auto", "rap_olink", "symbol", "raw")) {
   .require_package("TCMDATA")
+  input_format <- match.arg(input_format)
   graph <- .extract_ppi_graph(ppi)
 
   mapping <- protein_to_gene_symbol(
     proteins = targets,
     protein_col = target_col,
     from_type = from_type,
+    input_format = input_format,
     mapping_table = mapping_table,
     mapping_protein_col = mapping_protein_col,
     mapping_symbol_col = mapping_symbol_col,
@@ -885,13 +935,47 @@ plot_enrichment_lollipop <- function(x, ...) {
 }
 
 
-.normalize_identifiers <- function(x) {
+.normalize_identifier_rows <- function(x,
+                                       input_format = c("auto", "rap_olink", "symbol", "raw")) {
+  input_format <- match.arg(input_format)
   x <- trimws(as.character(x))
-  x <- sub("^.*\\.", "", x)
-  x <- sub(";.*$", "", x)
-  x <- gsub("[^A-Za-z0-9_\\-]", "", x)
+  if (input_format == "auto") {
+    rap_olink <- grepl(
+      "(^|\\.)olink_instance_[0-9]+\\.",
+      x,
+      ignore.case = TRUE
+    )
+    x[rap_olink] <- sub(
+      "^.*olink_instance_[0-9]+\\.",
+      "",
+      x[rap_olink],
+      ignore.case = TRUE
+    )
+    x <- sub(";.*$", "", x)
+    x <- gsub("[^A-Za-z0-9_.\\-]", "", x)
+  } else if (input_format == "rap_olink") {
+    x <- sub("^.*\\.", "", x)
+    x <- sub(";.*$", "", x)
+    x <- gsub("[^A-Za-z0-9_.\\-]", "", x)
+  } else if (input_format == "symbol") {
+    invalid <- !is.na(x) & nzchar(x) & !grepl("^[A-Za-z0-9_.\\-]+$", x)
+    if (any(invalid)) {
+      stop(
+        "`input_format = \"symbol\"` received invalid identifier(s): ",
+        paste(utils::head(x[invalid], 5L), collapse = ", "),
+        call. = FALSE
+      )
+    }
+  }
   x[x == ""] <- NA_character_
-  x <- toupper(x)
+  toupper(x)
+}
+
+
+.normalize_identifiers <- function(x,
+                                   input_format = c("auto", "rap_olink", "symbol", "raw")) {
+  input_format <- match.arg(input_format)
+  x <- .normalize_identifier_rows(x, input_format = input_format)
   unique(x[!is.na(x)])
 }
 
@@ -969,17 +1053,20 @@ plot_enrichment_lollipop <- function(x, ...) {
 .prepare_protein_enrichment_input <- function(proteins,
                                               protein_col = NULL,
                                               from_type = "SYMBOL",
+                                              input_format = c("auto", "rap_olink", "symbol", "raw"),
                                               mapping_table = NULL,
                                               mapping_protein_col = "protein",
                                               mapping_symbol_col = "gene_symbol",
                                               universe = NULL,
                                               organism_db = "org.Hs.eg.db",
                                               target_type = c("SYMBOL", "ENTREZID")) {
+  input_format <- match.arg(input_format)
   target_type <- match.arg(target_type)
   mapping <- protein_to_gene_symbol(
     proteins = proteins,
     protein_col = protein_col,
     from_type = from_type,
+    input_format = input_format,
     mapping_table = mapping_table,
     mapping_protein_col = mapping_protein_col,
     mapping_symbol_col = mapping_symbol_col,
@@ -997,6 +1084,7 @@ plot_enrichment_lollipop <- function(x, ...) {
     universe_mapping <- protein_to_gene_symbol(
       proteins = universe,
       from_type = from_type,
+      input_format = input_format,
       mapping_table = mapping_table,
       mapping_protein_col = mapping_protein_col,
       mapping_symbol_col = mapping_symbol_col,
@@ -1006,6 +1094,13 @@ plot_enrichment_lollipop <- function(x, ...) {
     universe_symbols <- unique(universe_mapping$gene_symbol)
     if (!length(universe_symbols)) {
       stop("`universe` was provided, but no background gene symbols were mapped.")
+    }
+    missing_from_universe <- setdiff(gene_symbols, universe_symbols)
+    if (length(missing_from_universe)) {
+      stop(
+        "All mapped query proteins must be present in `universe`; missing gene symbols: ",
+        paste(utils::head(missing_from_universe, 10L), collapse = ", ")
+      )
     }
   }
 
@@ -1024,11 +1119,23 @@ plot_enrichment_lollipop <- function(x, ...) {
         target_type = target_type,
         organism_db = organism_db
       )
+      missing_target_ids <- setdiff(target_ids, universe_target_ids)
+      if (length(missing_target_ids)) {
+        stop("Mapped query identifiers are not a subset of the mapped ORA universe.")
+      }
     }
   }
 
   list(
     mapping = mapping,
+    mapping_summary = list(
+      query = attr(mapping, "mapping_summary"),
+      universe = if (exists("universe_mapping", inherits = FALSE)) {
+        attr(universe_mapping, "mapping_summary")
+      } else {
+        NULL
+      }
+    ),
     gene_symbols = gene_symbols,
     universe_symbols = universe_symbols,
     target_ids = target_ids,

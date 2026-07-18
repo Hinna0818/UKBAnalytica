@@ -280,26 +280,6 @@ get_pomegranate_diseases <- function(disease = NULL, supported_only = TRUE) {
     c(pomegranate_defs, list(name = curated$name))
   )
 
-  icd10 <- union(
-    .definition_pattern_codes(curated$icd10_pattern),
-    .definition_pattern_codes(pom$icd10_pattern)
-  )
-  icd9 <- union(
-    .definition_pattern_codes(curated$icd9_pattern),
-    .definition_pattern_codes(pom$icd9_pattern)
-  )
-  death_icd10 <- union(
-    .definition_pattern_codes(curated$death_icd10),
-    .definition_pattern_codes(pom$death_icd10)
-  )
-  opcs4 <- union(
-    .definition_pattern_codes(curated$opcs4_pattern),
-    .definition_pattern_codes(pom$opcs4_pattern)
-  )
-  cancer_icd10 <- union(
-    .definition_pattern_codes(curated$cancer_icd10_pattern),
-    .definition_pattern_codes(pom$cancer_icd10_pattern)
-  )
   sr <- unique(c(
     as.integer(curated$sr_codes %||% integer()),
     as.integer(pom$sr_codes %||% integer())
@@ -308,19 +288,47 @@ get_pomegranate_diseases <- function(disease = NULL, supported_only = TRUE) {
 
   create_disease_definition(
     name = curated$name,
-    icd10_pattern = .catalog_codes_to_pattern(icd10),
-    icd9_pattern = .catalog_codes_to_pattern(icd9),
+    icd10_pattern = .union_definition_patterns(
+      curated$icd10_pattern,
+      pom$icd10_pattern
+    ),
+    icd9_pattern = .union_definition_patterns(
+      curated$icd9_pattern,
+      pom$icd9_pattern
+    ),
     sr_codes = if (length(sr) > 0) sr else NULL,
-    death_icd10 = .catalog_codes_to_pattern(death_icd10),
-    opcs4_pattern = .catalog_codes_to_pattern(opcs4),
+    death_icd10 = .union_definition_patterns(
+      curated$death_icd10,
+      pom$death_icd10
+    ),
+    opcs4_pattern = .union_definition_patterns(
+      curated$opcs4_pattern,
+      pom$opcs4_pattern
+    ),
     first_occurrence_fields = curated$first_occurrence_fields,
     first_occurrence_source_fields = curated$first_occurrence_source_fields,
-    cancer_icd10_pattern = .catalog_codes_to_pattern(cancer_icd10),
+    cancer_icd10_pattern = .union_definition_patterns(
+      curated$cancer_icd10_pattern,
+      pom$cancer_icd10_pattern
+    ),
     cancer_histology = curated$cancer_histology,
     cancer_behaviour = curated$cancer_behaviour,
     algo_date_field = curated$algo_date_field,
     algo_source_field = curated$algo_source_field
   )
+}
+
+.union_definition_patterns <- function(...) {
+  patterns <- unlist(list(...), use.names = FALSE)
+  patterns <- unique(as.character(patterns))
+  patterns <- patterns[!is.na(patterns) & nzchar(patterns)]
+  if (length(patterns) == 0L) {
+    return(NULL)
+  }
+  if (length(patterns) == 1L) {
+    return(patterns[[1]])
+  }
+  paste0("(", paste0("(", patterns, ")", collapse = "|"), ")")
 }
 
 .curated_pomegranate_definition_map <- function() {

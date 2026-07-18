@@ -17,7 +17,8 @@ get_protein_ppi(
   network_type = "functional",
   add_nodes = 0,
   show_query_node_labels = 0,
-  output = c("igraph", "data.frame")
+  output = c("igraph", "data.frame"),
+  input_format = c("auto", "rap_olink", "symbol", "raw")
 )
 }
 \arguments{
@@ -56,6 +57,9 @@ Default is \code{9606}.}
 is \code{0}.}
 
 \item{output}{One of \code{"igraph"} or \code{"data.frame"}. Default is \code{"igraph"}.}
+
+\item{input_format}{Input naming convention passed to
+\code{\link[=protein_to_gene_symbol]{protein_to_gene_symbol()}}.}
 }
 \value{
 A list with components \code{source}, \code{gene_symbols}, \code{mapping}, and

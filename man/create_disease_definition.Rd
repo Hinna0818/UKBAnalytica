@@ -58,14 +58,15 @@ cancer registry ICD-10 codes (Field 40006).}
 \item{cancer_behaviour}{Optional integer vector of tumour behaviour codes
 (Field 40012) to retain. Use \code{3L} for malignant tumours.}
 
-\item{algo_date_field}{Integer. UKB field ID for the algorithmically-defined
-outcome date (Category 42). For example, 42016 for COPD, 42014 for Asthma.
+\item{algo_date_field}{Integer vector. UKB field ID(s) for
+algorithmically-defined outcome dates (Category 42). For example, 42016
+for COPD and 42014 for Asthma.
 The corresponding data column can be \code{p{field}_i0} or \code{p{field}}.
 Records with date \code{1900-01-01} are treated as unknown and excluded.}
 
-\item{algo_source_field}{Integer. UKB field ID for the algorithmically-defined
-outcome source (Category 42). For example, 42017 for COPD source and
-42015 for Asthma source. Stored as metadata for source provenance.}
+\item{algo_source_field}{Optional integer vector paired with
+\code{algo_date_field}. For example, 42017 for COPD source and 42015 for
+Asthma source. Use \code{NA} when a date field has no source field.}
 
 \item{icd10}{Deprecated alias of \code{icd10_pattern}.}
 

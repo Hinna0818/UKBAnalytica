@@ -35,10 +35,11 @@ runmulti_glm(
 \item{...}{Additional arguments passed to \code{stats::glm()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{family},
-\code{link}, \code{beta}, \code{lower95}, \code{upper95}, \code{pvalue},
-\code{n}.  For log- or logit-link families \code{exp(beta)} gives the
-ratio-scale effect (IRR, rate ratio, etc.).
+A data.frame with columns: \code{variable}, \code{contrast},
+\code{family}, \code{link}, \code{beta}, \code{lower95}, \code{upper95},
+\code{pvalue}, and \code{n}. Multi-level categorical exposures return one
+row per non-reference contrast. For log- or logit-link families
+\code{exp(beta)} gives the ratio-scale effect (IRR, rate ratio, etc.).
 }
 \description{
 Fit GLMs for each main variable separately using any \code{stats} family.

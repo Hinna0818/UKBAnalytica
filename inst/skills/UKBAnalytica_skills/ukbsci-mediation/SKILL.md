@@ -5,7 +5,6 @@ description: >
   cohorts using UKBAnalytica. Wraps regmedint (Valeri & VanderWeele 4-way
   decomposition: CDE, PNDE, TNIE, TNDE, PNIE, TE, PM) via run_mediation;
   supports multi-mediator screening (run_multi_mediator),
-  sensitivity-to-unmeasured-confounding (run_sensitivity_mediation), and
   visualization (plot_mediation, plot_mediation_forest) for linear,
   logistic, and Cox outcome models with continuous or binary mediators.
   Use this skill when the user asks for mediation analysis, indirect
@@ -42,7 +41,6 @@ CIs are aggregate.
   decompose total effect into direct + indirect components.
 - Screening multiple candidate mediators for the strongest indirect effect.
 - Reporting CDE / PNDE / TNIE / TNDE / PNIE / TE / proportion-mediated.
-- Sensitivity assessment to unmeasured exposure–mediator confounders.
 
 ## 2. When NOT to load
 
@@ -135,21 +133,7 @@ multi <- run_multi_mediator(
 # data.frame: one row per mediator with TNIE/PNDE/TE/PM + SE/CI/p
 ```
 
-### Phase 4 — Sensitivity to unmeasured confounding
-
-```r
-sens <- run_sensitivity_mediation(
-  mediation_result = res,
-  rho_values       = seq(-0.9, 0.9, by = 0.1)
-)
-# data.frame: rho, tnie_adjusted, pnde_adjusted, te_adjusted
-```
-
-Caveat: the implementation is a simplified ρ-based approximation, not a
-fully rigorous bounds method. State this caveat to the user when reporting
-the sensitivity analysis.
-
-### Phase 5 — Visualize
+### Phase 4 — Visualize
 
 ```r
 p_bar  <- plot_mediation(res, type = "effects",
@@ -201,8 +185,8 @@ outcome model (recommended; the default).
 5. **No multiple-comparisons correction in `run_multi_mediator()`.**
    When screening ≥ 5 mediators, apply Benjamini-Hochberg externally before
    highlighting "significant" indirect effects.
-6. **Sensitivity analysis is approximate.** State this in the manuscript;
-   for rigorous bounds use the original VanderWeele / Imai approach.
+6. **Sensitivity analysis is not implemented.** Use a method appropriate to
+   the fitted mediation model and report its assumptions explicitly.
 7. **Exponentiated estimates** apply naturally to logistic / Cox outcomes
    (OR / HR scale). For linear outcomes, leave `exponentiate = FALSE`.
 
@@ -214,7 +198,6 @@ outcome model (recommended; the default).
 |----------|---------|
 | `run_mediation(...)` | S3 `mediation_result` (`effects`, `mediator_model`, `outcome_model`, `regmedint_obj`, `params`) |
 | `run_multi_mediator(...)` | data.frame: per-mediator effects |
-| `run_sensitivity_mediation(mediation_result, rho_values)` | data.frame: ρ-adjusted effects |
 | `plot_mediation(mediation_result, type = c("effects","path","decomposition"))` | ggplot |
 | `plot_mediation_forest(multi_mediation_result, effect_type)` | ggplot |
 | S3 methods | `print`, `summary`, `coef`, `confint` (on `mediation_result`) |

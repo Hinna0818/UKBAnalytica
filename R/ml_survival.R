@@ -362,11 +362,11 @@ ukb_ml_survival_predict <- function(object,
     }
   )
   
-  surv_obj <- Surv(test_data[[object$time_var]], test_data[[object$event_var]])
-  
-  # Calculate concordance
-  conc <- concordance(surv_obj ~ risk)
-  conc$concordance
+  .sml_c_index(
+    test_data[[object$time_var]],
+    test_data[[object$event_var]],
+    risk
+  )
 }
 
 # Frozen-test Survival ML Workflow -----------------------------------------
@@ -597,10 +597,54 @@ ukb_ml_survival_predict <- function(object,
 
 #' @keywords internal
 .sml_predict_matrix <- function(object, newdata) {
-  X <- stats::model.matrix(object$x_terms, data = newdata, contrasts.arg = object$contrasts)
+  newdata <- as.data.frame(newdata)
+  required <- unique(all.vars(object$x_terms))
+  missing <- setdiff(required, names(newdata))
+  if (length(missing) > 0L) {
+    stop(
+      "Prediction data are missing required variable(s): ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  for (variable in names(object$xlevels)) {
+    values <- as.character(newdata[[variable]])
+    unknown <- setdiff(unique(values[!is.na(values)]), object$xlevels[[variable]])
+    if (length(unknown) > 0L) {
+      stop(
+        sprintf(
+          "Prediction variable '%s' contains unseen level(s): %s.",
+          variable,
+          paste(unknown, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+    newdata[[variable]] <- factor(values, levels = object$xlevels[[variable]])
+  }
+  if (any(!stats::complete.cases(newdata[, required, drop = FALSE]))) {
+    stop(
+      "Survival prediction data contain missing predictor values; provide complete predictors.",
+      call. = FALSE
+    )
+  }
+
+  X <- stats::model.matrix(
+    object$x_terms,
+    data = newdata,
+    contrasts.arg = object$contrasts,
+    xlev = object$xlevels
+  )
   if ("(Intercept)" %in% colnames(X)) {
     X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
   }
+  missing_columns <- setdiff(object$feature_names, colnames(X))
+  if (length(missing_columns) > 0L) {
+    zeros <- matrix(0, nrow = nrow(X), ncol = length(missing_columns))
+    colnames(zeros) <- missing_columns
+    X <- cbind(X, zeros)
+  }
+  X <- X[, object$feature_names, drop = FALSE]
   storage.mode(X) <- "numeric"
   X
 }
@@ -680,7 +724,7 @@ ukb_ml_survival_predict <- function(object,
 .sml_c_index <- function(time, event, risk) {
   .check_ml_package("survival")
   keep <- stats::complete.cases(time, event, risk)
-  if (sum(keep) < 2L || length(unique(event[keep])) < 2L) return(NA_real_)
+  if (sum(keep) < 2L || sum(event[keep] == 1L) == 0L) return(NA_real_)
   conc <- concordance(
     Surv(time[keep], event[keep]) ~ risk[keep],
     reverse = TRUE
@@ -689,15 +733,98 @@ ukb_ml_survival_predict <- function(object,
 }
 
 #' @keywords internal
+.sml_censoring_km <- function(time, event) {
+  observed_times <- sort(unique(time))
+  censoring_survival <- 1
+  rows <- vector("list", length(observed_times))
+  for (index in seq_along(observed_times)) {
+    current_time <- observed_times[[index]]
+    at_risk <- sum(time >= current_time)
+    censored <- sum(time == current_time & event == 0L)
+    before <- censoring_survival
+    if (at_risk > 0L && censored > 0L) {
+      censoring_survival <- censoring_survival * (1 - censored / at_risk)
+    }
+    rows[[index]] <- data.frame(
+      time = current_time,
+      before = before,
+      after = censoring_survival
+    )
+  }
+  do.call(rbind, rows)
+}
+
+#' @keywords internal
+.sml_censoring_probability <- function(km, times, left_limit = FALSE) {
+  vapply(times, function(current_time) {
+    eligible <- if (isTRUE(left_limit)) {
+      km$time < current_time
+    } else {
+      km$time <= current_time
+    }
+    if (!any(eligible)) return(1)
+    km$after[max(which(eligible))]
+  }, numeric(1))
+}
+
+#' @keywords internal
 .sml_brier_at_times <- function(time, event, survival_prob, times) {
+  time <- as.numeric(time)
+  event <- as.integer(event)
+  survival_prob <- as.matrix(survival_prob)
+  if (nrow(survival_prob) != length(time) || ncol(survival_prob) != length(times)) {
+    stop(
+      "`survival_prob` must have one row per participant and one column per time.",
+      call. = FALSE
+    )
+  }
+  keep <- stats::complete.cases(time, event) & time > 0 & event %in% c(0L, 1L)
+  time <- time[keep]
+  event <- event[keep]
+  survival_prob <- survival_prob[keep, , drop = FALSE]
+  if (length(time) == 0L) {
+    return(stats::setNames(rep(NA_real_, length(times)), paste0("brier_t", times)))
+  }
+  if (any(!is.na(survival_prob) &
+    (!is.finite(survival_prob) | survival_prob < 0 | survival_prob > 1))) {
+    stop("Survival probabilities must be between 0 and 1.", call. = FALSE)
+  }
+
+  censoring_km <- .sml_censoring_km(time, event)
   stats <- numeric(length(times))
   names(stats) <- paste0("brier_t", times)
   for (i in seq_along(times)) {
     t <- times[[i]]
-    obs_surv <- rep(NA_real_, length(time))
-    obs_surv[time > t] <- 1
-    obs_surv[time <= t & event == 1L] <- 0
-    stats[[i]] <- mean((obs_surv - survival_prob[, i])^2, na.rm = TRUE)
+    predicted_survival <- survival_prob[, i]
+    valid_prediction <- !is.na(predicted_survival)
+    event_before_t <- valid_prediction & time <= t & event == 1L
+    event_free_at_t <- valid_prediction & time > t
+    contribution <- rep(0, length(time))
+
+    if (any(event_before_t)) {
+      g_before_event <- .sml_censoring_probability(
+        censoring_km,
+        time[event_before_t],
+        left_limit = TRUE
+      )
+      if (any(g_before_event <= 0)) {
+        stats[[i]] <- NA_real_
+        next
+      }
+      contribution[event_before_t] <-
+        predicted_survival[event_before_t]^2 / g_before_event
+    }
+
+    if (any(event_free_at_t)) {
+      g_at_t <- .sml_censoring_probability(censoring_km, t)
+      if (!is.finite(g_at_t) || g_at_t <= 0) {
+        stats[[i]] <- NA_real_
+        next
+      }
+      contribution[event_free_at_t] <-
+        (1 - predicted_survival[event_free_at_t])^2 / g_at_t
+    }
+    stats[[i]] <- sum(contribution) / sum(valid_prediction)
   }
   stats
 }
@@ -972,6 +1099,16 @@ ukb_ml_survival_tune <- function(split,
 
   results <- vector("list", nrow(grid))
   best_score_seen <- if (isTRUE(maximize)) -Inf else Inf
+  prep_train <- NULL
+  fold_idx <- NULL
+  if (resampling == "cv") {
+    prep_train <- .sml_model_frame(formula, split$train)
+    fold_idx <- .mlw_create_folds(
+      prep_train$data[[parsed$event_var]],
+      folds,
+      outcome_type = "binary"
+    )
+  }
 
   for (i in seq_len(nrow(grid))) {
     params <- .sml_row_to_params(grid[i, , drop = FALSE])
@@ -982,8 +1119,6 @@ ukb_ml_survival_tune <- function(split,
       risk <- .sml_predict_core(fit, split$validation, type = "risk")
       scores <- .sml_c_index(split$validation[[parsed$time_var]], split$validation[[parsed$event_var]], risk)
     } else {
-      prep_train <- .sml_model_frame(formula, split$train)
-      fold_idx <- .mlw_create_folds(prep_train$data[[parsed$event_var]], folds, outcome_type = "binary")
       for (fold in seq_along(fold_idx)) {
         valid_idx <- fold_idx[[fold]]
         train_idx <- setdiff(seq_len(nrow(prep_train$data)), valid_idx)
@@ -1017,7 +1152,13 @@ ukb_ml_survival_tune <- function(split,
     best_params = .sml_row_to_params(results_df[best_idx, , drop = FALSE]),
     best_score = results_df$.score[[best_idx]],
     split_info = split$split_info,
-    tuning_info = list(resampling = resampling, folds = folds, n_candidates = nrow(grid))
+    tuning_info = list(
+      resampling = resampling,
+      folds = folds,
+      fold_indices = fold_idx,
+      complete_rows = if (!is.null(prep_train)) prep_train$complete_idx else NULL,
+      n_candidates = nrow(grid)
+    )
   )
   class(out) <- "ukb_ml_survival_tune"
   out
@@ -1068,8 +1209,9 @@ ukb_ml_survival_fit_final <- function(split,
 #'
 #' @description
 #' Computes final survival ML metrics on the frozen test set. The primary metric
-#' is Harrell's C-index. Naive time-specific Brier scores are also reported for
-#' requested prediction times without IPCW adjustment.
+#' is Harrell's C-index. Time-specific Brier scores use inverse probability of
+#' censoring weighting, with the censoring distribution estimated by
+#' Kaplan-Meier in the evaluation set.
 #'
 #' @param object A \code{ukb_ml_survival_final} object.
 #' @param split A \code{ukb_ml_survival_split} object.
@@ -1318,6 +1460,11 @@ ukb_ml_survival_importance <- function(object, ...) {
 #' @param sample_n Subsample size
 #' @param seed Random seed
 #' @param verbose Print progress
+#' @param method Model-agnostic SHAP backend.
+#'   \code{"permutation"} is retained as an alias for \code{"fastshap"}.
+#' @param background_data Optional reference data. Training data are used by
+#'   default.
+#' @param background_n Maximum number of background observations.
 #' @param ... Additional arguments
 #'
 #' @return A ukb_shap object
@@ -1330,8 +1477,11 @@ ukb_ml_survival_shap <- function(object,
                                  sample_n = NULL,
                                  seed = NULL,
                                  verbose = TRUE,
+                                 method = c("auto", "kernelshap", "fastshap", "permutation", "kernalshap"),
+                                 background_data = NULL,
+                                 background_n = 200,
                                  ...) {
-  
+  method <- match.arg(method)
   if (!is.null(seed)) set.seed(seed)
 
   if (inherits(object, "ukb_ml_survival_workflow")) {
@@ -1339,13 +1489,16 @@ ukb_ml_survival_shap <- function(object,
       stop("The workflow does not contain a final model.", call. = FALSE)
     }
     if (is.null(data)) data <- object$split$test
+    if (is.null(background_data)) background_data <- object$split$train
     object <- object$final_model
   }
 
   if (inherits(object, "ukb_ml_survival_final")) {
     if (is.null(data)) data <- object$train_data
+    if (is.null(background_data)) background_data <- object$train_data
     data <- as.data.frame(data)
-    X <- data[, object$selected_features %||% object$predictors, drop = FALSE]
+    features <- object$selected_features %||% object$predictors
+    X <- data[, features, drop = FALSE]
 
     if (!is.null(sample_n) && sample_n < nrow(X)) {
       idx <- sample(nrow(X), sample_n)
@@ -1359,23 +1512,32 @@ ukb_ml_survival_shap <- function(object,
       .sml_predict_core(model, newdata = newdata, times = time_point, type = "survival")[, 1]
     }
 
-    shap_values <- .ukb_permutation_shap(
+    background_X <- as.data.frame(background_data)[, features, drop = FALSE]
+    background_X <- .ukb_shap_sample_background(background_X, background_n)
+    resolved_method <- .ukb_shap_resolve_method(method, object$model)
+    backend <- .ukb_shap_model_agnostic(
+      method = resolved_method,
       object = object,
-      feature_names = colnames(X),
       X = X,
+      background_X = background_X,
       pred_wrapper = pred_wrapper,
       nsim = nsim,
+      verbose = verbose,
       ...
     )
 
     result <- list(
-      shap_values = as.matrix(shap_values),
-      baseline = mean(pred_wrapper(object, X), na.rm = TRUE),
+      shap_values = backend$shap_values,
+      baseline = backend$baseline,
       feature_names = colnames(X),
       feature_values = X,
       model_type = object$model,
       task = "survival",
-      time_point = time_point
+      time_point = time_point,
+      method = resolved_method,
+      output_scale = "survival_probability",
+      background_n = nrow(background_X),
+      local_accuracy_error = backend$local_accuracy_error
     )
     class(result) <- "ukb_shap"
     if (verbose) message("SHAP computation complete")
@@ -1384,6 +1546,9 @@ ukb_ml_survival_shap <- function(object,
   
   if (is.null(data)) {
     data <- object$test_data
+  }
+  if (is.null(background_data)) {
+    background_data <- object$train_data
   }
   
   X <- data[, object$predictors, drop = FALSE]
@@ -1397,37 +1562,43 @@ ukb_ml_survival_shap <- function(object,
   
   if (verbose) message(sprintf("Computing SHAP values at time = %g...", time_point))
   
-  # Create prediction wrapper for survival probability at time_point
   pred_wrapper <- function(model, newdata) {
-    # This is a simplified approach - for RSF
-    if (object$model_type == "rsf") {
-      pred <- predict(model, newdata = newdata)
-      time_idx <- which.min(abs(pred$time.interest - time_point))
-      pred$survival[, time_idx]
-    } else {
-      # For other models, compute survival at time_point
-      full_data <- cbind(newdata, data[, c(object$time_var, object$event_var)])
-      ukb_ml_survival_predict(object, newdata = full_data, times = time_point, type = "survival")[, 1]
-    }
+    prediction_object <- object
+    prediction_object$model <- model
+    ukb_ml_survival_predict(
+      prediction_object,
+      newdata = newdata,
+      times = time_point,
+      type = "survival"
+    )[, 1]
   }
-  
-  shap_values <- .ukb_permutation_shap(
+
+  background_X <- as.data.frame(background_data)[, object$predictors, drop = FALSE]
+  background_X <- .ukb_shap_sample_background(background_X, background_n)
+  resolved_method <- .ukb_shap_resolve_method(method, object$model_type)
+  backend <- .ukb_shap_model_agnostic(
+    method = resolved_method,
     object = object$model,
-    feature_names = object$predictors,
     X = X,
+    background_X = background_X,
     pred_wrapper = pred_wrapper,
     nsim = nsim,
+    verbose = verbose,
     ...
   )
-  
+
   result <- list(
-    shap_values = as.matrix(shap_values),
-    baseline = NA,  # Baseline is complex for survival
+    shap_values = backend$shap_values,
+    baseline = backend$baseline,
     feature_names = object$predictors,
     feature_values = X,
     model_type = object$model_type,
     task = "survival",
-    time_point = time_point
+    time_point = time_point,
+    method = resolved_method,
+    output_scale = "survival_probability",
+    background_n = nrow(background_X),
+    local_accuracy_error = backend$local_accuracy_error
   )
   
   class(result) <- "ukb_shap"

@@ -21,7 +21,9 @@ ukb_ml_workflow(
   evaluate_test = TRUE,
   seed = NULL,
   verbose = TRUE,
-  ...
+  ...,
+  nested_cv = FALSE,
+  nested_cv_params = list()
 )
 }
 \arguments{
@@ -63,9 +65,20 @@ ukb_ml_workflow(
 \item{verbose}{Logical.}
 
 \item{...}{Additional arguments.}
+
+\item{nested_cv}{Logical. Run supplementary nested cross-validation on the
+training split. Defaults to \code{FALSE} and does not alter the standard
+workflow when disabled.}
+
+\item{nested_cv_params}{Optional list containing \code{outer_folds},
+\code{inner_folds}, \code{repeats}, \code{metric}, \code{seed}, or
+\code{verbose} for \code{\link{ukb_ml_nested_cv}}.}
 }
 \value{
-A \code{ukb_ml_workflow} object.
+A \code{ukb_ml_workflow} object containing the frozen data split,
+optional \code{nested_cv_result}, feature-selection and tuning results,
+threshold information, the refitted final model, and final test metrics
+and predictions.
 }
 \description{
 High-level, publication-oriented ML workflow for binary, multiclass, and

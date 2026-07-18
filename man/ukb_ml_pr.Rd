@@ -7,19 +7,24 @@
 ukb_ml_pr(object, newdata = NULL, plot = TRUE, n_thresholds = 200, ...)
 }
 \arguments{
-\item{object}{A ukb_ml object}
+\item{object}{A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+\code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+binary-classification object.}
 
-\item{newdata}{Optional new data}
+\item{newdata}{Optional evaluation data. Stored frozen-test predictions are
+used when available; this is required for a \code{ukb_ml_final} object.}
 
 \item{plot}{Whether to create the PR plot (default TRUE)}
 
-\item{n_thresholds}{Number of threshold points (default 200)}
+\item{n_thresholds}{Maximum number of points retained for plotting. AUPRC is
+always calculated from all unique prediction thresholds.}
 
 \item{...}{Additional arguments}
 }
 \value{
-A ukb_ml_pr object with fields: data (threshold/precision/recall),
-auprc, prevalence
+A \code{ukb_ml_pr} object containing the precision-recall curve,
+average precision, prevalence, positive class, evaluation source, and
+optionally a ggplot object.
 }
 \description{
 Compute Precision-Recall curve and area under PR curve (AUPRC)

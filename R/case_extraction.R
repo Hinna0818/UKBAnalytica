@@ -84,8 +84,11 @@ extract_cases_by_source <- function(dt,
   opcs4_long <- if ("OPCS4" %in% sources) parse_opcs4_procedures(dt) else data.table::data.table()
   cancer_long <- if ("CancerRegistry" %in% sources) parse_cancer_registry(dt) else data.table::data.table()
 
-  death_dates <- get_death_dates(dt)
-  baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
+  followup_window <- .ukb_followup_window(
+    dt = dt,
+    baseline_col = baseline_col,
+    censor_date = censor_date
+  )
 
   # Process each disease
   results_list <- lapply(names(disease_definitions), function(disease_key) {
@@ -144,23 +147,49 @@ extract_cases_by_source <- function(dt,
 
     # Algorithm source: UK Biobank algorithmically-defined outcomes (Category 42)
     if ("Algorithm" %in% sources && !is.null(def$algo_date_field)) {
-      algo_col_candidates <- c(
-        paste0("p", def$algo_date_field, "_i0"),
-        paste0("p", def$algo_date_field)
-      )
-      algo_col <- algo_col_candidates[algo_col_candidates %in% names(dt)][1]
+      algo_date_fields <- as.integer(def$algo_date_field)
+      algo_source_fields <- def$algo_source_field
+      if (is.null(algo_source_fields)) {
+        algo_source_fields <- rep(NA_integer_, length(algo_date_fields))
+      }
+      if (length(algo_source_fields) != length(algo_date_fields)) {
+        stop(
+          "Algorithm date/source field lengths differ for disease '",
+          disease_key,
+          "'. Recreate the definition with create_disease_definition().",
+          call. = FALSE
+        )
+      }
 
-      if (!is.na(algo_col)) {
-        algo_source_col <- NULL
-        if (!is.null(def$algo_source_field)) {
-          algo_source_candidates <- c(
-            paste0("p", def$algo_source_field, "_i0"),
-            paste0("p", def$algo_source_field)
-          )
-          algo_source_col <- algo_source_candidates[algo_source_candidates %in% names(dt)][1]
+      algorithm_records <- vector("list", length(algo_date_fields))
+      for (algorithm_index in seq_along(algo_date_fields)) {
+        date_field <- algo_date_fields[[algorithm_index]]
+        source_field <- algo_source_fields[[algorithm_index]]
+        algo_col_candidates <- c(
+          paste0("p", date_field, "_i0"),
+          paste0("p", date_field)
+        )
+        algo_col <- algo_col_candidates[algo_col_candidates %in% names(dt)][1]
+        if (is.na(algo_col)) {
+          message(sprintf(
+            "  [Algorithm] No date column found for %s field %s, skipping that field",
+            disease_key,
+            date_field
+          ))
+          next
         }
 
-        has_algo_source <- !is.null(algo_source_col) && !is.na(algo_source_col)
+        algo_source_col <- NA_character_
+        if (!is.na(source_field)) {
+          algo_source_candidates <- c(
+            paste0("p", source_field, "_i0"),
+            paste0("p", source_field)
+          )
+          algo_source_col <- algo_source_candidates[
+            algo_source_candidates %in% names(dt)
+          ][1]
+        }
+        has_algo_source <- !is.na(algo_source_col)
 
         if (has_algo_source) {
           algo_dt <- dt[, .(
@@ -176,24 +205,33 @@ extract_cases_by_source <- function(dt,
           )]
         }
 
-        # Exclude 1900-01-01 (date unknown) and NA
-        algo_dt <- algo_dt[!is.na(algo_date) & algo_date != as.Date("1900-01-01")]
-        if (nrow(algo_dt) > 0) {
+        algo_dt <- algo_dt[
+          !is.na(algo_date) & algo_date != as.Date("1900-01-01")
+        ]
+        if (nrow(algo_dt) > 0L) {
           algo_dt[, source := data.table::fifelse(
             !is.na(algo_source) & trimws(algo_source) != "",
             paste0("Algorithm_", trimws(algo_source)),
             "Algorithm"
           )]
-          algo_dt[, `:=`(disease = disease_key, earliest_date = algo_date)]
+          algo_dt[, `:=`(
+            disease = disease_key,
+            earliest_date = algo_date,
+            diagnosis_date_quality = "recorded"
+          )]
           algo_dt[, c("algo_date", "algo_source") := NULL]
-          diagnosis_sources$algo <- algo_dt
+          algorithm_records[[algorithm_index]] <- algo_dt
         }
-      } else {
-        message(sprintf(
-          "  [Algorithm] No date column found for %s, tried: %s, skipping",
-          disease_key,
-          paste(algo_col_candidates, collapse = ", ")
-        ))
+      }
+      algorithm_records <- algorithm_records[
+        !vapply(algorithm_records, is.null, logical(1))
+      ]
+      if (length(algorithm_records) > 0L) {
+        diagnosis_sources$algo <- data.table::rbindlist(
+          algorithm_records,
+          use.names = TRUE,
+          fill = TRUE
+        )
       }
     }
 
@@ -201,11 +239,23 @@ extract_cases_by_source <- function(dt,
 
     all_diagnoses <- data.table::rbindlist(diagnosis_sources, use.names = TRUE, fill = TRUE)
 
+    if (!"diagnosis_date_quality" %in% names(all_diagnoses)) {
+      all_diagnoses[, "diagnosis_date_quality" := NA_character_]
+    }
     earliest_per_person <- all_diagnoses[
       ,
       {
-        min_idx <- which.min(earliest_date)
-        list(earliest_date = earliest_date[min_idx], diagnosis_source = source[min_idx])
+        dated <- which(!is.na(earliest_date))
+        selected <- if (length(dated) > 0L) {
+          dated[[which.min(earliest_date[dated])]]
+        } else {
+          1L
+        }
+        list(
+          earliest_date = earliest_date[[selected]],
+          diagnosis_source = source[[selected]],
+          diagnosis_date_quality = .SD[["diagnosis_date_quality"]][[selected]]
+        )
       },
       by = .(eid, disease)
     ]
@@ -227,21 +277,43 @@ extract_cases_by_source <- function(dt,
   diagnosis_dt <- data.table::rbindlist(results_list, use.names = TRUE, fill = TRUE)
 
   # Calculate survival metrics
-  surv_dt <- data.table::merge.data.table(diagnosis_dt, baseline_dt, by = "eid", all.x = TRUE)
-  surv_dt <- data.table::merge.data.table(surv_dt, death_dates, by = "eid", all.x = TRUE)
+  surv_dt <- data.table::merge.data.table(
+    diagnosis_dt,
+    followup_window,
+    by = "eid",
+    all.x = TRUE,
+    sort = FALSE
+  )
 
-  surv_dt[, prevalent_case := !is.na(earliest_date) & earliest_date <= baseline_date]
-  surv_dt[, status := as.integer(!is.na(earliest_date) & earliest_date > baseline_date)]
+  surv_dt[, "undated_diagnosis" :=
+    is.na(get("earliest_date")) & !is.na(get("diagnosis_source"))]
+  surv_dt[, prevalent_case := data.table::fifelse(
+    get("undated_diagnosis"),
+    NA,
+    !is.na(earliest_date) & earliest_date <= baseline_date
+  )]
+  surv_dt[, status := as.integer(
+    !is.na(earliest_date) &
+      !is.na(baseline_date) &
+      !is.na(followup_end_date) &
+      earliest_date > baseline_date &
+      earliest_date <= followup_end_date
+  )]
+  surv_dt[is.na(baseline_date) | is.na(followup_end_date), status := NA_integer_]
+  surv_dt[get("undated_diagnosis") %in% TRUE, status := NA_integer_]
 
   surv_dt[, end_date := data.table::fifelse(
     status == 1L, earliest_date,
-    pmin(death_date, censor_date, na.rm = TRUE)
+    followup_end_date
   )]
-  surv_dt[is.na(end_date), end_date := censor_date]
+  surv_dt[is.na(end_date), end_date := followup_end_date]
   surv_dt[, surv_time := as.numeric(end_date - baseline_date) / 365.25]
   surv_dt[surv_time < 0, `:=`(surv_time = NA_real_, status = NA_integer_)]
 
-  surv_dt[, c("baseline_date", "death_date", "end_date") := NULL]
+  surv_dt[, c(
+    "baseline_date", "death_date", "lost_to_followup_date",
+    "followup_end_date", "end_date", "undated_diagnosis"
+  ) := NULL]
   data.table::setorder(surv_dt, disease, eid)
 
   return(surv_dt)
@@ -336,7 +408,8 @@ extract_disease_diagnosis <- function(dt,
     )]
   }
 
-  out[, diagnosed := !is.na(earliest_date)]
+  out[, diagnosed := !is.na(earliest_date) |
+        diagnosis_source %in% "Self-report_unknown_date"]
   out[, prevalent_case := data.table::fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
   out[, incident_case := data.table::fifelse(is.na(status), 0L, as.integer(status == 1L))]
   out[, status := data.table::fifelse(is.na(status), 0L, status)]
@@ -453,8 +526,8 @@ generate_wide_format_dual_source <- function(dt,
     d_wide <- data.table::copy(all_eids)
 
     # Mark history (prevalent) from prevalent_sources
+    prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
     if (nrow(d_prevalent) > 0) {
-      prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
       d_wide[, (paste0(d, "_history")) := as.integer(eid %in% prevalent_eids)]
     } else {
       d_wide[, (paste0(d, "_history")) := 0L]
@@ -462,13 +535,11 @@ generate_wide_format_dual_source <- function(dt,
 
     # Mark incident from outcome_sources
     if (nrow(d_outcome) > 0) {
-      d_wide <- data.table::merge.data.table(
-        d_wide,
-        d_outcome[, .(eid, status)],
-        by = "eid", all.x = TRUE
-      )
-      d_wide[, (paste0(d, "_incident")) := as.integer(status == 1L & !is.na(status))]
-      d_wide[, status := NULL]
+      incident_eids <- d_outcome[
+        status == 1L & !eid %in% prevalent_eids,
+        eid
+      ]
+      d_wide[, (paste0(d, "_incident")) := as.integer(eid %in% incident_eids)]
     } else {
       d_wide[, (paste0(d, "_incident")) := 0L]
     }
@@ -1011,4 +1082,3 @@ extract_disease_history_sensitivity <- function(dt,
 
   return(result_dt)
 }
-

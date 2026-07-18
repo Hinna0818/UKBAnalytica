@@ -24,7 +24,7 @@ runmulti_cox(
 \item{...}{Additional arguments passed to \code{coxph()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{coef},
+A data.frame with columns: \code{variable}, \code{contrast}, \code{coef},
 \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
 \code{pvalue}, \code{n}, and \code{n_event}.
 }

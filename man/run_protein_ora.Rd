@@ -19,7 +19,8 @@ run_protein_ora(
   pAdjustMethod = "BH",
   minGSSize = 10,
   maxGSSize = 500,
-  readable = TRUE
+  readable = TRUE,
+  input_format = c("auto", "rap_olink", "symbol", "raw")
 )
 }
 \arguments{
@@ -62,10 +63,13 @@ Default is \code{"BH"}.}
 
 \item{readable}{Logical. Passed to \code{clusterProfiler::enrichGO()}. Default is
 \code{TRUE}.}
+
+\item{input_format}{Input naming convention passed to
+\code{\link[=protein_to_gene_symbol]{protein_to_gene_symbol()}}.}
 }
 \value{
-A list with components \code{gene_symbols}, \code{mapping}, \code{universe_symbols},
-and \code{ora_result}.
+A list with components \code{gene_symbols}, \code{mapping}, \code{mapping_summary},
+\code{universe_symbols}, and \code{ora_result}.
 }
 \description{
 Convert protein identifiers to gene symbols and run over-representation

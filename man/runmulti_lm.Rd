@@ -18,7 +18,10 @@ runmulti_lm(data, main_var, covariates = NULL, outcome, ...)
 \item{...}{Additional arguments passed to \code{stats::lm()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{beta}, \code{lower95}, \code{upper95}, \code{pvalue}.
+A data.frame with columns: \code{variable}, \code{contrast},
+\code{beta}, \code{lower95}, \code{upper95}, and \code{pvalue}.
+Multi-level categorical exposures return one row per non-reference
+contrast.
 }
 \description{
 Fit linear regression models (\code{lm}) for each main variable separately.

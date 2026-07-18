@@ -57,7 +57,8 @@ MetaboAnalystR in a clean subprocess to avoid global-state issues. Default
 }
 \value{
 A list of class \code{ukb_metabolite_ora} with components \code{input},
-\code{mapping}, \code{matched}, \code{unmatched}, \code{ora_result}, \code{backend}, and \code{library}.
+\code{mapping}, \code{matched}, \code{unmatched}, \code{ora_result}, \code{backend}, \code{library}, and
+\code{mapping_summary}.
 }
 \description{
 Run ORA for a metabolite list. The recommended first backend is

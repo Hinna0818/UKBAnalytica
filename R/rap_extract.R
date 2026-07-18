@@ -36,13 +36,25 @@ NULL
                         env = character()) {
   .rap_require_dx()
 
+  if (is.null(args)) {
+    args <- character(0)
+  }
+  if (!is.atomic(args) || is.list(args)) {
+    stop("DNAnexus command arguments must be an atomic vector.", call. = FALSE)
+  }
+  args <- as.character(args)
+  if (anyNA(args) || any(grepl("[\r\n]", args))) {
+    stop("DNAnexus command arguments cannot contain missing values or line breaks.", call. = FALSE)
+  }
+  safe_args <- vapply(args, shQuote, character(1), USE.NAMES = FALSE)
+
   stdout_file <- tempfile("ukba_dx_stdout_")
   stderr_file <- tempfile("ukba_dx_stderr_")
   on.exit(unlink(c(stdout_file, stderr_file)), add = TRUE)
 
   status <- system2(
     command = "dx",
-    args = args,
+    args = safe_args,
     stdout = stdout_file,
     stderr = stderr_file,
     env = .rap_dx_env(env),

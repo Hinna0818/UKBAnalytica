@@ -12,6 +12,9 @@ ukb_ml_survival_shap(
   sample_n = NULL,
   seed = NULL,
   verbose = TRUE,
+  method = c("auto", "kernelshap", "fastshap", "permutation", "kernalshap"),
+  background_data = NULL,
+  background_n = 200,
   ...
 )
 }
@@ -29,6 +32,14 @@ ukb_ml_survival_shap(
 \item{seed}{Random seed}
 
 \item{verbose}{Print progress}
+
+\item{method}{Model-agnostic SHAP backend.
+\code{"permutation"} is retained as an alias for \code{"fastshap"}.}
+
+\item{background_data}{Optional reference data. Training data are used by
+default.}
+
+\item{background_n}{Maximum number of background observations.}
 
 \item{...}{Additional arguments}
 }

@@ -21,6 +21,7 @@ ukb_ml_compare_flows(
   feature_set_labels = NULL,
   model_labels = NULL,
   param_grid = NULL,
+  tune = TRUE,
   tune_params = list(),
   threshold_params = list(),
   ...
@@ -59,6 +60,8 @@ feature-set and model combinations are evaluated.}
 \item{param_grid}{Optional hyperparameter grid. Can be a single grid shared
 by all combinations, a named list keyed by model, feature set, or
 \code{"feature_set__model"}.}
+
+\item{tune}{Logical. Run hyperparameter tuning for each comparison flow.}
 
 \item{tune_params}{Optional list passed to \code{\link{ukb_ml_tune}}. Can also
 be keyed by model, feature set, or combination.}

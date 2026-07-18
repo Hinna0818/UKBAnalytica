@@ -1,3 +1,28 @@
+#' @keywords internal
+.regression_term_coefficients <- function(model, variable) {
+  terms_obj <- stats::terms(model)
+  term_labels <- attr(terms_obj, "term.labels")
+  term_index <- match(variable, term_labels)
+  if (is.na(term_index)) {
+    stop(
+      sprintf("Could not identify model term for main variable '%s'.", variable),
+      call. = FALSE
+    )
+  }
+  design <- stats::model.matrix(model)
+  assignment <- attr(design, "assign")
+  term_columns <- colnames(design)[assignment == term_index]
+  coefficient_names <- names(stats::coef(model))
+  term_columns <- intersect(term_columns, coefficient_names)
+  if (length(term_columns) == 0L) {
+    stop(
+      sprintf("No estimable coefficient was found for main variable '%s'.", variable),
+      call. = FALSE
+    )
+  }
+  term_columns
+}
+
 #' Run multiple Cox proportional hazards models
 #'
 #' @description
@@ -13,7 +38,7 @@
 #'
 #' @importFrom stats as.formula confint
 #' @importFrom survival Surv coxph
-#' @return A data.frame with columns: \code{variable}, \code{coef},
+#' @return A data.frame with columns: \code{variable}, \code{contrast}, \code{coef},
 #'   \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
 #'   \code{pvalue}, \code{n}, and \code{n_event}.
 #'
@@ -44,11 +69,13 @@ runmulti_cox <- function(data,
     sum_model <- summary(model)
     coefs <- sum_model$coefficients
     conf <- sum_model$conf.int
-    main_row <- coefs[rownames(coefs) == var, , drop = FALSE]
-    conf_row <- conf[rownames(conf) == var, , drop = FALSE]
+    contrast_names <- .regression_term_coefficients(model, var)
+    main_row <- coefs[contrast_names, , drop = FALSE]
+    conf_row <- conf[contrast_names, , drop = FALSE]
 
     results[[var]] <- data.frame(
-      variable = var,
+      variable = rep(var, length(contrast_names)),
+      contrast = contrast_names,
       coef = unname(main_row[, "coef"]),
       se = unname(main_row[, "se(coef)"]),
       z = unname(main_row[, "z"]),
@@ -82,7 +109,10 @@ runmulti_cox <- function(data,
 #' @param ... Additional arguments passed to \code{stats::lm()}.
 #'
 #' @importFrom stats as.formula lm confint coef
-#' @return A data.frame with columns: \code{variable}, \code{beta}, \code{lower95}, \code{upper95}, \code{pvalue}.
+#' @return A data.frame with columns: \code{variable}, \code{contrast},
+#'   \code{beta}, \code{lower95}, \code{upper95}, and \code{pvalue}.
+#'   Multi-level categorical exposures return one row per non-reference
+#'   contrast.
 #'
 #' @export
 runmulti_lm <- function(data,
@@ -109,16 +139,18 @@ runmulti_lm <- function(data,
     # extract results
     sum_model <- summary(model)
     coefs <- sum_model$coefficients
-    ci <- stats::confint(model, parm = var, level = 0.95)
+    contrast_names <- .regression_term_coefficients(model, var)
+    ci <- stats::confint(model, parm = contrast_names, level = 0.95)
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
-    main_row <- coefs[rownames(coefs) == var, , drop = FALSE]
+    main_row <- coefs[contrast_names, , drop = FALSE]
 
     results[[var]] <- data.frame(
-      variable = var,
-      beta = round(main_row[, "Estimate"], 3),
-      lower95 = round(ci[, 1], 3),
-      upper95 = round(ci[, 2], 3),
-      pvalue = signif(main_row[, "Pr(>|t|)"], 3),
+      variable = rep(var, length(contrast_names)),
+      contrast = contrast_names,
+      beta = unname(main_row[, "Estimate"]),
+      lower95 = unname(ci[, 1]),
+      upper95 = unname(ci[, 2]),
+      pvalue = unname(main_row[, "Pr(>|t|)"]),
       stringsAsFactors = FALSE
     )
   }
@@ -143,7 +175,9 @@ runmulti_lm <- function(data,
 #' @param ... Additional arguments passed to \code{stats::glm()}.
 #'
 #' @importFrom stats as.formula glm binomial confint coef
-#' @return A data.frame with columns: \code{variable}, \code{OR}, \code{lower95}, \code{upper95}, \code{pvalue}.
+#' @return A data.frame with columns: \code{variable}, \code{contrast},
+#'   \code{OR}, \code{lower95}, \code{upper95}, and \code{pvalue}. Multi-level
+#'   categorical exposures return one row per non-reference contrast.
 #'
 #' @export
 runmulti_logit <- function(data,
@@ -179,17 +213,23 @@ runmulti_logit <- function(data,
     # extract results
     sum_model <- summary(model)
     coefs <- sum_model$coefficients
-    ci <- suppressWarnings(stats::confint(model, parm = var, level = 0.95))
+    contrast_names <- .regression_term_coefficients(model, var)
+    ci <- suppressWarnings(stats::confint(
+      model,
+      parm = contrast_names,
+      level = 0.95
+    ))
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
-    main_row <- coefs[rownames(coefs) == var, , drop = FALSE]
+    main_row <- coefs[contrast_names, , drop = FALSE]
 
     # OR = exp(beta), CI = exp(CI of beta)
     results[[var]] <- data.frame(
-      variable = var,
-      OR = round(exp(main_row[, "Estimate"]), 3),
-      lower95 = round(exp(ci[, 1]), 3),
-      upper95 = round(exp(ci[, 2]), 3),
-      pvalue = signif(main_row[, "Pr(>|z|)"], 3),
+      variable = rep(var, length(contrast_names)),
+      contrast = contrast_names,
+      OR = unname(exp(main_row[, "Estimate"])),
+      lower95 = unname(exp(ci[, 1])),
+      upper95 = unname(exp(ci[, 2])),
+      pvalue = unname(main_row[, "Pr(>|z|)"]),
       stringsAsFactors = FALSE
     )
   }
@@ -228,10 +268,11 @@ runmulti_logit <- function(data,
 #' @param ... Additional arguments passed to \code{stats::glm()}.
 #'
 #' @importFrom stats as.formula glm confint qnorm model.frame
-#' @return A data.frame with columns: \code{variable}, \code{family},
-#'   \code{link}, \code{beta}, \code{lower95}, \code{upper95}, \code{pvalue},
-#'   \code{n}.  For log- or logit-link families \code{exp(beta)} gives the
-#'   ratio-scale effect (IRR, rate ratio, etc.).
+#' @return A data.frame with columns: \code{variable}, \code{contrast},
+#'   \code{family}, \code{link}, \code{beta}, \code{lower95}, \code{upper95},
+#'   \code{pvalue}, and \code{n}. Multi-level categorical exposures return one
+#'   row per non-reference contrast. For log- or logit-link families
+#'   \code{exp(beta)} gives the ratio-scale effect (IRR, rate ratio, etc.).
 #'
 #' @export
 runmulti_glm <- function(data,
@@ -259,18 +300,20 @@ runmulti_glm <- function(data,
 
     sum_model <- summary(model)
     coefs     <- sum_model$coefficients
-    main_row  <- coefs[rownames(coefs) == var, , drop = FALSE]
+    contrast_names <- .regression_term_coefficients(model, var)
+    main_row <- coefs[contrast_names, , drop = FALSE]
 
     if (is_quasi) {
       se_val <- main_row[, "Std. Error"]
       b_val  <- main_row[, "Estimate"]
       z95    <- stats::qnorm(0.975)
-      ci     <- matrix(c(b_val - z95 * se_val, b_val + z95 * se_val),
-                       nrow = 1,
-                       dimnames = list(var, c("2.5 %", "97.5 %")))
+      ci <- cbind(
+        "2.5 %" = b_val - z95 * se_val,
+        "97.5 %" = b_val + z95 * se_val
+      )
     } else {
       ci <- suppressWarnings(
-        stats::confint(model, parm = var, level = 0.95)
+        stats::confint(model, parm = contrast_names, level = 0.95)
       )
       if (!is.matrix(ci)) ci <- t(as.matrix(ci))
     }
@@ -278,13 +321,14 @@ runmulti_glm <- function(data,
     pval_col <- if ("Pr(>|t|)" %in% colnames(coefs)) "Pr(>|t|)" else "Pr(>|z|)"
 
     results[[var]] <- data.frame(
-      variable = var,
+      variable = rep(var, length(contrast_names)),
+      contrast = contrast_names,
       family   = family_obj$family,
       link     = family_obj$link,
-      beta     = round(main_row[, "Estimate"], 4),
-      lower95  = round(ci[, 1], 4),
-      upper95  = round(ci[, 2], 4),
-      pvalue   = signif(main_row[, pval_col], 3),
+      beta     = unname(main_row[, "Estimate"]),
+      lower95  = unname(ci[, 1]),
+      upper95  = unname(ci[, 2]),
+      pvalue   = unname(main_row[, pval_col]),
       n        = nrow(stats::model.frame(model)),
       stringsAsFactors = FALSE
     )
@@ -313,8 +357,10 @@ runmulti_glm <- function(data,
 #' @param ... Additional arguments passed to \code{MASS::glm.nb()}.
 #'
 #' @importFrom stats as.formula confint model.frame
-#' @return A data.frame with columns: \code{variable}, \code{IRR},
-#'   \code{lower95}, \code{upper95}, \code{pvalue}, \code{theta}, \code{n}.
+#' @return A data.frame with columns: \code{variable}, \code{contrast},
+#'   \code{IRR}, \code{lower95}, \code{upper95}, \code{pvalue}, \code{theta},
+#'   and \code{n}. Multi-level categorical exposures return one row per
+#'   non-reference contrast.
 #'   \code{IRR} is the incidence rate ratio (\code{exp(beta)}).
 #'   \code{theta} is the estimated negative-binomial dispersion parameter
 #'   (larger values indicate less overdispersion).
@@ -341,18 +387,20 @@ runmulti_negbin <- function(data,
 
     sum_model <- summary(model)
     coefs    <- sum_model$coefficients
-    main_row <- coefs[rownames(coefs) == var, , drop = FALSE]
+    contrast_names <- .regression_term_coefficients(model, var)
+    main_row <- coefs[contrast_names, , drop = FALSE]
 
-    ci <- suppressWarnings(stats::confint(model, parm = var, level = 0.95))
+    ci <- suppressWarnings(stats::confint(model, parm = contrast_names, level = 0.95))
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
 
     results[[var]] <- data.frame(
-      variable = var,
-      IRR      = round(exp(main_row[, "Estimate"]), 4),
-      lower95  = round(exp(ci[, 1]), 4),
-      upper95  = round(exp(ci[, 2]), 4),
-      pvalue   = signif(main_row[, "Pr(>|z|)"], 3),
-      theta    = round(model$theta, 4),
+      variable = rep(var, length(contrast_names)),
+      contrast = contrast_names,
+      IRR      = unname(exp(main_row[, "Estimate"])),
+      lower95  = unname(exp(ci[, 1])),
+      upper95  = unname(exp(ci[, 2])),
+      pvalue   = unname(main_row[, "Pr(>|z|)"]),
+      theta    = unname(model$theta),
       n        = nrow(stats::model.frame(model)),
       stringsAsFactors = FALSE
     )

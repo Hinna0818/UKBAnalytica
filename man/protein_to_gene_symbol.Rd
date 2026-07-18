@@ -12,7 +12,8 @@ protein_to_gene_symbol(
   mapping_protein_col = "protein",
   mapping_symbol_col = "gene_symbol",
   organism_db = "org.Hs.eg.db",
-  drop_unmapped = TRUE
+  drop_unmapped = TRUE,
+  input_format = c("auto", "rap_olink", "symbol", "raw")
 )
 }
 \arguments{
@@ -38,10 +39,17 @@ symbols. Default is \code{"gene_symbol"}.}
 
 \item{drop_unmapped}{Logical. If \code{TRUE}, drop rows without a mapped gene
 symbol. Default is \code{TRUE}.}
+
+\item{input_format}{Input naming convention. \code{"auto"} parses only recognized
+RAP Olink column names and Olink semicolon coding; \code{"rap_olink"} explicitly
+extracts the suffix after the final dot; \code{"symbol"} validates gene-symbol
+style identifiers; and \code{"raw"} preserves identifiers apart from trimming
+whitespace and converting to upper case.}
 }
 \value{
 A data.frame with columns \code{protein}, \code{gene_symbol}, and
-\code{mapping_source}.
+\code{mapping_source}. Its \code{mapping_summary} attribute reports input, mapped,
+and unmapped protein counts.
 }
 \description{
 Convert a vector of protein identifiers into HGNC gene symbols for downstream

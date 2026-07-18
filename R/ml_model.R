@@ -274,67 +274,90 @@ ukb_ml_model <- function(formula,
   
   model <- match.arg(model)
   task <- match.arg(task)
+  if (!is.data.frame(data)) {
+    stop("`data` must be a data.frame or data.table.", call. = FALSE)
+  }
+  data <- as.data.frame(data)
+  if (!is.list(params)) {
+    stop("`params` must be a list.", call. = FALSE)
+  }
+  dots <- list(...)
+  if (length(dots) > 0L) {
+    params <- utils::modifyList(params, dots)
+  }
   
   # Sample data if requested
-  if (!is.null(sample_n) && sample_n < nrow(data)) {
-    if (!is.null(seed)) set.seed(seed)
-    data <- data[sample(nrow(data), sample_n), ]
-    if (verbose) message(sprintf("Sampled %d observations from data", sample_n))
+  if (!is.null(sample_n)) {
+    if (!is.numeric(sample_n) || length(sample_n) != 1L || is.na(sample_n) || sample_n < 1L) {
+      stop("`sample_n` must be a positive integer or NULL.", call. = FALSE)
+    }
+    sample_n <- min(as.integer(sample_n), nrow(data))
+    if (sample_n < nrow(data)) {
+      sample_idx <- if (is.null(seed)) {
+        sample.int(nrow(data), sample_n)
+      } else {
+        with_seed(seed, sample.int(nrow(data), sample_n))
+      }
+      data <- data[sample_idx, , drop = FALSE]
+      if (verbose) message(sprintf("Sampled %d observations from data", sample_n))
+    }
   }
   
-  # Prepare data
+  # Preserve the legacy complete-case contract, then delegate fitting and
+  # prediction preprocessing to the current workflow implementation.
   prep <- .prepare_model_data(formula, data, task)
-  
-  # Split data
-  split <- .split_data(prep$data, prep$y, split_ratio, stratify, seed)
-  
-  train_data <- prep$data[split$train_idx, ]
-  test_data <- prep$data[split$test_idx, ]
-  
-  X_train <- prep$X[split$train_idx, , drop = FALSE]
-  y_train <- prep$y[split$train_idx]
-  X_test <- prep$X[split$test_idx, , drop = FALSE]
-  y_test <- prep$y[split$test_idx]
-  
-  if (verbose) {
-    message(sprintf("Training %s for %s", .get_model_label(model), task))
-    message(sprintf("Train: %d, Test: %d observations", nrow(train_data), nrow(test_data)))
-  }
-  
-  # Train model
-  fitted_model <- switch(model,
-    rf = .fit_rf(X_train, y_train, task, params, verbose, ...),
-    xgboost = .fit_xgboost(X_train, y_train, task, params, verbose, ...),
-    glmnet = .fit_glmnet(X_train, y_train, task, params, verbose, ...),
-    svm = .fit_svm(X_train, y_train, task, params, verbose, ...),
-    nnet = .fit_nnet(X_train, y_train, task, params, verbose, ...),
-    logistic = .fit_logistic(formula, train_data, task, params, verbose, ...)
+  flow_model <- if (task == "regression" && model == "logistic") "linear" else model
+  flow <- ukb_ml_flow(
+    formula = formula,
+    data = prep$data,
+    model = flow_model,
+    outcome_type = if (task == "classification") "auto" else "continuous",
+    split_params = list(
+      split = "train_test",
+      train_ratio = split_ratio,
+      stratify_by = if (isTRUE(stratify) && task == "classification") "outcome" else "none"
+    ),
+    tune = FALSE,
+    best_params = params,
+    threshold_method = "none",
+    use_validation_in_refit = FALSE,
+    compute_shap = FALSE,
+    seed = seed,
+    verbose = verbose
   )
-  
-  # Create result object
+
+  train_data <- as.data.frame(flow$split$train)
+  test_data <- as.data.frame(flow$split$test)
+  classes <- flow$final_model$classes
+  y_train <- train_data[[prep$response]]
+  y_test <- test_data[[prep$response]]
+  if (task == "classification") {
+    y_train <- factor(y_train, levels = classes)
+    y_test <- factor(y_test, levels = classes)
+  }
+
   result <- list(
-    model = fitted_model,
+    model = flow$final_model$fitted_model,
     model_type = model,
     task = task,
     formula = formula,
-    predictors = prep$predictors,
+    predictors = flow$features,
     outcome = prep$response,
     train_data = train_data,
     test_data = test_data,
-    X_train = X_train,
+    X_train = train_data[, flow$features, drop = FALSE],
     y_train = y_train,
-    X_test = X_test,
+    X_test = test_data[, flow$features, drop = FALSE],
     y_test = y_test,
-    train_idx = split$train_idx,
-    test_idx = split$test_idx,
+    train_idx = flow$split$split_indices$train,
+    test_idx = flow$split$split_indices$test,
     seed = seed,
+    modern_model = flow$final_model,
+    flow = flow,
     call = match.call()
   )
-  
   class(result) <- "ukb_ml"
-  
-  # Calculate metrics on test set
-  result$metrics <- ukb_ml_metrics(result, verbose = FALSE)
+  result$metrics <- flow$test_eval$metrics
   
   if (verbose) {
     if (task == "classification") {
@@ -564,6 +587,37 @@ ukb_ml_predict <- function(object, newdata = NULL, type = c("response", "prob", 
 #' @export
 ukb_ml_predict.ukb_ml <- function(object, newdata = NULL, type = c("response", "prob", "class", "link"), ...) {
   type <- match.arg(type)
+
+  if (!is.null(object$modern_model) && inherits(object$modern_model, "ukb_ml_final")) {
+    prediction_data <- if (is.null(newdata)) object$test_data else newdata
+    if (type == "link") {
+      if (object$modern_model$model == "logistic") {
+        return(stats::predict(
+          object$modern_model$fitted_model,
+          newdata = as.data.frame(prediction_data),
+          type = "link"
+        ))
+      }
+      stop("`type = \"link\"` is only available for logistic models.", call. = FALSE)
+    }
+
+    core_type <- if (object$task == "regression") {
+      "response"
+    } else if (type == "class") {
+      "class"
+    } else {
+      "prob"
+    }
+    pred <- .ukb_ml_predict_core(object$modern_model, prediction_data, type = core_type)
+    if (object$task == "classification" && object$modern_model$outcome_type == "binary" &&
+        type %in% c("response", "prob")) {
+      pred <- as.numeric(pred)
+      out <- cbind(1 - pred, pred)
+      colnames(out) <- object$modern_model$classes
+      return(out)
+    }
+    return(pred)
+  }
   
   if (is.null(newdata)) {
     newdata <- object$test_data
@@ -635,15 +689,24 @@ ukb_ml_predict.ukb_ml <- function(object, newdata = NULL, type = c("response", "
   .check_ml_package("glmnet")
   
   X_mat <- model.matrix(~ . - 1, data = X)
+  expected <- rownames(model$glmnet.fit$beta)
+  missing_columns <- setdiff(expected, colnames(X_mat))
+  if (length(missing_columns) > 0L) {
+    zeros <- matrix(0, nrow = nrow(X_mat), ncol = length(missing_columns))
+    colnames(zeros) <- missing_columns
+    X_mat <- cbind(X_mat, zeros)
+  }
+  X_mat <- X_mat[, expected, drop = FALSE]
   
   if (task == "classification") {
     if (type == "class") {
-      predict(model, newx = X_mat, s = "lambda.min", type = "class")
+      as.vector(predict(model, newx = X_mat, s = "lambda.min", type = "class"))
     } else {
-      predict(model, newx = X_mat, s = "lambda.min", type = "response")
+      pred <- as.numeric(predict(model, newx = X_mat, s = "lambda.min", type = "response"))
+      cbind(1 - pred, pred)
     }
   } else {
-    predict(model, newx = X_mat, s = "lambda.min")
+    as.numeric(predict(model, newx = X_mat, s = "lambda.min"))
   }
 }
 

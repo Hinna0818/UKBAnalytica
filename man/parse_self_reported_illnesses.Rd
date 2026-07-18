@@ -21,6 +21,8 @@ A data.table with columns:
 \item{source}{Data source identifier ("Self-report")}
 \item{instance}{Assessment instance (0, 1, 2, 3)}
 \item{array_idx}{Array index within instance}
+\item{baseline_report}{Whether the illness was reported at baseline}
+\item{diagnosis_date_quality}{How the diagnosis date was obtained}
 }
 }
 \description{

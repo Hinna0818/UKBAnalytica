@@ -156,11 +156,6 @@ build_survival_dataset <- function(dt,
     baseline_col = baseline_col
   )
 
-  if (output == "long" && !include_all) {
-    message("[build_survival_dataset] Complete")
-    return(outcome_cases_dt[, .(eid, disease, status, surv_time, prevalent_case, earliest_date, diagnosis_source)])
-  }
-
   message("[build_survival_dataset] Calculating survival times...")
 
   if (!is.null(skeleton_info)) {
@@ -175,21 +170,24 @@ build_survival_dataset <- function(dt,
       time_valid_followup = valid_followup
     )]
   } else {
-    baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
-    death_dates <- get_death_dates(dt)
-    all_eids <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
-
-    all_eids[, end_date := pmin(death_date, censor_date, na.rm = TRUE)]
-    all_eids[is.na(end_date), end_date := censor_date]
+    all_eids <- .ukb_followup_window(
+      dt = dt,
+      baseline_col = baseline_col,
+      censor_date = censor_date
+    )
+    all_eids[, end_date := followup_end_date]
     all_eids[, default_surv_time := as.numeric(end_date - baseline_date) / 365.25]
     all_eids[, `:=`(
-      time_followup_end_reason = data.table::fifelse(
+      time_followup_end_reason = data.table::fcase(
         !is.na(death_date) & end_date == death_date,
         "death",
-        "administrative_censoring"
+        !is.na(lost_to_followup_date) & end_date == lost_to_followup_date,
+        "lost_to_followup",
+        default = "administrative_censoring"
       ),
       time_valid_followup = !is.na(baseline_date) & !is.na(end_date) & default_surv_time >= 0
     )]
+    all_eids[, c("lost_to_followup_date", "followup_end_date") := NULL]
   }
 
   diseases <- names(disease_definitions)
@@ -217,22 +215,42 @@ build_survival_dataset <- function(dt,
       cohort <- data.table::copy(all_eids)
       cohort[, `:=`(
         disease = d,
-        status = 0L,
+        status = data.table::fifelse(
+          get("time_valid_followup"),
+          0L,
+          NA_integer_
+        ),
         prevalent_case = FALSE,
         earliest_date = as.Date(NA),
         diagnosis_source = NA_character_,
-        surv_time = default_surv_time
+        surv_time = data.table::fifelse(
+          get("time_valid_followup"),
+          get("default_surv_time"),
+          NA_real_
+        )
       )]
 
       # Mark prevalent cases (from prevalent_sources including self-report)
       if (nrow(d_prevalent) > 0) {
-        prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
-        cohort[eid %in% prevalent_eids, prevalent_case := TRUE]
+        prevalent_records <- d_prevalent[prevalent_case == TRUE]
+        prevalent_eids <- prevalent_records$eid
+        if (nrow(prevalent_records) > 0L) {
+          cohort[prevalent_records, `:=`(
+            prevalent_case = TRUE,
+            status = NA_integer_,
+            surv_time = NA_real_,
+            earliest_date = i.earliest_date,
+            diagnosis_source = i.diagnosis_source
+          ), on = "eid"]
+        }
+      } else {
+        prevalent_eids <- cohort$eid[0]
       }
 
       # Mark incident cases and update survival time (from outcome_sources)
       if (nrow(d_outcome) > 0) {
-        cohort[d_outcome,
+        non_prevalent_outcome <- d_outcome[!eid %in% prevalent_eids]
+        cohort[non_prevalent_outcome,
           `:=`(
             status = i.status,
             earliest_date = i.earliest_date,
@@ -249,12 +267,17 @@ build_survival_dataset <- function(dt,
     })
 
     full_cohort <- data.table::rbindlist(full_list, use.names = TRUE, fill = TRUE)
-    full_cohort <- full_cohort[!is.na(surv_time) & surv_time >= 0]
     data.table::setorder(full_cohort, disease, eid)
 
     message("[build_survival_dataset] Complete")
-
-    return(full_cohort[, .(eid, disease, status, surv_time, prevalent_case, earliest_date, diagnosis_source)])
+    output_columns <- c(
+      "eid", "disease", "status", "surv_time", "prevalent_case",
+      "earliest_date", "diagnosis_source"
+    )
+    if (!isTRUE(include_all)) {
+      full_cohort <- full_cohort[status == 1L & prevalent_case == FALSE]
+    }
+    return(full_cohort[, output_columns, with = FALSE])
   }
 
   # Generate wide format: history from prevalent_sources, incident from outcome_sources
@@ -320,6 +343,10 @@ build_survival_dataset <- function(dt,
     all.x = TRUE
   )
   result_dt <- data.table::merge.data.table(result_dt, outcome_dt, by = "eid", all.x = TRUE)
+  internal_time_cols <- grep("^\\.ukba_time_skeleton_", names(result_dt), value = TRUE)
+  if (length(internal_time_cols) > 0L) {
+    result_dt[, (internal_time_cols) := NULL]
+  }
   data.table::setorder(result_dt, eid)
 
   if (isTRUE(show_flow)) {
@@ -472,14 +499,24 @@ build_survival_dataset <- function(dt,
     temp_baseline_col <- paste0(temp_baseline_col, "_")
   }
 
+  temp_followup_col <- ".ukba_time_skeleton_followup_end_date"
+  while (temp_followup_col %in% names(dt)) {
+    temp_followup_col <- paste0(temp_followup_col, "_")
+  }
+
   merged_dt <- data.table::merge.data.table(
     data.table::copy(dt),
-    skeleton_dt[, .(eid, .ukba_tmp_baseline = baseline_date)],
+    skeleton_dt[, .(
+      eid,
+      .ukba_tmp_baseline = baseline_date,
+      .ukba_tmp_followup_end = followup_end_date
+    )],
     by = "eid",
     all.x = TRUE,
     sort = FALSE
   )
   data.table::setnames(merged_dt, ".ukba_tmp_baseline", temp_baseline_col)
+  data.table::setnames(merged_dt, ".ukba_tmp_followup_end", temp_followup_col)
   data.table::setorder(merged_dt, eid)
   data.table::setorder(skeleton_dt, eid)
 

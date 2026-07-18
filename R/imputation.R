@@ -73,6 +73,12 @@ run_imputation <- function(data,
   if (!id_col %in% names(data)) {
     stop(sprintf("ID column '%s' not found in `data`.", id_col))
   }
+  if (id_col %in% vars) {
+    stop("`id_col` cannot be included in `vars`.", call. = FALSE)
+  }
+  if (anyNA(data[[id_col]]) || anyDuplicated(data[[id_col]])) {
+    stop("The ID column in `data` must be non-missing and unique.", call. = FALSE)
+  }
 
   vars <- unique(vars)
   vars_present <- vars[vars %in% names(data)]
@@ -144,12 +150,18 @@ run_imputation <- function(data,
         if (!id_col %in% names(extra)) {
           stop(sprintf("additional_data$%s does not contain '%s'.", nm, id_col))
         }
+        if (anyNA(extra[[id_col]]) || anyDuplicated(extra[[id_col]])) {
+          stop(sprintf(
+            "The ID column in additional_data$%s must be non-missing and unique.",
+            nm
+          ), call. = FALSE)
+        }
         merged <- merge(
           x = merged,
           y = extra,
           by = id_col,
-          all = (additional_join == "left"),
           all.x = (additional_join == "left"),
+          all.y = FALSE,
           sort = FALSE
         )
       }

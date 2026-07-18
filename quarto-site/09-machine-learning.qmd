@@ -331,6 +331,51 @@ ml <- ukb_ml_workflow(
 
 Do not use test-set metrics to choose hyperparameters.
 
+## Optional nested cross-validation
+
+Nested cross-validation is available as a supplementary robustness analysis,
+but it is not the default. Set `nested_cv = TRUE` only when you want an
+additional development-set estimate that repeats feature selection and tuning
+within each outer analysis fold.
+
+```{r ml-nested-cv, eval=FALSE}
+ml_nested <- ukb_ml_workflow(
+  outcome_status ~ age + sex + bmi + smoking + sbp,
+  data = ml_dt,
+  model = "xgboost",
+  feature_select = "filter",
+  feature_params = list(max_features = 50),
+  tune_params = list(
+    folds = 5,
+    metric = "auc",
+    param_grid = data.frame(
+      nrounds = c(50, 100),
+      max_depth = c(2, 4),
+      eta = c(0.05, 0.10)
+    )
+  ),
+  nested_cv = TRUE,
+  nested_cv_params = list(
+    outer_folds = 5,
+    inner_folds = 5,
+    repeats = 1
+  ),
+  threshold_method = "youden",
+  seed = 42
+)
+
+ml_nested$nested_cv_result$primary_metric_summary
+head(ml_nested$nested_cv_result$feature_stability)
+```
+
+Only the training split enters nested CV. The validation and frozen test sets
+remain untouched, and the standard workflow still performs its original
+feature selection, tuning, final refit, and test evaluation. Report nested-CV
+performance as the mean and standard deviation across outer evaluations; use
+`feature_stability` to inspect how often each feature was selected. For a
+standard prediction analysis with a prespecified feature set and a frozen test
+set, keep the default `nested_cv = FALSE`.
+
 ## Output object
 
 `ukb_ml_workflow()` returns a list-like `ukb_ml_workflow` object:
@@ -338,6 +383,7 @@ Do not use test-set metrics to choose hyperparameters.
 | Element | Content |
 |:--------|:--------|
 | `split` | Frozen `ukb_ml_split` object |
+| `nested_cv_result` | Optional nested-CV performance and feature stability; `NULL` by default |
 | `feature_result` | Selected features and feature-selection metadata |
 | `tune_result` | Candidate grid, best parameters, best development-set score |
 | `threshold_result` | Binary threshold learned from validation, CV OOF, or train data |
@@ -367,15 +413,44 @@ new_class <- predict(ml$final_model, newdata = new_participants, type = "class")
 
 For continuous outcomes, use `type = "response"`.
 
+## Additional binary-model evaluation
+
+For a binary `ukb_ml_workflow`, the PR curve, calibration curve, and decision
+curve functions use the stored frozen-test predictions by default:
+
+```{r ml-additional-evaluation, eval=FALSE}
+pr <- ukb_ml_pr(ml)
+calibration <- ukb_ml_calibration(ml, n_bins = 10)
+dca <- ukb_ml_dca(ml, thresholds = seq(0.01, 0.50, by = 0.01))
+
+pr$auprc
+calibration$brier_score
+calibration$ece
+dca$data
+```
+
+The same functions accept a `ukb_ml_flow` object. When only a fitted
+`ukb_ml_final` object is available, provide an evaluation dataset containing
+the outcome and required predictors:
+
+```{r ml-additional-evaluation-final, eval=FALSE}
+external_pr <- ukb_ml_pr(ml$final_model, newdata = external_validation_df)
+```
+
 ## SHAP interpretation
 
 Use `ukb_shap()` directly on the workflow object. If `data` is not supplied,
 the frozen test set stored in `ml$split$test` is used, so the interpretation is
-aligned with the final reported performance.
+aligned with the final reported performance. Three backends share the same
+output structure: native TreeSHAP for XGBoost, model-agnostic KernelSHAP, and
+Monte Carlo FastSHAP. With `method = "auto"`, XGBoost uses TreeSHAP; other
+models use an installed model-agnostic backend. The training split is used as
+the default background distribution.
 
 ```{r ml-shap, eval=FALSE}
 shap <- ukb_shap(
   ml,
+  method = "auto",
   sample_n = 500,
   nsim = 100,
   seed = 42
@@ -401,6 +476,9 @@ For multiclass models, choose the class probability to explain:
 ```{r ml-shap-multiclass, eval=FALSE}
 shap_case <- ukb_shap(ml_multi, class_level = "case", sample_n = 500)
 ```
+
+Existing scripts remain compatible: `method = "xgboost"` maps to TreeSHAP,
+and `method = "permutation"` maps to FastSHAP.
 
 ## Advanced: run the workflow step by step
 

@@ -13,33 +13,34 @@ NULL
 #' Compute SHAP Values
 #'
 #' @description
-#' Calculate SHAP values for model interpretation. SHAP values explain
-#' each feature's contribution to individual predictions.
+#' Calculate SHAP values through native TreeSHAP, KernelSHAP, or FastSHAP while
+#' preserving one output structure across supported machine-learning models.
 #'
 #' @param object A \code{ukb_ml_workflow}, \code{ukb_ml_final}, or legacy
 #'   \code{ukb_ml} object.
-#' @param data Data for SHAP computation. If \code{object} is a
-#'   \code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
-#'   If \code{object} is a \code{ukb_ml_final}, \code{data} is required.
-#' @param nsim Number of Monte Carlo samples for SHAP estimation (default 100).
-#'   Ignored when \code{method = "xgboost"}.
-#' @param sample_n Optional; subsample observations for large datasets
-#' @param seed Random seed
-#' @param verbose Print progress
-#' @param class_level Optional class to explain for multiclass
-#'   \code{ukb_ml_workflow}/\code{ukb_ml_final} objects.
-#' @param method SHAP backend. \code{"auto"} uses the native XGBoost
-#'   contribution backend for XGBoost models and an internal permutation
-#'   approximation otherwise.
-#' @param ... Additional arguments
+#' @param data Data to explain. A workflow uses its frozen test set when this is
+#'   \code{NULL}. A final-model object requires explicit data.
+#' @param nsim Number of Monte Carlo samples for FastSHAP. Ignored by TreeSHAP
+#'   and KernelSHAP.
+#' @param sample_n Optional number of observations to explain.
+#' @param seed Optional random seed.
+#' @param verbose Print progress messages.
+#' @param class_level Class probability to explain for multiclass models.
+#' @param method SHAP backend. \code{"auto"} uses TreeSHAP for XGBoost and an
+#'   installed model-agnostic backend otherwise. Legacy values
+#'   \code{"xgboost"} and \code{"permutation"} are aliases for
+#'   \code{"treeshap"} and \code{"fastshap"}. \code{"kernalshap"} is accepted
+#'   as an alias for \code{"kernelshap"}.
+#' @param background_data Optional reference data for KernelSHAP or FastSHAP.
+#'   A workflow uses its training split by default. A final model uses
+#'   \code{data} when no background is supplied.
+#' @param background_n Maximum number of background observations. Use
+#'   \code{NULL} to retain all supplied background observations.
+#' @param ... Additional arguments passed to the selected backend.
 #'
-#' @return A ukb_shap object containing:
-#' \itemize{
-#'   \item shap_values: Matrix of SHAP values (n x p)
-#'   \item baseline: Model baseline (expected) value
-#'   \item feature_names: Names of features
-#'   \item feature_values: Original feature values
-#' }
+#' @return A \code{ukb_shap} object containing the SHAP matrix, baseline,
+#'   feature names and values, backend name, output scale, background sample
+#'   size, and a local-accuracy diagnostic where available.
 #'
 #' @export
 ukb_shap <- function(object,
@@ -49,9 +50,15 @@ ukb_shap <- function(object,
                      seed = NULL,
                      verbose = TRUE,
                      class_level = NULL,
-                     method = c("auto", "permutation", "xgboost"),
+                     method = c(
+                       "auto", "treeshap", "kernelshap", "fastshap",
+                       "xgboost", "permutation", "kernalshap"
+                     ),
+                     background_data = NULL,
+                     background_n = 200,
                      ...) {
   method <- match.arg(method)
+  if (!is.null(seed)) set.seed(seed)
 
   if (inherits(object, "ukb_ml_workflow")) {
     if (is.null(object$final_model)) {
@@ -59,6 +66,9 @@ ukb_shap <- function(object,
     }
     if (is.null(data)) {
       data <- object$split$test
+    }
+    if (is.null(background_data)) {
+      background_data <- object$split$train
     }
     return(.ukb_shap_final_model(
       object = object$final_model,
@@ -69,13 +79,18 @@ ukb_shap <- function(object,
       verbose = verbose,
       class_level = class_level,
       method = method,
+      background_data = background_data,
+      background_n = background_n,
       ...
     ))
   }
 
   if (inherits(object, "ukb_ml_final")) {
     if (is.null(data)) {
-      stop("`data` is required when calling ukb_shap() on a ukb_ml_final object. You can also call ukb_shap() on the full ukb_ml_workflow object to use its frozen test set.", call. = FALSE)
+      stop("`data` is required when calling ukb_shap() on a ukb_ml_final object.", call. = FALSE)
+    }
+    if (is.null(background_data)) {
+      background_data <- data
     }
     return(.ukb_shap_final_model(
       object = object,
@@ -86,16 +101,16 @@ ukb_shap <- function(object,
       verbose = verbose,
       class_level = class_level,
       method = method,
+      background_data = background_data,
+      background_n = background_n,
       ...
     ))
   }
 
-  if (method == "xgboost") {
-    stop("method = 'xgboost' is only available for ukb_ml_workflow or ukb_ml_final objects fitted with model = 'xgboost'.", call. = FALSE)
+  if (!inherits(object, "ukb_ml")) {
+    stop("`object` must be a ukb_ml_workflow, ukb_ml_final, or legacy ukb_ml object.", call. = FALSE)
   }
-  if (!is.null(seed)) set.seed(seed)
-  
-  # Get data
+
   if (is.null(data)) {
     X <- object$X_test
     feature_values <- object$test_data[, object$predictors, drop = FALSE]
@@ -103,47 +118,55 @@ ukb_shap <- function(object,
     X <- data[, object$predictors, drop = FALSE]
     feature_values <- X
   }
-  
-  # Subsample if requested
   if (!is.null(sample_n) && sample_n < nrow(X)) {
     idx <- sample(nrow(X), sample_n)
     X <- X[idx, , drop = FALSE]
     feature_values <- feature_values[idx, , drop = FALSE]
-    if (verbose) message(sprintf("Using %d sampled observations for SHAP", sample_n))
+    if (isTRUE(verbose)) message(sprintf("Using %d sampled observations for SHAP", sample_n))
   }
-  
-  if (verbose) {
-    message(sprintf("Computing SHAP values for %d observations...", nrow(X)))
+
+  resolved_method <- .ukb_shap_resolve_method(method, object$model_type)
+  if (identical(resolved_method, "treeshap")) {
+    return(.ukb_shap_xgboost_legacy(
+      object = object,
+      X = X,
+      feature_values = feature_values,
+      class_level = class_level,
+      verbose = verbose
+    ))
   }
-  
-  # Create prediction wrapper
+
+  if (is.null(background_data)) {
+    background_data <- object$train_data
+  }
+  background_X <- background_data[, object$predictors, drop = FALSE]
+  background_X <- .ukb_shap_sample_background(background_X, background_n)
   pred_wrapper <- .create_shap_predict_wrapper(object)
-  
-  shap_values <- .ukb_permutation_shap(
+  backend <- .ukb_shap_model_agnostic(
+    method = resolved_method,
     object = object$model,
-    feature_names = object$predictors,
     X = X,
+    background_X = background_X,
     pred_wrapper = pred_wrapper,
     nsim = nsim,
+    verbose = verbose,
     ...
   )
-  
-  # Calculate baseline (expected value)
-  baseline <- .calculate_baseline(object)
-  
+
   result <- list(
-    shap_values = as.matrix(shap_values),
-    baseline = baseline,
+    shap_values = backend$shap_values,
+    baseline = backend$baseline,
     feature_names = object$predictors,
     feature_values = feature_values,
     model_type = object$model_type,
-    task = object$task
+    task = object$task,
+    method = resolved_method,
+    output_scale = if (object$task == "classification") "probability" else "response",
+    background_n = nrow(background_X),
+    local_accuracy_error = backend$local_accuracy_error
   )
-  
   class(result) <- "ukb_shap"
-  
-  if (verbose) message("SHAP computation complete")
-  
+  if (isTRUE(verbose)) message("SHAP computation complete")
   result
 }
 
@@ -157,7 +180,12 @@ ukb_shap <- function(object,
                                   seed = NULL,
                                   verbose = TRUE,
                                   class_level = NULL,
-                                  method = c("auto", "permutation", "xgboost"),
+                                  method = c(
+                                    "auto", "treeshap", "kernelshap", "fastshap",
+                                    "xgboost", "permutation", "kernalshap"
+                                  ),
+                                  background_data = NULL,
+                                  background_n = 200,
                                   ...) {
   if (!inherits(object, "ukb_ml_final")) {
     stop("`object` must be a ukb_ml_final object.", call. = FALSE)
@@ -167,19 +195,7 @@ ukb_shap <- function(object,
   }
   if (!is.null(seed)) set.seed(seed)
   method <- match.arg(method)
-
-  if ((method == "auto" && identical(object$model, "xgboost")) || method == "xgboost") {
-    if (!identical(object$model, "xgboost")) {
-      stop("method = 'xgboost' requires a ukb_ml_final object fitted with model = 'xgboost'.", call. = FALSE)
-    }
-    return(.ukb_shap_xgboost_final_model(
-      object = object,
-      data = data,
-      sample_n = sample_n,
-      seed = seed,
-      verbose = verbose
-    ))
-  }
+  resolved_method <- .ukb_shap_resolve_method(method, object$model)
 
   features <- object$selected_features %||% object$predictors
   data <- as.data.frame(data)
@@ -207,6 +223,17 @@ ukb_shap <- function(object,
     }
   }
 
+  if (identical(resolved_method, "treeshap")) {
+    return(.ukb_shap_xgboost_final_model(
+      object = object,
+      data = data,
+      sample_n = sample_n,
+      seed = seed,
+      verbose = verbose,
+      class_level = class_level
+    ))
+  }
+
   pred_wrapper <- function(model, newdata) {
     if (model$outcome_type == "continuous") {
       return(as.numeric(.ukb_ml_predict_core(model, newdata, type = "response")))
@@ -218,31 +245,45 @@ ukb_shap <- function(object,
     as.numeric(prob[, class_level])
   }
 
-  if (isTRUE(verbose)) {
-    target <- if (object$outcome_type == "multiclass") paste0("class=", class_level) else object$outcome_type
-    message(sprintf("Computing SHAP values for %d observations (%s)...", nrow(X), target))
+  if (is.null(background_data)) {
+    background_data <- data
   }
+  background_data <- as.data.frame(background_data)
+  missing_background <- setdiff(features, names(background_data))
+  if (length(missing_background) > 0L) {
+    stop(
+      "SHAP background data is missing feature column(s): ",
+      paste(missing_background, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  background_X <- background_data[, features, drop = FALSE]
+  background_X <- .ukb_shap_sample_background(background_X, background_n)
 
-  shap_values <- .ukb_permutation_shap(
+  backend <- .ukb_shap_model_agnostic(
+    method = resolved_method,
     object = object,
-    feature_names = features,
     X = X,
+    background_X = background_X,
     pred_wrapper = pred_wrapper,
     nsim = nsim,
+    verbose = verbose,
     ...
   )
 
-  baseline <- mean(pred_wrapper(object, X), na.rm = TRUE)
-
   result <- list(
-    shap_values = as.matrix(shap_values),
-    baseline = baseline,
+    shap_values = backend$shap_values,
+    baseline = backend$baseline,
     feature_names = features,
     feature_values = feature_values,
     model_type = object$model,
     task = if (object$outcome_type == "continuous") "regression" else "classification",
     outcome_type = object$outcome_type,
-    class_level = class_level
+    class_level = class_level,
+    method = resolved_method,
+    output_scale = if (object$outcome_type == "continuous") "response" else "probability",
+    background_n = nrow(background_X),
+    local_accuracy_error = backend$local_accuracy_error
   )
 
   class(result) <- "ukb_shap"
@@ -257,7 +298,8 @@ ukb_shap <- function(object,
                                           data,
                                           sample_n = NULL,
                                           seed = NULL,
-                                          verbose = TRUE) {
+                                          verbose = TRUE,
+                                          class_level = NULL) {
   .check_ml_package("xgboost")
 
   if (!inherits(object, "ukb_ml_final")) {
@@ -310,14 +352,27 @@ ukb_shap <- function(object,
   storage.mode(X) <- "numeric"
 
   if (isTRUE(verbose)) {
-    message(sprintf("Computing native XGBoost SHAP values for %d observations...", nrow(X)))
+    message(sprintf("Computing native TreeSHAP values for %d observations...", nrow(X)))
   }
-  contrib <- predict(
-    object$fitted_model,
-    xgboost::xgb.DMatrix(X),
-    predcontrib = TRUE
+
+  class_index <- 1L
+  explained_class <- NULL
+  if (object$outcome_type == "binary") {
+    explained_class <- object$positive_class
+  } else if (object$outcome_type == "multiclass") {
+    if (is.null(class_level) || !class_level %in% object$classes) {
+      stop("`class_level` must identify one class for multiclass TreeSHAP.", call. = FALSE)
+    }
+    class_index <- match(class_level, object$classes)
+    explained_class <- class_level
+  }
+
+  contrib <- .ukb_xgboost_contribution_matrix(
+    model = object$fitted_model,
+    X = X,
+    feature_names = expected_cols,
+    class_index = class_index
   )
-  contrib <- as.matrix(contrib)
   bias_col <- ncol(contrib)
   shap_values <- contrib[, -bias_col, drop = FALSE]
   colnames(shap_values) <- expected_cols
@@ -330,8 +385,11 @@ ukb_shap <- function(object,
     model_type = object$model,
     task = if (object$outcome_type == "continuous") "regression" else "classification",
     outcome_type = object$outcome_type,
-    class_level = if (object$outcome_type == "binary") object$positive_class else NULL,
-    method = "xgboost"
+    class_level = explained_class,
+    method = "treeshap",
+    output_scale = if (object$outcome_type == "continuous") "response" else "margin",
+    background_n = object$train_rows,
+    local_accuracy_error = attr(contrib, "local_accuracy_error")
   )
 
   class(result) <- "ukb_shap"
@@ -339,46 +397,270 @@ ukb_shap <- function(object,
   result
 }
 
-#' Internal permutation SHAP approximation
+#' Compute native TreeSHAP for a legacy ukb_ml object
 #' @keywords internal
 #' @noRd
-.ukb_permutation_shap <- function(object,
-                                  feature_names,
-                                  X,
-                                  pred_wrapper,
-                                  nsim = 100,
-                                  ...) {
-  X <- as.data.frame(X)
-  feature_names <- as.character(feature_names)
-  if (length(feature_names) == 0L || nrow(X) == 0L) {
-    return(matrix(numeric(0), nrow = nrow(X), ncol = length(feature_names),
-                  dimnames = list(NULL, feature_names)))
+.ukb_shap_xgboost_legacy <- function(object,
+                                     X,
+                                     feature_values,
+                                     class_level = NULL,
+                                     verbose = TRUE) {
+  if (!identical(object$model_type, "xgboost")) {
+    stop("TreeSHAP requires an XGBoost model.", call. = FALSE)
   }
-  if (!all(feature_names %in% names(X))) {
-    stop("All `feature_names` must be present in `X`.", call. = FALSE)
+  X_mat <- .ukb_shap_numeric_matrix(X)
+  classes <- if (is.factor(object$y_train)) levels(object$y_train) else unique(object$y_train)
+  class_index <- 1L
+  explained_class <- NULL
+  if (identical(object$task, "classification") && length(classes) > 2L) {
+    if (is.null(class_level) || !class_level %in% classes) {
+      stop("`class_level` must identify one class for multiclass TreeSHAP.", call. = FALSE)
+    }
+    class_index <- match(class_level, classes)
+    explained_class <- class_level
+  } else if (identical(object$task, "classification")) {
+    explained_class <- as.character(classes[[2]])
   }
-  nsim <- as.integer(nsim)
-  if (is.na(nsim) || nsim < 1L) {
-    stop("`nsim` must be a positive integer.", call. = FALSE)
-  }
-
-  pred_original <- as.numeric(pred_wrapper(object, X))
-  shap_values <- matrix(
-    0,
-    nrow = nrow(X),
-    ncol = length(feature_names),
-    dimnames = list(NULL, feature_names)
+  contrib <- .ukb_xgboost_contribution_matrix(
+    model = object$model,
+    X = X_mat,
+    feature_names = object$predictors,
+    class_index = class_index
   )
+  bias_col <- ncol(contrib)
+  result <- list(
+    shap_values = contrib[, -bias_col, drop = FALSE],
+    baseline = mean(contrib[, bias_col], na.rm = TRUE),
+    feature_names = object$predictors,
+    feature_values = feature_values,
+    model_type = object$model_type,
+    task = object$task,
+    outcome_type = if (object$task == "regression") "continuous" else if (length(classes) > 2L) "multiclass" else "binary",
+    class_level = explained_class,
+    method = "treeshap",
+    output_scale = if (object$task == "regression") "response" else "margin",
+    background_n = nrow(object$X_train),
+    local_accuracy_error = attr(contrib, "local_accuracy_error")
+  )
+  class(result) <- "ukb_shap"
+  if (isTRUE(verbose)) message("SHAP computation complete")
+  result
+}
 
-  for (s in seq_len(nsim)) {
-    for (j in seq_along(feature_names)) {
-      X_perm <- X
-      X_perm[[feature_names[[j]]]] <- sample(X_perm[[feature_names[[j]]]], nrow(X_perm), replace = FALSE)
-      pred_perm <- as.numeric(pred_wrapper(object, X_perm))
-      shap_values[, j] <- shap_values[, j] + (pred_original - pred_perm)
+#' Resolve SHAP backend names and legacy aliases
+#' @keywords internal
+#' @noRd
+.ukb_shap_resolve_method <- function(method, model_type) {
+  aliases <- c(
+    xgboost = "treeshap",
+    permutation = "fastshap",
+    kernalshap = "kernelshap"
+  )
+  if (method %in% names(aliases)) {
+    method <- unname(aliases[[method]])
+  }
+  if (identical(method, "auto")) {
+    if (identical(model_type, "xgboost")) {
+      return("treeshap")
+    }
+    if (requireNamespace("kernelshap", quietly = TRUE)) {
+      return("kernelshap")
+    }
+    if (requireNamespace("fastshap", quietly = TRUE)) {
+      return("fastshap")
+    }
+    stop(
+      "Model-agnostic SHAP requires package 'kernelshap' or 'fastshap'. ",
+      "Install one of these packages or use an XGBoost model with TreeSHAP.",
+      call. = FALSE
+    )
+  }
+  if (identical(method, "treeshap") && !identical(model_type, "xgboost")) {
+    stop("TreeSHAP is only available for XGBoost models.", call. = FALSE)
+  }
+  method
+}
+
+#' Sample a reproducible SHAP background set
+#' @keywords internal
+#' @noRd
+.ukb_shap_sample_background <- function(background_X, background_n = 200) {
+  background_X <- as.data.frame(background_X)
+  if (nrow(background_X) == 0L) {
+    stop("SHAP background data must contain at least one row.", call. = FALSE)
+  }
+  if (is.null(background_n)) {
+    return(background_X)
+  }
+  if (!is.numeric(background_n) || length(background_n) != 1L ||
+      is.na(background_n) || background_n < 1) {
+    stop("`background_n` must be NULL or a positive integer.", call. = FALSE)
+  }
+  background_n <- as.integer(background_n)
+  if (nrow(background_X) > background_n) {
+    background_X <- background_X[sample.int(nrow(background_X), background_n), , drop = FALSE]
+  }
+  background_X
+}
+
+#' Run a model-agnostic SHAP backend
+#' @keywords internal
+#' @noRd
+.ukb_shap_model_agnostic <- function(method,
+                                     object,
+                                     X,
+                                     background_X,
+                                     pred_wrapper,
+                                     nsim = 100,
+                                     verbose = TRUE,
+                                     ...) {
+  X <- as.data.frame(X)
+  background_X <- as.data.frame(background_X)
+  if (!identical(names(X), names(background_X))) {
+    stop("SHAP explanation and background data must have identical feature columns.", call. = FALSE)
+  }
+
+  extra_args <- list(...)
+  if (length(extra_args) > 0L && (is.null(names(extra_args)) || any(!nzchar(names(extra_args))))) {
+    stop("Additional SHAP backend arguments in `...` must be named.", call. = FALSE)
+  }
+
+  if (identical(method, "kernelshap")) {
+    if (!requireNamespace("kernelshap", quietly = TRUE)) {
+      stop("Package 'kernelshap' is required for method = 'kernelshap'.", call. = FALSE)
+    }
+    kernelshap_fun <- getExportedValue("kernelshap", "kernelshap")
+    args <- utils::modifyList(
+      list(
+        object = object,
+        X = X,
+        bg_X = background_X,
+        pred_fun = pred_wrapper,
+        verbose = verbose
+      ),
+      extra_args
+    )
+    fit <- do.call(kernelshap_fun, args)
+    shap_values <- as.matrix(fit$S)
+    baseline <- as.numeric(fit$baseline)[1]
+  } else if (identical(method, "fastshap")) {
+    if (!requireNamespace("fastshap", quietly = TRUE)) {
+      stop("Package 'fastshap' is required for method = 'fastshap'.", call. = FALSE)
+    }
+    nsim <- as.integer(nsim)
+    if (length(nsim) != 1L || is.na(nsim) || nsim < 1L) {
+      stop("`nsim` must be a positive integer for FastSHAP.", call. = FALSE)
+    }
+    fastshap_fun <- getExportedValue("fastshap", "explain")
+    args <- utils::modifyList(
+      list(
+        object = object,
+        feature_names = names(X),
+        X = background_X,
+        newdata = X,
+        pred_wrapper = pred_wrapper,
+        nsim = nsim,
+        adjust = nsim > 1L,
+        shap_only = FALSE,
+        parallel = FALSE
+      ),
+      extra_args
+    )
+    fit <- do.call(fastshap_fun, args)
+    shap_values <- as.matrix(fit$shapley_values)
+    baseline <- as.numeric(fit$baseline)[1]
+  } else {
+    stop("Unsupported model-agnostic SHAP backend: ", method, call. = FALSE)
+  }
+
+  if (!identical(dim(shap_values), c(nrow(X), ncol(X)))) {
+    stop("The SHAP backend returned an unexpected matrix shape.", call. = FALSE)
+  }
+  colnames(shap_values) <- names(X)
+  pred <- as.numeric(pred_wrapper(object, X))
+  local_error <- if (length(pred) == nrow(X)) {
+    max(abs(baseline + rowSums(shap_values) - pred), na.rm = TRUE)
+  } else {
+    NA_real_
+  }
+  if (!is.finite(local_error)) local_error <- NA_real_
+
+  list(
+    shap_values = shap_values,
+    baseline = baseline,
+    local_accuracy_error = local_error
+  )
+}
+
+#' Convert legacy predictors to the numeric matrix used by XGBoost
+#' @keywords internal
+#' @noRd
+.ukb_shap_numeric_matrix <- function(X) {
+  X <- as.data.frame(X)
+  if (any(vapply(X, is.character, logical(1)))) {
+    stop("Character predictors are not supported by legacy XGBoost SHAP.", call. = FALSE)
+  }
+  X_mat <- as.matrix(X)
+  for (i in seq_along(X)) {
+    if (is.factor(X[[i]])) {
+      X_mat[, i] <- as.numeric(X[[i]]) - 1
     }
   }
-  shap_values / nsim
+  storage.mode(X_mat) <- "numeric"
+  X_mat
+}
+
+#' Return one class-specific XGBoost contribution matrix
+#' @keywords internal
+#' @noRd
+.ukb_xgboost_contribution_matrix <- function(model,
+                                              X,
+                                              feature_names,
+                                              class_index = 1L) {
+  .check_ml_package("xgboost")
+  X <- as.matrix(X)
+  dmat <- xgboost::xgb.DMatrix(X)
+  contrib_raw <- tryCatch(
+    predict(model, dmat, predcontrib = TRUE, strict_shape = TRUE),
+    error = function(e) predict(model, dmat, predcontrib = TRUE)
+  )
+  dims <- dim(contrib_raw)
+  expected_columns <- length(feature_names) + 1L
+
+  if (length(dims) == 3L) {
+    if (class_index < 1L || class_index > dims[[2]]) {
+      stop("Requested TreeSHAP class index is outside the model output.", call. = FALSE)
+    }
+    if (dims[[1]] == nrow(X) && dims[[3]] == expected_columns) {
+      selected <- contrib_raw[, class_index, , drop = FALSE]
+      contrib <- matrix(selected, nrow = nrow(X), ncol = expected_columns)
+    } else if (dims[[1]] == expected_columns && dims[[3]] == nrow(X)) {
+      selected <- contrib_raw[, class_index, , drop = FALSE]
+      contrib <- t(matrix(selected, nrow = expected_columns, ncol = nrow(X)))
+    } else {
+      stop("Unexpected multidimensional TreeSHAP output shape.", call. = FALSE)
+    }
+  } else {
+    contrib <- as.matrix(contrib_raw)
+    if (nrow(contrib) != nrow(X) || ncol(contrib) != expected_columns) {
+      stop("Unexpected TreeSHAP output shape.", call. = FALSE)
+    }
+  }
+  colnames(contrib) <- c(feature_names, "BIAS")
+
+  margin <- predict(model, dmat, outputmargin = TRUE)
+  if (is.matrix(margin)) {
+    margin <- margin[, class_index]
+  } else if (length(margin) != nrow(X) && length(margin) %% nrow(X) == 0L) {
+    margin <- matrix(margin, nrow = nrow(X), byrow = TRUE)[, class_index]
+  }
+  local_error <- if (length(margin) == nrow(X)) {
+    max(abs(rowSums(contrib) - as.numeric(margin)), na.rm = TRUE)
+  } else {
+    NA_real_
+  }
+  attr(contrib, "local_accuracy_error") <- local_error
+  contrib
 }
 
 #' Create prediction wrapper for SHAP

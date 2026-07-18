@@ -167,6 +167,83 @@
 }
 
 #' @keywords internal
+.mlw_prepare_prediction_data <- function(object, newdata) {
+  newdata <- as.data.frame(newdata)
+  required <- unique(all.vars(object$x_terms))
+  missing <- setdiff(required, names(newdata))
+  if (length(missing) > 0L) {
+    stop(
+      "Prediction data are missing required variable(s): ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  for (variable in names(object$xlevels)) {
+    values <- as.character(newdata[[variable]])
+    unknown <- setdiff(unique(values[!is.na(values)]), object$xlevels[[variable]])
+    if (length(unknown) > 0L) {
+      stop(
+        sprintf(
+          "Prediction variable '%s' contains unseen level(s): %s.",
+          variable,
+          paste(unknown, collapse = ", ")
+        ),
+        call. = FALSE
+      )
+    }
+    newdata[[variable]] <- factor(values, levels = object$xlevels[[variable]])
+  }
+
+  complete <- stats::complete.cases(newdata[, required, drop = FALSE])
+  list(
+    data = newdata[complete, , drop = FALSE],
+    rows = which(complete),
+    n = nrow(newdata)
+  )
+}
+
+#' @keywords internal
+.mlw_prediction_matrix <- function(object, newdata) {
+  X <- stats::model.matrix(
+    object$x_terms,
+    data = newdata,
+    contrasts.arg = object$contrasts,
+    xlev = object$xlevels
+  )
+  if ("(Intercept)" %in% colnames(X)) {
+    X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
+  }
+
+  missing_columns <- setdiff(object$feature_names, colnames(X))
+  if (length(missing_columns) > 0L) {
+    zeros <- matrix(0, nrow = nrow(X), ncol = length(missing_columns))
+    colnames(zeros) <- missing_columns
+    X <- cbind(X, zeros)
+  }
+  X <- X[, object$feature_names, drop = FALSE]
+  storage.mode(X) <- "numeric"
+  X
+}
+
+#' @keywords internal
+.mlw_restore_predictions <- function(prediction, rows, n) {
+  if (is.matrix(prediction)) {
+    out <- matrix(
+      NA_real_,
+      nrow = n,
+      ncol = ncol(prediction),
+      dimnames = list(NULL, colnames(prediction))
+    )
+    out[rows, ] <- prediction
+    return(out)
+  }
+  out <- rep(NA_real_, n)
+  out[rows] <- as.numeric(prediction)
+  out
+}
+
+#' @keywords internal
 .mlw_check_model <- function(model, outcome_type) {
   model <- match.arg(model, c(
     "logistic", "linear", "lm", "rf", "xgboost", "glmnet",
@@ -323,6 +400,17 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     stop("Multiclass probabilities must have class column names.", call. = FALSE)
   }
   prob <- prob[, classes, drop = FALSE]
+  keep <- !is.na(truth) & stats::complete.cases(prob)
+  truth <- droplevels(truth[keep])
+  prob <- prob[keep, , drop = FALSE]
+  if (length(truth) == 0L) {
+    return(c(
+      accuracy = NA_real_, balanced_accuracy = NA_real_, macro_f1 = NA_real_,
+      weighted_f1 = NA_real_, macro_precision = NA_real_,
+      macro_recall = NA_real_, logloss = NA_real_
+    ))
+  }
+  classes <- colnames(prob)
   pred <- factor(classes[max.col(prob, ties.method = "first")], levels = classes)
 
   accuracy <- mean(pred == truth, na.rm = TRUE)
@@ -542,6 +630,8 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
   type <- match.arg(type)
   outcome_type <- object$outcome_type
   model <- object$model
+  prediction_data <- .mlw_prepare_prediction_data(object, newdata)
+  newdata <- prediction_data$data
 
   if (outcome_type == "continuous") {
     pred <- switch(
@@ -549,20 +639,22 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
       linear = stats::predict(object$fitted_model, newdata = newdata),
       rf = predict(object$fitted_model, data = newdata)$predictions,
       xgboost = {
-        X <- stats::model.matrix(object$x_terms, data = newdata, contrasts.arg = object$contrasts)
-        if ("(Intercept)" %in% colnames(X)) X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
+        X <- .mlw_prediction_matrix(object, newdata)
         predict(object$fitted_model, xgboost::xgb.DMatrix(X))
       },
       glmnet = {
-        X <- stats::model.matrix(object$x_terms, data = newdata, contrasts.arg = object$contrasts)
-        if ("(Intercept)" %in% colnames(X)) X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
+        X <- .mlw_prediction_matrix(object, newdata)
         as.numeric(stats::predict(object$fitted_model, newx = X, s = "lambda.min"))
       },
       svm = as.numeric(stats::predict(object$fitted_model, newdata = newdata)),
       rpart = as.numeric(stats::predict(object$fitted_model, newdata = newdata)),
       nnet = as.numeric(stats::predict(object$fitted_model, newdata = newdata))
     )
-    return(as.numeric(pred))
+    return(.mlw_restore_predictions(
+      pred,
+      prediction_data$rows,
+      prediction_data$n
+    ))
   }
 
   classes <- object$classes
@@ -580,8 +672,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     },
     xgboost = {
       .check_ml_package("xgboost")
-      X <- stats::model.matrix(object$x_terms, data = newdata, contrasts.arg = object$contrasts)
-      if ("(Intercept)" %in% colnames(X)) X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
+      X <- .mlw_prediction_matrix(object, newdata)
       raw <- predict(object$fitted_model, xgboost::xgb.DMatrix(X))
       if (outcome_type == "binary") {
         out <- cbind(1 - raw, raw)
@@ -594,8 +685,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
       }
     },
     glmnet = {
-      X <- stats::model.matrix(object$x_terms, data = newdata, contrasts.arg = object$contrasts)
-      if ("(Intercept)" %in% colnames(X)) X <- X[, setdiff(colnames(X), "(Intercept)"), drop = FALSE]
+      X <- .mlw_prediction_matrix(object, newdata)
       raw <- stats::predict(object$fitted_model, newx = X, s = "lambda.min", type = "response")
       if (outcome_type == "binary") {
         p <- as.numeric(raw)
@@ -632,13 +722,24 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     }
   )
 
+  prob <- .mlw_restore_predictions(
+    prob,
+    prediction_data$rows,
+    prediction_data$n
+  )
+
   if (outcome_type == "binary" && type %in% c("response", "prob")) {
     return(as.numeric(prob[, object$positive_class]))
   }
   if (type == "prob") {
     return(prob)
   }
-  factor(classes[max.col(prob, ties.method = "first")], levels = classes)
+  class_prediction <- rep(NA_character_, nrow(prob))
+  valid <- stats::complete.cases(prob)
+  class_prediction[valid] <- classes[
+    max.col(prob[valid, , drop = FALSE], ties.method = "first")
+  ]
+  factor(class_prediction, levels = classes)
 }
 
 #' Standardize Manual ML Train/Test Splits
@@ -925,6 +1026,11 @@ ukb_ml_split_data <- function(df,
     split_obj$internal_validation <- split_obj$test
   }
   split_obj$split_method <- "package"
+  split_obj$split_indices <- list(
+    train = train_idx,
+    validation = validation_idx,
+    test = test_idx
+  )
   split_obj$split_info <- utils::modifyList(split_obj$split_info, list(
     split = split,
     train_ratio = train_ratio,
@@ -1244,6 +1350,21 @@ ukb_ml_tune <- function(split,
   oof_pred <- NULL
   best_score_seen <- if (isTRUE(maximize)) -Inf else Inf
   best_oof <- NULL
+  prep_train <- NULL
+  fold_idx <- NULL
+  if (resampling == "cv") {
+    prep_train <- .mlw_model_frame(
+      formula,
+      split$train,
+      outcome_type,
+      classes = classes
+    )
+    fold_idx <- .mlw_create_folds(
+      prep_train$data[[parsed$response]],
+      folds,
+      outcome_type
+    )
+  }
 
   for (i in seq_len(nrow(grid))) {
     params <- .mlw_row_to_params(grid[i, , drop = FALSE])
@@ -1258,8 +1379,6 @@ ukb_ml_tune <- function(split,
       metrics <- .mlw_metrics(truth, pred, outcome_type, threshold = 0.5, positive_class = fit$positive_class)
       scores <- .mlw_eval_metric(metrics, metric)
     } else {
-      prep_train <- .mlw_model_frame(formula, split$train, outcome_type, classes = classes)
-      fold_idx <- .mlw_create_folds(prep_train$data[[parsed$response]], folds, outcome_type)
       candidate_oof_truth <- prep_train$data[[parsed$response]]
       if (outcome_type == "multiclass") {
         candidate_oof_pred <- matrix(NA_real_, nrow = nrow(prep_train$data), ncol = length(classes))
@@ -1314,9 +1433,469 @@ ukb_ml_tune <- function(split,
     best_score = results_df$.score[[best_idx]],
     oof = best_oof,
     split_info = split$split_info,
-    tuning_info = list(resampling = resampling, folds = folds, n_candidates = nrow(grid))
+    tuning_info = list(
+      resampling = resampling,
+      folds = folds,
+      fold_indices = fold_idx,
+      complete_rows = if (!is.null(prep_train)) prep_train$complete_idx else NULL,
+      n_candidates = nrow(grid)
+    )
   )
   class(result) <- "ukb_ml_tune"
+  result
+}
+
+#' @keywords internal
+.mlw_nested_feature_select <- function(split,
+                                       formula,
+                                       method,
+                                       outcome_type,
+                                       feature_params,
+                                       seed = NULL) {
+  if (!is.list(feature_params)) {
+    stop("'feature_params' must be a list.", call. = FALSE)
+  }
+
+  args <- feature_params
+  args$split <- split
+  args$formula <- formula
+  args$method <- method
+  args$outcome_type <- outcome_type
+  args$seed <- seed
+  args$verbose <- FALSE
+  do.call(ukb_ml_feature_select, args)
+}
+
+#' @keywords internal
+.mlw_nested_inner_tune <- function(data,
+                                   formula,
+                                   model,
+                                   outcome_type,
+                                   feature_select,
+                                   feature_params,
+                                   tune_params,
+                                   inner_folds,
+                                   metric,
+                                   seed = NULL) {
+  search <- match.arg(tune_params$search %||% "grid", c("grid", "random", "bayes"))
+  if (search == "bayes" && !requireNamespace("rBayesianOptimization", quietly = TRUE)) {
+    search <- "random"
+  }
+  grid <- .mlw_param_grid(
+    model = model,
+    outcome_type = outcome_type,
+    param_grid = tune_params$param_grid,
+    param_space = tune_params$param_space,
+    search = search,
+    n_iter = tune_params$n_iter,
+    seed = seed
+  )
+  maximize <- tune_params$maximize %||% .mlw_metric_direction(metric)
+  parsed <- .mlw_parse_formula(formula, data)
+  classes <- if (outcome_type %in% c("binary", "multiclass")) {
+    .mlw_outcome_classes(data[[parsed$response]])
+  } else {
+    NULL
+  }
+
+  if (!is.null(seed)) set.seed(seed)
+  fold_idx <- .mlw_create_folds(data[[parsed$response]], inner_folds, outcome_type)
+  results <- vector("list", nrow(grid))
+
+  for (candidate in seq_len(nrow(grid))) {
+    params <- .mlw_row_to_params(grid[candidate, , drop = FALSE])
+    scores <- rep(NA_real_, length(fold_idx))
+
+    for (fold in seq_along(fold_idx)) {
+      assess_idx <- fold_idx[[fold]]
+      analysis_idx <- setdiff(seq_len(nrow(data)), assess_idx)
+      inner_split <- ukb_ml_as_split(
+        train_data = data[analysis_idx, , drop = FALSE],
+        test_data = data[assess_idx, , drop = FALSE],
+        check_overlap = FALSE,
+        outcome = parsed$response,
+        outcome_type = outcome_type
+      )
+      fold_seed <- if (is.null(seed)) NULL else seed + candidate * 100L + fold
+      selected <- .mlw_nested_feature_select(
+        split = inner_split,
+        formula = formula,
+        method = feature_select,
+        outcome_type = outcome_type,
+        feature_params = feature_params,
+        seed = fold_seed
+      )
+      fit <- .ukb_ml_fit_core(
+        formula = selected$formula,
+        data = inner_split$train,
+        model = model,
+        outcome_type = outcome_type,
+        params = params,
+        classes = classes,
+        seed = fold_seed,
+        verbose = FALSE
+      )
+      prediction <- .ukb_ml_predict_core(
+        fit,
+        inner_split$test,
+        type = if (outcome_type == "continuous") "response" else "prob"
+      )
+      metrics <- .mlw_metrics(
+        truth = inner_split$test[[parsed$response]],
+        prediction = prediction,
+        outcome_type = outcome_type,
+        threshold = 0.5,
+        positive_class = fit$positive_class
+      )
+      scores[[fold]] <- .mlw_eval_metric(metrics, metric)
+    }
+
+    results[[candidate]] <- cbind(
+      grid[candidate, , drop = FALSE],
+      data.frame(.score = mean(scores, na.rm = TRUE), stringsAsFactors = FALSE)
+    )
+  }
+
+  results <- do.call(rbind, results)
+  if (!any(is.finite(results$.score))) {
+    stop("Nested CV could not compute a finite inner-fold tuning score.", call. = FALSE)
+  }
+  best_idx <- if (isTRUE(maximize)) which.max(results$.score) else which.min(results$.score)
+
+  list(
+    best_params = .mlw_row_to_params(results[best_idx, , drop = FALSE]),
+    best_score = results$.score[[best_idx]],
+    results = results,
+    search = search,
+    metric = metric,
+    maximize = maximize,
+    inner_folds = length(fold_idx)
+  )
+}
+
+#' Run Supplementary Nested Cross-Validation
+#'
+#' @description
+#' Estimates internal model performance with nested cross-validation using only
+#' the training portion of a \code{ukb_ml_split}. Each outer analysis fold runs
+#' feature selection and hyperparameter tuning without accessing its outer
+#' assessment fold. Validation and frozen test sets are never used. This
+#' function is intended as a supplementary robustness analysis; it does not
+#' replace final evaluation on an independent or frozen test set.
+#'
+#' @param split A \code{ukb_ml_split} object. Only \code{split$train} is used.
+#' @param formula Model formula.
+#' @param model Model type supported by \code{\link{ukb_ml_workflow}}.
+#' @param outcome_type Outcome type. Defaults to the split outcome type.
+#' @param feature_select Feature-selection method used within every inner and
+#'   outer analysis fold.
+#' @param feature_params List passed to \code{\link{ukb_ml_feature_select}}.
+#' @param tune Logical. Tune hyperparameters within each outer analysis fold.
+#' @param tune_params Tuning specification matching \code{\link{ukb_ml_tune}},
+#'   including \code{search}, \code{param_grid}, \code{param_space},
+#'   \code{n_iter}, and \code{maximize}. Resampling is always inner-fold CV.
+#' @param outer_folds Number of outer assessment folds.
+#' @param inner_folds Number of inner tuning folds.
+#' @param repeats Number of repeated outer CV runs.
+#' @param metric Primary tuning metric. Defaults to AUC for binary outcomes,
+#'   macro F1 for multiclass outcomes, and RMSE for continuous outcomes.
+#' @param seed Optional random seed.
+#' @param verbose Logical. Print outer-fold progress.
+#'
+#' @return A \code{ukb_ml_nested_cv} object containing outer-fold metrics,
+#'   metric summaries, fold-specific selected features and tuning results,
+#'   feature-selection frequencies, and outer-fold predictions. These estimates
+#'   describe internal development-set performance and feature stability; they
+#'   are not frozen-test estimates.
+#'
+#' @examples
+#' set.seed(42)
+#' demo <- data.frame(
+#'   outcome = factor(rep(c("control", "case"), each = 30)),
+#'   age = rnorm(60),
+#'   bmi = rnorm(60),
+#'   marker = c(rnorm(30), rnorm(30, 0.8))
+#' )
+#' split <- ukb_ml_split_data(demo, outcome = "outcome", seed = 42,
+#'                            verbose = FALSE)
+#' nested <- ukb_ml_nested_cv(
+#'   split,
+#'   outcome ~ age + bmi + marker,
+#'   model = "logistic",
+#'   outer_folds = 3,
+#'   inner_folds = 2,
+#'   verbose = FALSE
+#' )
+#' nested$metric_summary
+#'
+#' @export
+ukb_ml_nested_cv <- function(split,
+                             formula,
+                             model,
+                             outcome_type = c("auto", "binary", "multiclass", "continuous"),
+                             feature_select = c("none", "boruta", "filter", "glmnet"),
+                             feature_params = list(),
+                             tune = TRUE,
+                             tune_params = list(),
+                             outer_folds = 5,
+                             inner_folds = 5,
+                             repeats = 1,
+                             metric = NULL,
+                             seed = NULL,
+                             verbose = TRUE) {
+  if (!inherits(split, "ukb_ml_split")) {
+    stop("'split' must be a ukb_ml_split object.", call. = FALSE)
+  }
+  if (!is.list(tune_params)) {
+    stop("'tune_params' must be a list.", call. = FALSE)
+  }
+  if (length(outer_folds) != 1L || !is.finite(outer_folds) || outer_folds < 2) {
+    stop("'outer_folds' must be a single number of at least 2.", call. = FALSE)
+  }
+  if (length(inner_folds) != 1L || !is.finite(inner_folds) || inner_folds < 2) {
+    stop("'inner_folds' must be a single number of at least 2.", call. = FALSE)
+  }
+  if (length(repeats) != 1L || !is.finite(repeats) || repeats < 1) {
+    stop("'repeats' must be a positive integer.", call. = FALSE)
+  }
+
+  outer_folds <- as.integer(outer_folds)
+  inner_folds <- as.integer(inner_folds)
+  repeats <- as.integer(repeats)
+  feature_select <- match.arg(feature_select)
+  parsed <- .mlw_parse_formula(formula, split$train)
+  outcome_type_arg <- match.arg(outcome_type)
+  outcome_type <- if (outcome_type_arg == "auto") {
+    if (!is.null(split$outcome_type) && !is.na(split$outcome_type)) {
+      split$outcome_type
+    } else {
+      .mlw_resolve_outcome_type(split$train[[parsed$response]], "auto")
+    }
+  } else {
+    outcome_type_arg
+  }
+  model <- .mlw_check_model(model, outcome_type)
+  metric <- metric %||% tune_params$metric %||% .mlw_default_metric(outcome_type)
+
+  classes <- if (outcome_type %in% c("binary", "multiclass")) {
+    .mlw_outcome_classes(split$train[[parsed$response]])
+  } else {
+    NULL
+  }
+  development <- .mlw_model_frame(
+    formula,
+    split$train,
+    outcome_type,
+    classes = classes
+  )$data
+
+  fold_metrics <- list()
+  fold_features <- list()
+  fold_predictions <- list()
+  fold_tuning <- list()
+  result_index <- 0L
+
+  for (repeat_id in seq_len(repeats)) {
+    repeat_seed <- if (is.null(seed)) NULL else seed + repeat_id * 10000L
+    if (!is.null(repeat_seed)) set.seed(repeat_seed)
+    outer_idx <- .mlw_create_folds(
+      development[[parsed$response]],
+      outer_folds,
+      outcome_type
+    )
+
+    for (outer_fold in seq_along(outer_idx)) {
+      result_index <- result_index + 1L
+      assess_idx <- outer_idx[[outer_fold]]
+      analysis_idx <- setdiff(seq_len(nrow(development)), assess_idx)
+      outer_split <- ukb_ml_as_split(
+        train_data = development[analysis_idx, , drop = FALSE],
+        test_data = development[assess_idx, , drop = FALSE],
+        check_overlap = FALSE,
+        outcome = parsed$response,
+        outcome_type = outcome_type
+      )
+      fold_seed <- if (is.null(repeat_seed)) NULL else repeat_seed + outer_fold * 100L
+
+      if (isTRUE(tune)) {
+        tuned <- .mlw_nested_inner_tune(
+          data = as.data.frame(outer_split$train),
+          formula = formula,
+          model = model,
+          outcome_type = outcome_type,
+          feature_select = feature_select,
+          feature_params = feature_params,
+          tune_params = tune_params,
+          inner_folds = inner_folds,
+          metric = metric,
+          seed = fold_seed
+        )
+        best_params <- tuned$best_params
+      } else {
+        best_params <- tune_params$best_params %||% list()
+        tuned <- list(
+          best_params = best_params,
+          best_score = NA_real_,
+          results = NULL,
+          search = "none",
+          metric = metric,
+          maximize = .mlw_metric_direction(metric),
+          inner_folds = 0L
+        )
+      }
+
+      selected <- .mlw_nested_feature_select(
+        split = outer_split,
+        formula = formula,
+        method = feature_select,
+        outcome_type = outcome_type,
+        feature_params = feature_params,
+        seed = fold_seed
+      )
+      fit <- .ukb_ml_fit_core(
+        formula = selected$formula,
+        data = outer_split$train,
+        model = model,
+        outcome_type = outcome_type,
+        params = best_params,
+        classes = classes,
+        seed = fold_seed,
+        verbose = FALSE
+      )
+      prediction <- .ukb_ml_predict_core(
+        fit,
+        outer_split$test,
+        type = if (outcome_type == "continuous") "response" else "prob"
+      )
+      truth <- outer_split$test[[parsed$response]]
+      metrics <- .mlw_metrics(
+        truth = truth,
+        prediction = prediction,
+        outcome_type = outcome_type,
+        threshold = 0.5,
+        positive_class = fit$positive_class
+      )
+
+      fold_metrics[[result_index]] <- cbind(
+        data.frame(
+          repeat_id = repeat_id,
+          outer_fold = outer_fold,
+          n_analysis = nrow(outer_split$train),
+          n_assessment = nrow(outer_split$test),
+          stringsAsFactors = FALSE
+        ),
+        as.data.frame(as.list(metrics), stringsAsFactors = FALSE)
+      )
+      fold_features[[result_index]] <- data.frame(
+        repeat_id = repeat_id,
+        outer_fold = outer_fold,
+        feature = selected$selected_features,
+        stringsAsFactors = FALSE
+      )
+      prediction_df <- data.frame(
+        repeat_id = repeat_id,
+        outer_fold = outer_fold,
+        assessment_row = assess_idx,
+        truth = as.character(truth),
+        stringsAsFactors = FALSE
+      )
+      if (is.matrix(prediction)) {
+        probability <- as.data.frame(prediction, stringsAsFactors = FALSE)
+        names(probability) <- paste0("prob_", make.names(names(probability), unique = TRUE))
+        prediction_df <- cbind(prediction_df, probability)
+      } else {
+        prediction_df$prediction <- as.numeric(prediction)
+      }
+      fold_predictions[[result_index]] <- prediction_df
+      fold_tuning[[result_index]] <- list(
+        repeat_id = repeat_id,
+        outer_fold = outer_fold,
+        best_params = best_params,
+        best_score = tuned$best_score,
+        results = tuned$results,
+        selected_features = selected$selected_features
+      )
+
+      if (isTRUE(verbose)) {
+        message(sprintf(
+          "[ukb_ml_nested_cv] repeat %d/%d, outer fold %d/%d: %s = %.4f",
+          repeat_id,
+          repeats,
+          outer_fold,
+          length(outer_idx),
+          metric,
+          .mlw_eval_metric(metrics, metric)
+        ))
+      }
+    }
+  }
+
+  fold_metrics <- do.call(rbind, fold_metrics)
+  fold_features <- do.call(rbind, fold_features)
+  fold_predictions <- do.call(rbind, fold_predictions)
+  metric_names <- setdiff(
+    names(fold_metrics),
+    c("repeat_id", "outer_fold", "n_analysis", "n_assessment")
+  )
+  metric_summary <- do.call(rbind, lapply(metric_names, function(metric_name) {
+    values <- as.numeric(fold_metrics[[metric_name]])
+    values <- values[is.finite(values)]
+    n <- length(values)
+    estimate <- if (n > 0L) mean(values) else NA_real_
+    standard_deviation <- if (n > 1L) sd(values) else NA_real_
+    standard_error <- if (n > 1L) standard_deviation / sqrt(n) else NA_real_
+    data.frame(
+      metric = metric_name,
+      n = n,
+      mean = estimate,
+      sd = standard_deviation,
+      se = standard_error,
+      stringsAsFactors = FALSE
+    )
+  }))
+
+  all_features <- unique(c(parsed$predictors, fold_features$feature))
+  selected_count <- table(factor(fold_features$feature, levels = all_features))
+  feature_stability <- data.frame(
+    feature = all_features,
+    selected_count = as.integer(selected_count),
+    outer_evaluations = nrow(fold_metrics),
+    selection_frequency = as.integer(selected_count) / nrow(fold_metrics),
+    stringsAsFactors = FALSE
+  )
+  feature_stability <- feature_stability[
+    order(feature_stability$selection_frequency, decreasing = TRUE),
+    ,
+    drop = FALSE
+  ]
+  rownames(feature_stability) <- NULL
+
+  result <- list(
+    model = model,
+    outcome = parsed$response,
+    outcome_type = outcome_type,
+    metric = metric,
+    fold_metrics = fold_metrics,
+    metric_summary = metric_summary,
+    primary_metric_summary = metric_summary[metric_summary$metric == metric, , drop = FALSE],
+    fold_features = fold_features,
+    feature_stability = feature_stability,
+    fold_predictions = fold_predictions,
+    fold_tuning = fold_tuning,
+    settings = list(
+      outer_folds = outer_folds,
+      inner_folds = inner_folds,
+      repeats = repeats,
+      feature_select = feature_select,
+      tune = isTRUE(tune),
+      development_rows = nrow(development),
+      validation_rows_used = 0L,
+      test_rows_used = 0L,
+      seed = seed
+    ),
+    call = match.call()
+  )
+  class(result) <- "ukb_ml_nested_cv"
   result
 }
 
@@ -1508,7 +2087,12 @@ ukb_ml_evaluate_test <- function(object,
     pred_out$prob <- pred
     pred_out$pred_class <- factor(ifelse(pred >= th, positive_class, setdiff(object$classes, positive_class)[1]), levels = object$classes)
   } else if (outcome_type == "multiclass") {
-    pred_out$pred_class <- factor(colnames(pred)[max.col(pred, ties.method = "first")], levels = object$classes)
+    pred_class <- rep(NA_character_, nrow(pred))
+    valid_prediction <- stats::complete.cases(pred)
+    pred_class[valid_prediction] <- colnames(pred)[
+      max.col(pred[valid_prediction, , drop = FALSE], ties.method = "first")
+    ]
+    pred_out$pred_class <- factor(pred_class, levels = object$classes)
     pred_out <- cbind(pred_out, as.data.frame(pred, check.names = FALSE))
   } else {
     pred_out$prediction <- pred
@@ -1520,6 +2104,11 @@ ukb_ml_evaluate_test <- function(object,
     threshold = th,
     evaluated_at = Sys.time(),
     test_rows = nrow(split$test),
+    evaluated_rows = if (is.matrix(pred)) {
+      sum(!is.na(truth) & stats::complete.cases(pred))
+    } else {
+      sum(!is.na(truth) & !is.na(pred))
+    },
     outcome_type = outcome_type
   )
   class(result) <- "ukb_ml_test_eval"
@@ -1987,6 +2576,7 @@ plot.ukb_ml_flow <- function(x, type = c("roc", "shap_beeswarm"), ...) {
 #' @param param_grid Optional hyperparameter grid. Can be a single grid shared
 #'   by all combinations, a named list keyed by model, feature set, or
 #'   \code{"feature_set__model"}.
+#' @param tune Logical. Run hyperparameter tuning for each comparison flow.
 #' @param tune_params Optional list passed to \code{\link{ukb_ml_tune}}. Can also
 #'   be keyed by model, feature set, or combination.
 #' @param threshold_params Optional list passed to \code{\link{ukb_ml_threshold}}.
@@ -2017,6 +2607,7 @@ ukb_ml_compare_flows <- function(formula = NULL,
                                  feature_set_labels = NULL,
                                  model_labels = NULL,
                                  param_grid = NULL,
+                                 tune = TRUE,
                                  tune_params = list(),
                                  threshold_params = list(),
                                  ...) {
@@ -2093,6 +2684,72 @@ ukb_ml_compare_flows <- function(formula = NULL,
     model_labels <- stats::setNames(as.character(model_labels), models)
   }
 
+  dots <- list(...)
+  shared_split <- split
+  if (is.null(shared_split)) {
+    if (!is.null(train_data) || !is.null(test_data)) {
+      if (is.null(train_data) || is.null(test_data)) {
+        stop(
+          "Both `train_data` and `test_data` are required when using pre-split data.",
+          call. = FALSE
+        )
+      }
+      shared_split <- ukb_ml_as_split(
+        train_data = train_data,
+        test_data = test_data,
+        validation_data = validation_data,
+        id_col = id_col,
+        check_overlap = !is.null(id_col),
+        outcome = outcome,
+        outcome_type = outcome_type_arg
+      )
+    } else if (!is.null(data)) {
+      split_call <- utils::modifyList(
+        list(
+          df = data,
+          outcome = outcome,
+          outcome_type = outcome_type_arg,
+          seed = dots$seed %||% NULL,
+          verbose = dots$verbose %||% TRUE
+        ),
+        dots$split_params %||% list()
+      )
+      shared_split <- do.call(ukb_ml_split_data, split_call)
+    } else {
+      stop(
+        "Supply `split`, `train_data` + `test_data`, or full `data`.",
+        call. = FALSE
+      )
+    }
+  }
+  if (!inherits(shared_split, "ukb_ml_split")) {
+    stop("`split` must be a ukb_ml_split object.", call. = FALSE)
+  }
+  if (!is.null(id_col)) {
+    split_sets <- list(
+      train = shared_split$train,
+      validation = shared_split$validation,
+      test = shared_split$test
+    )
+    split_sets <- split_sets[!vapply(split_sets, is.null, logical(1))]
+    for (set_name in names(split_sets)) {
+      ids <- split_sets[[set_name]][[id_col]]
+      if (is.null(ids)) {
+        stop(
+          sprintf("id_col '%s' was not found in the shared %s set.", id_col, set_name),
+          call. = FALSE
+        )
+      }
+      if (anyNA(ids) || anyDuplicated(ids)) {
+        stop(
+          sprintf("id_col '%s' must be non-missing and unique in the shared %s set.", id_col, set_name),
+          call. = FALSE
+        )
+      }
+    }
+    shared_split$id_col <- id_col
+  }
+
   flows <- list()
   for (feature_set_id in names(feature_sets)) {
     feature_set_label <- unname(feature_set_labels[[feature_set_id]] %||% feature_set_id)
@@ -2109,11 +2766,11 @@ ukb_ml_compare_flows <- function(formula = NULL,
 
       flow <- ukb_ml_flow(
         formula = .mlw_formula_from_features(outcome, feature_sets[[feature_set_id]]),
-        data = data,
-        split = split,
-        train_data = train_data,
-        test_data = test_data,
-        validation_data = validation_data,
+        data = NULL,
+        split = shared_split,
+        train_data = NULL,
+        test_data = NULL,
+        validation_data = NULL,
         id_col = id_col,
         outcome = outcome,
         model = model,
@@ -2121,6 +2778,7 @@ ukb_ml_compare_flows <- function(formula = NULL,
         model_label = combo_label,
         outcome_type = outcome_type_arg,
         param_grid = .mlw_select_compare_arg(param_grid, combo_id, model, feature_set_id),
+        tune = tune,
         tune_params = .mlw_select_compare_arg(tune_params, combo_id, model, feature_set_id) %||% list(),
         threshold_params = .mlw_select_compare_arg(threshold_params, combo_id, model, feature_set_id) %||% list(),
         ...
@@ -2180,6 +2838,12 @@ ukb_ml_compare_flows <- function(formula = NULL,
 
   out <- list(
     flows = flows,
+    split = shared_split,
+    test_ids = if (!is.null(shared_split$id_col)) {
+      shared_split$test[[shared_split$id_col]]
+    } else {
+      seq_len(nrow(shared_split$test))
+    },
     metrics = metrics_all,
     comparison = comparison,
     predictions = predictions_all,
@@ -2520,6 +3184,12 @@ ukb_ml_compare_feature_sets <- function(split,
 #' @param feature_params List passed to \code{\link{ukb_ml_feature_select}}.
 #' @param tune Logical. Run hyperparameter tuning.
 #' @param tune_params List passed to \code{\link{ukb_ml_tune}}.
+#' @param nested_cv Logical. Run supplementary nested cross-validation on the
+#'   training split. Defaults to \code{FALSE} and does not alter the standard
+#'   workflow when disabled.
+#' @param nested_cv_params Optional list containing \code{outer_folds},
+#'   \code{inner_folds}, \code{repeats}, \code{metric}, \code{seed}, or
+#'   \code{verbose} for \code{\link{ukb_ml_nested_cv}}.
 #' @param threshold_method \code{"none"}, \code{"fixed"}, or \code{"youden"}.
 #' @param threshold_params List passed to \code{\link{ukb_ml_threshold}}.
 #' @param fit_final Logical. Refit final model.
@@ -2528,7 +3198,10 @@ ukb_ml_compare_feature_sets <- function(split,
 #' @param verbose Logical.
 #' @param ... Additional arguments.
 #'
-#' @return A \code{ukb_ml_workflow} object.
+#' @return A \code{ukb_ml_workflow} object containing the frozen data split,
+#'   optional \code{nested_cv_result}, feature-selection and tuning results,
+#'   threshold information, the refitted final model, and final test metrics
+#'   and predictions.
 #'
 #' @export
 ukb_ml_workflow <- function(formula,
@@ -2547,7 +3220,9 @@ ukb_ml_workflow <- function(formula,
                             evaluate_test = TRUE,
                             seed = NULL,
                             verbose = TRUE,
-                            ...) {
+                            ...,
+                            nested_cv = FALSE,
+                            nested_cv_params = list()) {
   if (is.null(split) && is.null(data)) {
     stop("Either 'data' or 'split' must be supplied.", call. = FALSE)
   }
@@ -2571,6 +3246,39 @@ ukb_ml_workflow <- function(formula,
   model <- .mlw_check_model(model, outcome_type_final)
 
   feature_select <- match.arg(feature_select)
+  if (length(nested_cv) != 1L || is.na(nested_cv) || !is.logical(nested_cv)) {
+    stop("'nested_cv' must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.list(nested_cv_params)) {
+    stop("'nested_cv_params' must be a list.", call. = FALSE)
+  }
+  nested_cv_result <- NULL
+  if (isTRUE(nested_cv)) {
+    allowed_nested_params <- c(
+      "outer_folds", "inner_folds", "repeats", "metric", "seed", "verbose"
+    )
+    unsupported_nested_params <- setdiff(names(nested_cv_params), allowed_nested_params)
+    if (length(unsupported_nested_params) > 0L) {
+      stop(
+        "Unsupported nested_cv_params: ",
+        paste(unsupported_nested_params, collapse = ", "),
+        call. = FALSE
+      )
+    }
+    nested_args <- nested_cv_params
+    nested_args$split <- split
+    nested_args$formula <- formula
+    nested_args$model <- model
+    nested_args$outcome_type <- outcome_type_final
+    nested_args$feature_select <- feature_select
+    nested_args$feature_params <- feature_params
+    nested_args$tune <- tune
+    nested_args$tune_params <- tune_params
+    if (is.null(nested_args$seed)) nested_args$seed <- seed
+    if (is.null(nested_args$verbose)) nested_args$verbose <- verbose
+    nested_cv_result <- do.call(ukb_ml_nested_cv, nested_args)
+  }
+
   feature_result <- do.call(
     ukb_ml_feature_select,
     c(
@@ -2653,6 +3361,7 @@ ukb_ml_workflow <- function(formula,
 
   result <- list(
     split = split,
+    nested_cv_result = nested_cv_result,
     feature_result = feature_result,
     tune_result = tune_result,
     threshold_result = threshold_result,
@@ -2662,6 +3371,7 @@ ukb_ml_workflow <- function(formula,
     workflow_info = list(
       model = model,
       outcome_type = outcome_type_final,
+      nested_cv = isTRUE(nested_cv),
       test_set_used_only_for_final_eval = isTRUE(evaluate_test),
       seed = seed,
       created_at = Sys.time()
@@ -2717,6 +3427,15 @@ print.ukb_ml_workflow <- function(x, ...) {
   if (!is.null(x$tune_result)) {
     cat(sprintf("Best %s: %.4f\n", x$tune_result$metric, x$tune_result$best_score))
   }
+  if (!is.null(x$nested_cv_result) && nrow(x$nested_cv_result$primary_metric_summary) > 0L) {
+    nested_summary <- x$nested_cv_result$primary_metric_summary[1, , drop = FALSE]
+    cat(sprintf(
+      "Nested CV %s: %.4f (SD %.4f)\n",
+      nested_summary$metric,
+      nested_summary$mean,
+      nested_summary$sd
+    ))
+  }
   if (!is.null(x$threshold_result)) {
     cat(sprintf("Threshold: %.4f (%s)\n", x$threshold_result$threshold, x$threshold_result$source %||% x$threshold_result$method))
   }
@@ -2725,6 +3444,29 @@ print.ukb_ml_workflow <- function(x, ...) {
     for (nm in names(x$final_test_metrics)) {
       cat(sprintf("  %s: %.4f\n", nm, x$final_test_metrics[[nm]]))
     }
+  }
+  invisible(x)
+}
+
+#' @export
+print.ukb_ml_nested_cv <- function(x, ...) {
+  cat("\nUKB ML Nested Cross-Validation\n")
+  cat(sprintf("Model: %s\n", x$model))
+  cat(sprintf(
+    "Outer evaluations: %d across %d repeat(s)\n",
+    nrow(x$fold_metrics),
+    x$settings$repeats
+  ))
+  cat(sprintf("Requested outer folds: %d\n", x$settings$outer_folds))
+  cat(sprintf("Inner folds: %d\n", x$settings$inner_folds))
+  if (nrow(x$primary_metric_summary) > 0L) {
+    summary <- x$primary_metric_summary[1, , drop = FALSE]
+    cat(sprintf(
+      "%s: %.4f (SD %.4f)\n",
+      summary$metric,
+      summary$mean,
+      summary$sd
+    ))
   }
   invisible(x)
 }

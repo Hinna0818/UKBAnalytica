@@ -14,9 +14,12 @@ ukb_ml_dca(
 )
 }
 \arguments{
-\item{object}{A ukb_ml object}
+\item{object}{A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+\code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+binary-classification object.}
 
-\item{newdata}{Optional new data}
+\item{newdata}{Optional evaluation data. Stored frozen-test predictions are
+used when available; this is required for a \code{ukb_ml_final} object.}
 
 \item{plot}{Whether to create the DCA plot (default TRUE)}
 
@@ -28,8 +31,9 @@ ukb_ml_dca(
 \item{...}{Additional arguments}
 }
 \value{
-A ukb_ml_dca object with field data containing:
-threshold, net_benefit_model, net_benefit_all, net_benefit_none
+A \code{ukb_ml_dca} object containing threshold-specific net benefit
+for the model, treat-all and treat-none strategies, prevalence, positive
+class, evaluation source, harm, and optionally a ggplot object.
 }
 \description{
 Compute Decision Curve Analysis (DCA) net benefit across a range of

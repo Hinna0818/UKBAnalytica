@@ -38,7 +38,8 @@ Imports:
     MASS,
     mgcv,
     xml2,
-    igraph
+    igraph,
+    withr
 Suggests:
     testthat,
     rms,
@@ -47,6 +48,8 @@ Suggests:
     survminer,
     MatchIt,
     regmedint,
+    kernelshap,
+    fastshap,
     ranger,
     xgboost,
     glmnet,

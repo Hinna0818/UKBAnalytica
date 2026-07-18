@@ -28,6 +28,7 @@ A \code{ukb_ml_survival_test_eval} object.
 }
 \description{
 Computes final survival ML metrics on the frozen test set. The primary metric
-is Harrell's C-index. Naive time-specific Brier scores are also reported for
-requested prediction times without IPCW adjustment.
+is Harrell's C-index. Time-specific Brier scores use inverse probability of
+censoring weighting, with the censoring distribution estimated by
+Kaplan-Meier in the evaluation set.
 }

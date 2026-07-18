@@ -18,7 +18,9 @@ runmulti_logit(data, main_var, covariates = NULL, outcome, ...)
 \item{...}{Additional arguments passed to \code{stats::glm()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{OR}, \code{lower95}, \code{upper95}, \code{pvalue}.
+A data.frame with columns: \code{variable}, \code{contrast},
+\code{OR}, \code{lower95}, \code{upper95}, and \code{pvalue}. Multi-level
+categorical exposures return one row per non-reference contrast.
 }
 \description{
 Fit logistic regression models (\code{glm} with \code{family = binomial}) for each main variable separately.

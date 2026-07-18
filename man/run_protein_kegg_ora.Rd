@@ -20,7 +20,8 @@ run_protein_kegg_ora(
   minGSSize = 10,
   maxGSSize = 500,
   readable = TRUE,
-  use_internal_data = FALSE
+  use_internal_data = FALSE,
+  input_format = c("auto", "rap_olink", "symbol", "raw")
 )
 }
 \arguments{
@@ -65,10 +66,14 @@ Default is \code{"BH"}.}
 
 \item{use_internal_data}{Logical. Passed to \code{clusterProfiler::enrichKEGG()}.
 Default is \code{FALSE}.}
+
+\item{input_format}{Input naming convention passed to
+\code{\link[=protein_to_gene_symbol]{protein_to_gene_symbol()}}.}
 }
 \value{
 A list with components \code{gene_symbols}, \code{entrez_ids}, \code{mapping},
-\code{universe_symbols}, \code{universe_entrez_ids}, and \code{ora_result}.
+\code{mapping_summary}, \code{universe_symbols}, \code{universe_entrez_ids}, and
+\code{ora_result}.
 }
 \description{
 Convert protein identifiers to gene symbols, then to Entrez IDs, and run

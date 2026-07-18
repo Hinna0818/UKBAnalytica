@@ -18,8 +18,10 @@ runmulti_negbin(data, main_var, outcome, covariates = NULL, ...)
 \item{...}{Additional arguments passed to \code{MASS::glm.nb()}.}
 }
 \value{
-A data.frame with columns: \code{variable}, \code{IRR},
-\code{lower95}, \code{upper95}, \code{pvalue}, \code{theta}, \code{n}.
+A data.frame with columns: \code{variable}, \code{contrast},
+\code{IRR}, \code{lower95}, \code{upper95}, \code{pvalue}, \code{theta},
+and \code{n}. Multi-level categorical exposures return one row per
+non-reference contrast.
 \code{IRR} is the incidence rate ratio (\code{exp(beta)}).
 \code{theta} is the estimated negative-binomial dispersion parameter
 (larger values indicate less overdispersion).

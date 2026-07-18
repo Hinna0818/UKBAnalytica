@@ -12,7 +12,10 @@ ukb_shap(
   seed = NULL,
   verbose = TRUE,
   class_level = NULL,
-  method = c("auto", "permutation", "xgboost"),
+  method = c("auto", "treeshap", "kernelshap", "fastshap", "xgboost", "permutation",
+    "kernalshap"),
+  background_data = NULL,
+  background_n = 200,
   ...
 )
 }
@@ -20,38 +23,41 @@ ukb_shap(
 \item{object}{A \code{ukb_ml_workflow}, \code{ukb_ml_final}, or legacy
 \code{ukb_ml} object.}
 
-\item{data}{Data for SHAP computation. If \code{object} is a
-\code{ukb_ml_workflow} and \code{data = NULL}, the frozen test set is used.
-If \code{object} is a \code{ukb_ml_final}, \code{data} is required.}
+\item{data}{Data to explain. A workflow uses its frozen test set when this is
+\code{NULL}. A final-model object requires explicit data.}
 
-\item{nsim}{Number of Monte Carlo samples for SHAP estimation (default 100).
-Ignored when \code{method = "xgboost"}.}
+\item{nsim}{Number of Monte Carlo samples for FastSHAP. Ignored by TreeSHAP
+and KernelSHAP.}
 
-\item{sample_n}{Optional; subsample observations for large datasets}
+\item{sample_n}{Optional number of observations to explain.}
 
-\item{seed}{Random seed}
+\item{seed}{Optional random seed.}
 
-\item{verbose}{Print progress}
+\item{verbose}{Print progress messages.}
 
-\item{class_level}{Optional class to explain for multiclass
-\code{ukb_ml_workflow}/\code{ukb_ml_final} objects.}
+\item{class_level}{Class probability to explain for multiclass models.}
 
-\item{method}{SHAP backend. \code{"auto"} uses the native XGBoost
-contribution backend for XGBoost models and an internal permutation
-approximation otherwise.}
+\item{method}{SHAP backend. \code{"auto"} uses TreeSHAP for XGBoost and an
+installed model-agnostic backend otherwise. Legacy values
+\code{"xgboost"} and \code{"permutation"} are aliases for
+\code{"treeshap"} and \code{"fastshap"}. \code{"kernalshap"} is accepted
+as an alias for \code{"kernelshap"}.}
 
-\item{...}{Additional arguments}
+\item{background_data}{Optional reference data for KernelSHAP or FastSHAP.
+A workflow uses its training split by default. A final model uses
+\code{data} when no background is supplied.}
+
+\item{background_n}{Maximum number of background observations. Use
+\code{NULL} to retain all supplied background observations.}
+
+\item{...}{Additional arguments passed to the selected backend.}
 }
 \value{
-A ukb_shap object containing:
-\itemize{
-\item shap_values: Matrix of SHAP values (n x p)
-\item baseline: Model baseline (expected) value
-\item feature_names: Names of features
-\item feature_values: Original feature values
-}
+A \code{ukb_shap} object containing the SHAP matrix, baseline,
+feature names and values, backend name, output scale, background sample
+size, and a local-accuracy diagnostic where available.
 }
 \description{
-Calculate SHAP values for model interpretation. SHAP values explain
-each feature's contribution to individual predictions.
+Calculate SHAP values through native TreeSHAP, KernelSHAP, or FastSHAP while
+preserving one output structure across supported machine-learning models.
 }

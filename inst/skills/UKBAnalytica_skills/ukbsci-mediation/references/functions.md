@@ -67,24 +67,6 @@ No multiple-comparisons correction — apply externally (e.g. BH).
 
 ---
 
-## `run_sensitivity_mediation()`
-
-```r
-run_sensitivity_mediation(mediation_result,
-                          rho_values = seq(-0.9, 0.9, by = 0.1))
-```
-
-Approximate ρ-based sensitivity for an unmeasured exposure-mediator
-confounder.
-
-**Returns:** `data.frame`: `rho, tnie_adjusted, tnie_original, pnde_adjusted,
-te_adjusted`.
-
-Caveat: simplified placeholder approximation, not rigorous bounds. Disclose
-in manuscript.
-
----
-
 ## `plot_mediation()`
 
 ```r

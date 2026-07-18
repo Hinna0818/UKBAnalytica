@@ -14,6 +14,7 @@
 - Refined visualization helpers for forest plots, volcano plots, calibration and decision-curve analysis, ROC comparison, SHAP summaries, enrichment plots, and manuscript-ready figure export.
 
 ### Recent updates
+- Added optional supplementary nested cross-validation through `ukb_ml_nested_cv()` and `ukb_ml_workflow(nested_cv = TRUE)`, with fold-level performance and feature-selection stability while preserving the default frozen-test workflow.
 - Added `ukb_time_skeleton()` to create a reusable follow-up time skeleton with baseline date, death date, loss-to-follow-up date, administrative censoring, follow-up end reason, and valid follow-up indicators.
 - Added optional `time_skeleton` support to `build_survival_dataset()` while preserving the default survival workflow.
 - Added RAP-protected dictionary utilities, including `ukb_download_rap_dictionary()`, `ukb_query_dictionary()`, and `ukb_validate_columns()`, for official RAP dictionary lookup, Chinese/English field search, and column validation.
@@ -185,7 +186,6 @@ add sensitivity analysis module and refine the docs.
 #### Mediation Analysis (`mediation.R`)
 - `run_mediation()`: Causal mediation analysis (wrapping regmedint)
 - `run_multi_mediator()`: Test multiple mediators
-- `run_sensitivity_mediation()`: Sensitivity analysis for unmeasured confounding
 - Supports linear, logistic, and Cox outcome models
 - Effects: CDE, PNDE, TNIE, TE, Proportion Mediated
 

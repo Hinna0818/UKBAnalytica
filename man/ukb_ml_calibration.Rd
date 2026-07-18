@@ -14,9 +14,13 @@ ukb_ml_calibration(
 )
 }
 \arguments{
-\item{object}{A ukb_ml object}
+\item{object}{A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+\code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+binary-classification object.}
 
-\item{newdata}{Optional new data}
+\item{newdata}{Optional evaluation data. Stored frozen-test predictions are
+used for workflow, flow, and test-evaluation objects when this is
+\code{NULL}. This argument is required for a \code{ukb_ml_final} object.}
 
 \item{n_bins}{Number of bins for calibration (default 10)}
 
@@ -27,7 +31,9 @@ ukb_ml_calibration(
 \item{...}{Additional arguments}
 }
 \value{
-ukb_ml_calibration object
+A \code{ukb_ml_calibration} object containing the grouped calibration
+table, Brier score, expected calibration error, prevalence, positive class,
+evaluation source, and optionally a ggplot object.
 }
 \description{
 Generate calibration curve to assess prediction reliability.

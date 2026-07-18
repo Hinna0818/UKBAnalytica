@@ -17,6 +17,8 @@
 #'     \item{source}{Data source identifier ("Self-report")}
 #'     \item{instance}{Assessment instance (0, 1, 2, 3)}
 #'     \item{array_idx}{Array index within instance}
+#'     \item{baseline_report}{Whether the illness was reported at baseline}
+#'     \item{diagnosis_date_quality}{How the diagnosis date was obtained}
 #'   }
 #'
 #' @details
@@ -30,8 +32,12 @@
 #' @import data.table
 #' @export
 parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  dt <- data.table::as.data.table(data.table::copy(dt))
+  if (!"eid" %in% names(dt)) {
+    stop("Column 'eid' was not found in 'dt'.", call. = FALSE)
+  }
+  if (anyNA(dt[["eid"]]) || anyDuplicated(dt[["eid"]])) {
+    stop("Column 'eid' must be non-missing and unique.", call. = FALSE)
   }
 
   # Step 1: Melt p20002_i*_a* code columns
@@ -41,7 +47,8 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     return(data.table::data.table(
       eid = integer(0), sr_code = integer(0),
       diag_date = as.Date(character(0)), source = character(0),
-      instance = integer(0), array_idx = integer(0)
+      instance = integer(0), array_idx = integer(0),
+      baseline_report = logical(0), diagnosis_date_quality = character(0)
     ))
   }
 
@@ -71,7 +78,8 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     return(data.table::data.table(
       eid = integer(0), sr_code = integer(0),
       diag_date = as.Date(character(0)), source = character(0),
-      instance = integer(0), array_idx = integer(0)
+      instance = integer(0), array_idx = integer(0),
+      baseline_report = logical(0), diagnosis_date_quality = character(0)
     ))
   }
 
@@ -79,33 +87,32 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
   year_cols <- grep("^p20008_i[0-9]+_a[0-9]+$", names(dt), value = TRUE)
   if (length(year_cols) == 0) {
     warning("[parse_self_reported_illnesses] No p20008_i*_a* year columns found")
-    codes_long[, `:=`(diag_date = as.Date(NA), source = "Self-report")]
-    return(codes_long)
-  }
+    result <- data.table::copy(codes_long)
+    result[, diag_year := NA_real_]
+  } else {
+    eids_with_codes <- unique(codes_long$eid)
+    dt_sub <- dt[eid %in% eids_with_codes, c("eid", year_cols), with = FALSE]
+    dt_sub[, (year_cols) := lapply(.SD, as.numeric), .SDcols = year_cols]
 
-  eids_with_codes <- unique(codes_long$eid)
-  dt_sub <- dt[eid %in% eids_with_codes, c("eid", year_cols), with = FALSE]
-  dt_sub[, (year_cols) := lapply(.SD, as.numeric), .SDcols = year_cols]
-
-  years_long <- data.table::melt(
-    dt_sub, id.vars = "eid", measure.vars = year_cols,
-    variable.name = "col_name", value.name = "diag_year", na.rm = TRUE
-  )
-
-  years_long[, c("instance", "array_idx") := {
-    parts <- regmatches(col_name, regexec("p20008_i([0-9]+)_a([0-9]+)", col_name))
-    list(
-      as.integer(sapply(parts, function(x) if (length(x) == 3) x[2] else NA)),
-      as.integer(sapply(parts, function(x) if (length(x) == 3) x[3] else NA))
+    years_long <- data.table::melt(
+      dt_sub, id.vars = "eid", measure.vars = year_cols,
+      variable.name = "col_name", value.name = "diag_year", na.rm = FALSE
     )
-  }]
-  years_long[, col_name := NULL]
 
-  # Step 3: Join codes and years
-  result <- data.table::merge.data.table(
-    codes_long, years_long,
-    by = c("eid", "instance", "array_idx"), all.x = TRUE
-  )
+    years_long[, c("instance", "array_idx") := {
+      parts <- regmatches(col_name, regexec("p20008_i([0-9]+)_a([0-9]+)", col_name))
+      list(
+        as.integer(sapply(parts, function(x) if (length(x) == 3) x[2] else NA)),
+        as.integer(sapply(parts, function(x) if (length(x) == 3) x[3] else NA))
+      )
+    }]
+    years_long[, col_name := NULL]
+
+    result <- data.table::merge.data.table(
+      codes_long, years_long,
+      by = c("eid", "instance", "array_idx"), all.x = TRUE
+    )
+  }
 
   # Step 4: Convert fractional year to date (robust to malformed values)
   result[, diag_year := suppressWarnings(as.numeric(diag_year))]
@@ -129,10 +136,48 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
   }]
 
   result[, diag_year := NULL]
-  result[, source := "Self-report"]
+  baseline_dt <- data.table::data.table(
+    eid = dt[["eid"]],
+    baseline_date = if (baseline_col %in% names(dt)) {
+      .safe_as_date(dt[[baseline_col]], col_name = baseline_col)
+    } else {
+      as.Date(NA)
+    }
+  )
+  result <- data.table::merge.data.table(
+    result,
+    baseline_dt,
+    by = "eid",
+    all.x = TRUE,
+    sort = FALSE
+  )
+  result[, "baseline_report" := get("instance") == 0L]
+  result[, "diagnosis_date_quality" := data.table::fcase(
+    get("baseline_report") & is.na(get("diag_date")) &
+      !is.na(get("baseline_date")),
+    "baseline_date_imputed",
+    get("baseline_report") & !is.na(get("diag_date")) &
+      !is.na(get("baseline_date")) & get("diag_date") > get("baseline_date"),
+    "baseline_date_clamped",
+    get("baseline_report") & !is.na(get("diag_date")),
+    "reported_before_or_at_baseline",
+    !get("baseline_report") & !is.na(get("diag_date")),
+    "estimated",
+    default = "unknown"
+  )]
+  result[
+    get("baseline_report") & !is.na(get("baseline_date")) &
+      (is.na(get("diag_date")) | get("diag_date") > get("baseline_date")),
+    "diag_date" := get("baseline_date")
+  ]
+  result[, `:=`(baseline_date = NULL, source = "Self-report")]
   data.table::setorder(result, eid, diag_date, na.last = TRUE)
 
-  return(result[, .(eid, sr_code, diag_date, source, instance, array_idx)])
+  output_columns <- c(
+    "eid", "sr_code", "diag_date", "source", "instance", "array_idx",
+    "baseline_report", "diagnosis_date_quality"
+  )
+  return(result[, output_columns, with = FALSE])
 }
 
 
@@ -184,9 +229,32 @@ aggregate_self_report_earliest <- function(sr_filtered) {
   if (!data.table::is.data.table(sr_filtered)) {
     sr_filtered <- data.table::as.data.table(sr_filtered)
   }
+  if (!"diagnosis_date_quality" %in% names(sr_filtered)) {
+    sr_filtered[, "diagnosis_date_quality" := data.table::fifelse(
+      is.na(get("diag_date")),
+      "unknown",
+      "estimated"
+    )]
+  }
   result <- sr_filtered[
-    !is.na(diag_date),
-    .(earliest_date = min(diag_date), source = "Self-report"),
+    ,
+    {
+      dated <- which(!is.na(diag_date))
+      selected <- if (length(dated) > 0L) {
+        dated[[which.min(diag_date[dated])]]
+      } else {
+        1L
+      }
+      list(
+        earliest_date = diag_date[[selected]],
+        source = if (is.na(diag_date[[selected]])) {
+          "Self-report_unknown_date"
+        } else {
+          "Self-report"
+        },
+        diagnosis_date_quality = .SD[["diagnosis_date_quality"]][[selected]]
+      )
+    },
     by = .(eid, disease)
   ]
   return(result)

@@ -35,10 +35,9 @@ multi[order(multi$tnie_p), ]
 fwrite(multi, "/mnt/project/<area>/04-results/06-mediation_screen.csv")
 ```
 
-## C. Sensitivity + forest plot
+## C. Forest plot
 
 ```r
-sens <- run_sensitivity_mediation(res, rho_values = seq(-0.9, 0.9, 0.1))
 plot_mediation(res, type = "effects", exponentiate = TRUE)
 
 p_forest <- plot_mediation_forest(multi, effect_type = "tnie", null_value = 0)

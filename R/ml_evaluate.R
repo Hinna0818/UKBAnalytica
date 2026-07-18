@@ -55,6 +55,13 @@ ukb_ml_roc_data <- function(truth,
   negative_class <- setdiff(levels(truth), positive_class)[1]
 
   prob <- as.numeric(prob)
+  if (length(prob) != length(truth)) {
+    stop("`truth` and `prob` must have the same length.", call. = FALSE)
+  }
+  invalid_prob <- !is.na(prob) & (!is.finite(prob) | prob < 0 | prob > 1)
+  if (any(invalid_prob)) {
+    stop("`prob` must contain positive-class probabilities between 0 and 1.", call. = FALSE)
+  }
   keep <- !is.na(truth) & !is.na(prob)
   truth <- droplevels(truth[keep])
   prob <- prob[keep]
@@ -66,6 +73,7 @@ ukb_ml_roc_data <- function(truth,
     response = truth,
     predictor = prob,
     levels = c(negative_class, positive_class),
+    direction = "<",
     quiet = quiet
   )
   auc_value <- as.numeric(auc(roc_obj))
@@ -165,7 +173,7 @@ ukb_ml_metrics <- function(object,
     if (task == "classification" && ci_method == "delong" && "auc" %in% metrics) {
       .check_ml_package("pROC")
       prob <- if (is.matrix(pred)) pred[, 2] else pred
-      roc_obj <- roc(y_true, prob, quiet = TRUE)
+      roc_obj <- roc(y_true, prob, direction = "<", quiet = TRUE)
       auc_ci <- as.numeric(ci.auc(roc_obj))
       result <- list(
         metrics = result,
@@ -217,7 +225,7 @@ ukb_ml_metrics <- function(object,
     
     for (m in metrics) {
       val <- switch(m,
-        auc = as.numeric(auc(roc(y_true, prob, quiet = TRUE))),
+        auc = as.numeric(auc(roc(y_true, prob, direction = "<", quiet = TRUE))),
         accuracy = (tp + tn) / (tp + tn + fp + fn),
         sensitivity = if (tp + fn > 0) tp / (tp + fn) else NA,
         recall      = if (tp + fn > 0) tp / (tp + fn) else NA,
@@ -278,20 +286,120 @@ ukb_ml_metrics <- function(object,
 
 #' @keywords internal
 .get_binary_truth_prob <- function(object, newdata = NULL, caller = "Evaluation") {
-  if (object$task != "classification") {
-    stop(sprintf("%s is only for classification models", caller))
-  }
+  positive_class <- NULL
+  evaluation_source <- if (is.null(newdata)) "stored_test_predictions" else "newdata"
 
-  if (is.null(newdata)) {
-    y_true <- object$y_test
-    pred <- ukb_ml_predict(object, type = "prob")
-  } else {
+  if (inherits(object, "ukb_ml_workflow")) {
+    final_model <- object$final_model
+    if (is.null(final_model) || !inherits(final_model, "ukb_ml_final")) {
+      stop(sprintf("%s requires a workflow containing a fitted final model.", caller), call. = FALSE)
+    }
+    if (!identical(final_model$outcome_type, "binary")) {
+      stop(sprintf("%s is only for binary classification models.", caller), call. = FALSE)
+    }
+    positive_class <- final_model$positive_class
+    if (is.null(newdata)) {
+      predictions <- object$final_test_predictions
+      if (is.null(predictions) || !all(c("truth", "prob") %in% names(predictions))) {
+        stop(
+          sprintf(
+            "%s requires stored test predictions. Run ukb_ml_workflow(..., evaluate_test = TRUE) or supply `newdata`.",
+            caller
+          ),
+          call. = FALSE
+        )
+      }
+      y_true <- predictions$truth
+      pred <- predictions$prob
+    } else {
+      .ukb_ml_validate_evaluation_data(newdata, final_model$outcome, caller)
+      y_true <- newdata[[final_model$outcome]]
+      pred <- .ukb_ml_predict_core(final_model, newdata, type = "prob")
+    }
+  } else if (inherits(object, "ukb_ml_flow")) {
+    final_model <- object$final_model
+    if (is.null(final_model) || !inherits(final_model, "ukb_ml_final")) {
+      stop(sprintf("%s requires a flow containing a fitted final model.", caller), call. = FALSE)
+    }
+    if (!identical(final_model$outcome_type, "binary")) {
+      stop(sprintf("%s is only for binary classification models.", caller), call. = FALSE)
+    }
+    positive_class <- final_model$positive_class
+    if (is.null(newdata)) {
+      predictions <- object$predictions
+      if (is.null(predictions) || !all(c("truth", "prob") %in% names(predictions))) {
+        stop(sprintf("%s requires stored test predictions or explicit `newdata`.", caller), call. = FALSE)
+      }
+      y_true <- predictions$truth
+      pred <- predictions$prob
+    } else {
+      .ukb_ml_validate_evaluation_data(newdata, final_model$outcome, caller)
+      y_true <- newdata[[final_model$outcome]]
+      pred <- .ukb_ml_predict_core(final_model, newdata, type = "prob")
+    }
+  } else if (inherits(object, "ukb_ml_final")) {
+    if (!identical(object$outcome_type, "binary")) {
+      stop(sprintf("%s is only for binary classification models.", caller), call. = FALSE)
+    }
+    if (is.null(newdata)) {
+      stop(sprintf("%s requires `newdata` for a ukb_ml_final object.", caller), call. = FALSE)
+    }
+    .ukb_ml_validate_evaluation_data(newdata, object$outcome, caller)
+    positive_class <- object$positive_class
     y_true <- newdata[[object$outcome]]
-    pred <- ukb_ml_predict(object, newdata = newdata, type = "prob")
+    pred <- .ukb_ml_predict_core(object, newdata, type = "prob")
+  } else if (inherits(object, "ukb_ml_test_eval")) {
+    if (!identical(object$outcome_type, "binary")) {
+      stop(sprintf("%s is only for binary classification models.", caller), call. = FALSE)
+    }
+    if (!is.null(newdata)) {
+      stop(sprintf("%s does not accept `newdata` with a ukb_ml_test_eval object.", caller), call. = FALSE)
+    }
+    if (is.null(object$predictions) || !all(c("truth", "prob") %in% names(object$predictions))) {
+      stop(sprintf("%s received an invalid ukb_ml_test_eval object.", caller), call. = FALSE)
+    }
+    y_true <- object$predictions$truth
+    pred <- object$predictions$prob
+  } else if (inherits(object, "ukb_ml")) {
+    if (!identical(object$task, "classification")) {
+      stop(sprintf("%s is only for binary classification models.", caller), call. = FALSE)
+    }
+    if (is.null(newdata)) {
+      y_true <- object$y_test
+      pred <- ukb_ml_predict(object, type = "prob")
+    } else {
+      .ukb_ml_validate_evaluation_data(newdata, object$outcome, caller)
+      y_true <- newdata[[object$outcome]]
+      pred <- ukb_ml_predict(object, newdata = newdata, type = "prob")
+    }
+    if (is.factor(object$y_train) && nlevels(object$y_train) == 2L) {
+      positive_class <- levels(object$y_train)[[2]]
+    }
+  } else {
+    stop(
+      sprintf(
+        "%s requires a ukb_ml_workflow, ukb_ml_flow, ukb_ml_final, ukb_ml_test_eval, or legacy ukb_ml object.",
+        caller
+      ),
+      call. = FALSE
+    )
   }
 
-  y_true <- droplevels(as.factor(y_true))
-  prob <- if (is.matrix(pred)) pred[, 2] else pred
+  y_true <- as.factor(y_true)
+  if (is.null(positive_class)) {
+    positive_class <- if (nlevels(y_true) >= 2L) levels(y_true)[[2]] else NA_character_
+  }
+  positive_class <- as.character(positive_class)
+  prob <- if (is.matrix(pred)) {
+    if (!is.null(colnames(pred)) && positive_class %in% colnames(pred)) {
+      pred[, positive_class]
+    } else {
+      pred[, 2]
+    }
+  } else {
+    pred
+  }
+  prob <- as.numeric(prob)
 
   keep <- !is.na(prob) & !is.na(y_true)
   if (!all(keep)) {
@@ -304,7 +412,10 @@ ukb_ml_metrics <- function(object,
   }
 
   if (nlevels(y_true) != 2) {
-    stop(sprintf("%s requires a binary outcome with exactly 2 classes", caller))
+    stop(sprintf("%s requires a binary outcome with exactly 2 observed classes.", caller), call. = FALSE)
+  }
+  if (!positive_class %in% levels(y_true)) {
+    stop(sprintf("%s: positive class '%s' was not found in the outcome.", caller, positive_class), call. = FALSE)
   }
 
   if (any(!is.finite(prob))) {
@@ -315,8 +426,25 @@ ukb_ml_metrics <- function(object,
     stop(sprintf("%s: predicted probabilities must be within [0, 1]", caller))
   }
 
-  y_binary <- as.integer(y_true == levels(y_true)[2])
-  list(y_true = y_true, prob = prob, y_binary = y_binary)
+  y_binary <- as.integer(as.character(y_true) == positive_class)
+  list(
+    y_true = y_true,
+    prob = prob,
+    y_binary = y_binary,
+    positive_class = positive_class,
+    evaluation_source = evaluation_source
+  )
+}
+
+#' @keywords internal
+.ukb_ml_validate_evaluation_data <- function(newdata, outcome, caller) {
+  if (!is.data.frame(newdata)) {
+    stop(sprintf("%s: `newdata` must be a data.frame or data.table.", caller), call. = FALSE)
+  }
+  if (is.null(outcome) || !outcome %in% names(newdata)) {
+    stop(sprintf("%s: outcome column '%s' was not found in `newdata`.", caller, outcome), call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 # ROC Curve
@@ -380,7 +508,7 @@ ukb_ml_roc <- function(object,
     
     prob <- if (is.matrix(pred)) pred[, 2] else pred
     
-    roc_obj <- roc(y_true, prob, quiet = TRUE)
+    roc_obj <- roc(y_true, prob, direction = "<", quiet = TRUE)
     roc_list[[name]] <- roc_obj
     
     # AUC with CI
@@ -439,14 +567,20 @@ print.ukb_ml_roc <- function(x, ...) {
 #' @description
 #' Generate calibration curve to assess prediction reliability.
 #'
-#' @param object A ukb_ml object
-#' @param newdata Optional new data
+#' @param object A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+#'   \code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+#'   binary-classification object.
+#' @param newdata Optional evaluation data. Stored frozen-test predictions are
+#'   used for workflow, flow, and test-evaluation objects when this is
+#'   \code{NULL}. This argument is required for a \code{ukb_ml_final} object.
 #' @param n_bins Number of bins for calibration (default 10)
 #' @param method Smoothing method: "loess", "isotonic", or "none"
 #' @param plot Whether to create calibration plot
 #' @param ... Additional arguments
 #'
-#' @return ukb_ml_calibration object
+#' @return A \code{ukb_ml_calibration} object containing the grouped calibration
+#'   table, Brier score, expected calibration error, prevalence, positive class,
+#'   evaluation source, and optionally a ggplot object.
 #'
 #' @export
 ukb_ml_calibration <- function(object,
@@ -455,25 +589,15 @@ ukb_ml_calibration <- function(object,
                                method = c("none", "loess", "isotonic"),
                                plot = TRUE,
                                ...) {
-  .ukb_ml_deprecated("ukb_ml_calibration", "ukb_ml_evaluate_test() and ml$final_test_predictions")
-  
   method <- match.arg(method)
-  
-  if (object$task != "classification") {
-    stop("Calibration curves are only for classification models")
+  n_bins <- as.integer(n_bins)
+  if (length(n_bins) != 1L || is.na(n_bins) || n_bins < 2L) {
+    stop("`n_bins` must be a single integer >= 2.", call. = FALSE)
   }
-  
-  # Get predictions
-  if (is.null(newdata)) {
-    y_true <- object$y_test
-    pred <- ukb_ml_predict(object, type = "prob")
-  } else {
-    y_true <- as.factor(newdata[[object$outcome]])
-    pred <- ukb_ml_predict(object, newdata = newdata, type = "prob")
-  }
-  
-  prob <- if (is.matrix(pred)) pred[, 2] else pred
-  y_binary <- as.numeric(y_true == levels(y_true)[2])
+
+  eval_data <- .get_binary_truth_prob(object, newdata, caller = "ukb_ml_calibration")
+  prob <- eval_data$prob
+  y_binary <- eval_data$y_binary
   
   # Create bins
   breaks <- seq(0, 1, length.out = n_bins + 1)
@@ -533,6 +657,9 @@ ukb_ml_calibration <- function(object,
     calibration = cal_data,
     brier_score = brier,
     ece = ece,
+    prevalence = mean(y_binary),
+    positive_class = eval_data$positive_class,
+    evaluation_source = eval_data$evaluation_source,
     method = method
   )
   
@@ -720,14 +847,19 @@ print.ukb_ml_ks <- function(x, ...) {
 #' Compute Precision-Recall curve and area under PR curve (AUPRC)
 #' for a binary classification model.
 #'
-#' @param object A ukb_ml object
-#' @param newdata Optional new data
+#' @param object A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+#'   \code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+#'   binary-classification object.
+#' @param newdata Optional evaluation data. Stored frozen-test predictions are
+#'   used when available; this is required for a \code{ukb_ml_final} object.
 #' @param plot Whether to create the PR plot (default TRUE)
-#' @param n_thresholds Number of threshold points (default 200)
+#' @param n_thresholds Maximum number of points retained for plotting. AUPRC is
+#'   always calculated from all unique prediction thresholds.
 #' @param ... Additional arguments
 #'
-#' @return A ukb_ml_pr object with fields: data (threshold/precision/recall),
-#'   auprc, prevalence
+#' @return A \code{ukb_ml_pr} object containing the precision-recall curve,
+#'   average precision, prevalence, positive class, evaluation source, and
+#'   optionally a ggplot object.
 #'
 #' @export
 ukb_ml_pr <- function(object,
@@ -735,8 +867,6 @@ ukb_ml_pr <- function(object,
                       plot = TRUE,
                       n_thresholds = 200,
                       ...) {
-  .ukb_ml_deprecated("ukb_ml_pr", "ukb_ml_evaluate_test() and ml$final_test_predictions")
-
   n_thresholds <- as.integer(n_thresholds)
   if (length(n_thresholds) != 1 || is.na(n_thresholds) || n_thresholds < 2) {
     stop("n_thresholds must be a single integer >= 2")
@@ -747,45 +877,73 @@ ukb_ml_pr <- function(object,
   y_binary <- eval_data$y_binary
   prevalence <- mean(y_binary)
 
-  thresholds <- seq(0, 1, length.out = n_thresholds)
-
-  precision_vec <- vapply(thresholds, function(t) {
-    tp <- sum(prob >= t & y_binary == 1L)
-    fp <- sum(prob >= t & y_binary == 0L)
-    if (tp + fp == 0) return(NA_real_)
-    tp / (tp + fp)
-  }, numeric(1))
-
-  recall_vec <- vapply(thresholds, function(t) {
-    tp <- sum(prob >= t & y_binary == 1L)
-    fn <- sum(prob < t  & y_binary == 1L)
-    if (tp + fn == 0) return(0)
-    tp / (tp + fn)
-  }, numeric(1))
-
-  pr_data <- data.frame(threshold = thresholds,
-                        precision = precision_vec,
-                        recall    = recall_vec)
-
-  # AUPRC via trapezoidal integration on valid rows, sorted by recall
-  valid     <- !is.na(pr_data$precision)
-  pr_sorted <- pr_data[valid, ][order(pr_data$recall[valid]), ]
-  auprc <- if (nrow(pr_sorted) >= 2) {
-    sum(diff(pr_sorted$recall) *
-          (head(pr_sorted$precision, -1) + utils::tail(pr_sorted$precision, -1)) / 2)
-  } else {
-    NA_real_
+  pr_exact <- .ukb_binary_pr_curve(y_binary, prob)
+  pr_data <- pr_exact$data
+  if (nrow(pr_data) > n_thresholds) {
+    keep_idx <- unique(as.integer(round(seq(1, nrow(pr_data), length.out = n_thresholds))))
+    pr_data <- pr_data[keep_idx, , drop = FALSE]
   }
 
   result <- list(
     data       = pr_data,
-    auprc      = auprc,
-    prevalence = prevalence
+    auprc      = pr_exact$auprc,
+    prevalence = prevalence,
+    auc_method = "average_precision",
+    n_unique_thresholds = pr_exact$n_unique_thresholds,
+    positive_class = eval_data$positive_class,
+    evaluation_source = eval_data$evaluation_source
   )
   class(result) <- "ukb_ml_pr"
 
   if (plot) result$plot <- plot_ml_pr(result)
   result
+}
+
+#' Calculate an exact binary precision-recall staircase and average precision
+#' @keywords internal
+#' @noRd
+.ukb_binary_pr_curve <- function(y_binary, prob) {
+  y_binary <- as.integer(y_binary)
+  prob <- as.numeric(prob)
+  if (length(y_binary) != length(prob) || length(prob) == 0L) {
+    stop("Binary outcomes and probabilities must have the same positive length.", call. = FALSE)
+  }
+  if (anyNA(y_binary) || anyNA(prob) || any(!is.finite(prob))) {
+    stop("Binary outcomes and probabilities cannot contain missing or non-finite values.", call. = FALSE)
+  }
+  if (!all(y_binary %in% c(0L, 1L))) {
+    stop("`y_binary` must contain only 0 and 1.", call. = FALSE)
+  }
+  positive_n <- sum(y_binary == 1L)
+  if (positive_n == 0L) {
+    stop("Precision-recall analysis requires at least one positive outcome.", call. = FALSE)
+  }
+
+  ord <- order(prob, decreasing = TRUE)
+  sorted_prob <- prob[ord]
+  sorted_y <- y_binary[ord]
+  cumulative_tp <- cumsum(sorted_y == 1L)
+  cumulative_fp <- cumsum(sorted_y == 0L)
+  group_end <- c(which(diff(sorted_prob) != 0), length(sorted_prob))
+
+  tp <- cumulative_tp[group_end]
+  fp <- cumulative_fp[group_end]
+  precision <- tp / (tp + fp)
+  recall <- tp / positive_n
+  thresholds <- sorted_prob[group_end]
+
+  average_precision <- sum(diff(c(0, recall)) * precision)
+  curve_data <- data.frame(
+    threshold = c(Inf, thresholds),
+    precision = c(1, precision),
+    recall = c(0, recall)
+  )
+
+  list(
+    data = curve_data,
+    auprc = as.numeric(average_precision),
+    n_unique_thresholds = length(thresholds)
+  )
 }
 
 #' @export
@@ -890,16 +1048,20 @@ print.ukb_ml_gain_lift <- function(x, ...) {
 #' Compute Decision Curve Analysis (DCA) net benefit across a range of
 #' threshold probabilities for a binary classification model.
 #'
-#' @param object A ukb_ml object
-#' @param newdata Optional new data
+#' @param object A \code{ukb_ml_workflow}, \code{ukb_ml_flow},
+#'   \code{ukb_ml_final}, \code{ukb_ml_test_eval}, or legacy \code{ukb_ml}
+#'   binary-classification object.
+#' @param newdata Optional evaluation data. Stored frozen-test predictions are
+#'   used when available; this is required for a \code{ukb_ml_final} object.
 #' @param plot Whether to create the DCA plot (default TRUE)
 #' @param thresholds Numeric vector of threshold probabilities
 #'   (default seq(0.01, 0.99, by = 0.01))
 #' @param harm Additional harm parameter subtracted from net benefit (default 0)
 #' @param ... Additional arguments
 #'
-#' @return A ukb_ml_dca object with field data containing:
-#'   threshold, net_benefit_model, net_benefit_all, net_benefit_none
+#' @return A \code{ukb_ml_dca} object containing threshold-specific net benefit
+#'   for the model, treat-all and treat-none strategies, prevalence, positive
+#'   class, evaluation source, harm, and optionally a ggplot object.
 #'
 #' @export
 ukb_ml_dca <- function(object,
@@ -908,8 +1070,6 @@ ukb_ml_dca <- function(object,
                        thresholds = seq(0.01, 0.99, by = 0.01),
                        harm       = 0,
                        ...) {
-  .ukb_ml_deprecated("ukb_ml_dca", "ukb_ml_evaluate_test() and ml$final_test_predictions")
-
   if (!is.numeric(thresholds) || length(thresholds) == 0) {
     stop("thresholds must be a non-empty numeric vector")
   }
@@ -951,6 +1111,8 @@ ukb_ml_dca <- function(object,
       net_benefit_none   = 0
     ),
     prevalence = prevalence,
+    positive_class = eval_data$positive_class,
+    evaluation_source = eval_data$evaluation_source,
     harm       = harm
   )
   class(result) <- "ukb_ml_dca"
