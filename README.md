@@ -29,7 +29,7 @@ tables that remain within RAP-controlled storage.
 install.packages("UKBAnalytica")
 ```
 
-You can also install the development version of `UKBAnalytica` from GitHub, which is recommended:
+You can also install the development version of `UKBAnalytica` from GitHub, which is **more recommended**:
 
 ```r
 # install.packages("devtools")
