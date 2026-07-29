@@ -306,7 +306,7 @@ build_survival_dataset(
 | `prevalent_sources` | char vector | Sources used to mark prevalent cases. Broader by default. |
 | `outcome_sources` | char vector | Sources used for incident outcome. Excludes Self-report by default (imprecise dates). |
 | `time_skeleton` | data.frame / NULL | Optional output from `ukb_time_skeleton()`. |
-| `primary_disease` | char | Disease key whose incident timing drives `outcome_*`. Defaults to first in `disease_definitions`. |
+| `primary_disease` | char vector | One or more disease keys. One key drives `outcome_*`; multiple keys create disease-specific status/time columns. |
 | `output` | char | `"wide"` (default) or `"long"`. |
 | `include_all` | logical | If `output = "long"`, include non-cases with `status = 0`. |
 | `show_flow` | logical | Print/attach participant attrition table. |
@@ -317,10 +317,15 @@ build_survival_dataset(
 - `<Disease>_history` (int 0/1)
 - `<Disease>_incident` (int 0/1)
 
-And, **once** (for `primary_disease`):
+For one `primary_disease`:
 
 - `outcome_status` (int / NA — NA = prevalent / not at risk)
 - `outcome_surv_time` (numeric years / NA)
+
+For multiple `primary_disease` keys:
+
+- `<Disease>_status` (int / NA)
+- `<Disease>_surv_time` (numeric years / NA)
 
 If `show_flow = TRUE`, the attrition table is stored at
 `attr(result, "participant_flow")`.

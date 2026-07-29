@@ -5,7 +5,8 @@ The main function for building a Cox-regression-ready dataset is
 follow-up time calculation, and supports separate source definitions for
 baseline exclusion and outcome ascertainment.
 It also supports participant-flow reporting (`show_flow`) and temporary
-`data.table` thread tuning (`dt_threads`) for large datasets.
+`data.table` thread tuning (`dt_threads`) for large datasets. One or more
+`primary_disease` keys can be calculated in the same wide-format call.
 
 ## Quick start
 
@@ -39,10 +40,15 @@ The wide-format output contains the following columns for each disease:
 | `{Disease}_incident` | 1 if incident (diagnosed after baseline) |
 | `outcome_status` | Primary disease event indicator (1 = event, 0 = censored, NA = prevalent) |
 | `outcome_surv_time` | Follow-up time in years (NA for prevalent cases) |
+| `{Disease}_status` | Multi-primary mode: independent event indicator for that disease |
+| `{Disease}_surv_time` | Multi-primary mode: independent follow-up time for that disease |
 
 Prevalent cases of the **primary disease** receive `NA` for both
 `outcome_status` and `outcome_surv_time` because they are not at risk for
-incident disease. In a Cox model you should exclude or handle them explicitly.
+incident disease. With multiple primary diseases, pass a character vector such
+as `primary_disease = c("Hypertension", "T2DM", "Dementia")`; the function
+returns disease-specific `_status` and `_surv_time` columns instead of the
+ambiguous generic `outcome_*` columns. Single-primary calls remain unchanged.
 
 ## Participant flow reporting
 
@@ -75,8 +81,9 @@ disease-phenotyping entry point. The user-facing workflow is:
 
 1. Choose diseases with `get_predefined_diseases()` or create one custom
    definition with `create_disease_definition()`.
-2. Choose `primary_disease`, which controls `outcome_status` and
-   `outcome_surv_time`.
+2. Choose one or more `primary_disease` keys. One key controls
+   `outcome_status` / `outcome_surv_time`; multiple keys produce independent
+   `<Disease>_status` / `<Disease>_surv_time` columns.
 3. Use `prevalent_sources` for baseline exclusion/history covariates.
 4. Use `outcome_sources` for incident endpoint ascertainment.
 5. After the function returns, keep participants with non-missing
@@ -115,7 +122,7 @@ were not at risk for an incident event.
 
 ## Follow-up time
 
-Follow-up time for the primary disease is calculated as:
+Follow-up time for each selected primary disease is calculated independently as:
 
 - **Prevalent case**: `NA` (not at risk).
 - **Incident case**: `(diagnosis_date - baseline_date) / 365.25`.

@@ -34,9 +34,12 @@
 #'   used to calculate default follow-up time for non-cases. The
 #'   \code{censor_date} argument remains the common administrative censoring
 #'   date used by endpoint extraction.
-#' @param primary_disease Disease key used to compute follow-up time and event
-#'   status (must be in \code{disease_definitions}). If NULL, the first disease
-#'   in the list is used.
+#' @param primary_disease One or more disease keys used to compute follow-up
+#'   time and event status (all must be in \code{disease_definitions}). If
+#'   \code{NULL}, the first disease in the list is used. For wide output, a
+#'   single key preserves the legacy \code{outcome_status} and
+#'   \code{outcome_surv_time} columns. Multiple keys produce independent
+#'   \code{<Disease>_status} and \code{<Disease>_surv_time} columns in one call.
 #' @param output Output format: \code{"wide"} (default) returns the original data
 #'   with disease indicator columns; \code{"long"} returns case-level records.
 #' @param include_all Logical; when \code{output = "long"}, if TRUE includes the full
@@ -53,8 +56,14 @@
 #'     \item{eid}{Participant identifier}
 #'     \item{\code{<Disease>_history}}{1 if prevalent case (from prevalent_sources), 0 otherwise}
 #'     \item{\code{<Disease>_incident}}{1 if incident case (from outcome_sources), 0 otherwise}
-#'     \item{outcome_status}{Event indicator for primary disease (1=event, 0=censored, NA=prevalent case)}
-#'     \item{outcome_surv_time}{Follow-up time in years for primary disease (NA for prevalent cases)}
+#'     \item{outcome_status}{For one primary disease, event indicator
+#'       (1=event, 0=censored, NA=prevalent case).}
+#'     \item{outcome_surv_time}{For one primary disease, follow-up time in
+#'       years (NA for prevalent cases).}
+#'     \item{\code{<Disease>_status}}{For multiple primary diseases, an
+#'       independent event indicator for each disease.}
+#'     \item{\code{<Disease>_surv_time}}{For multiple primary diseases,
+#'       independent follow-up time in years for each disease.}
 #'   }
 #'
 #' @details
@@ -78,7 +87,8 @@
 #'   \item \strong{Censored}: No diagnosis by end of follow-up (status = 0)
 #' }
 #'
-#' Follow-up time calculation (controlled by primary_disease):
+#' Follow-up time calculation (independently for every selected
+#' \code{primary_disease}):
 #' \itemize{
 #'   \item Prevalent case (primary disease): NA (not at risk)
 #'   \item Incident case: (diagnosis_date - baseline_date) / 365.25
@@ -132,6 +142,34 @@ build_survival_dataset <- function(dt,
   if (!is.null(skeleton_info)) {
     dt <- skeleton_info$dt
     baseline_col <- skeleton_info$baseline_col
+  }
+
+  diseases <- names(disease_definitions)
+  if (length(diseases) == 0L) {
+    stop("No disease definitions provided", call. = FALSE)
+  }
+
+  if (is.null(primary_disease)) {
+    primary_disease <- diseases[[1L]]
+  }
+  if (
+    !is.character(primary_disease) ||
+      length(primary_disease) == 0L ||
+      anyNA(primary_disease) ||
+      any(!nzchar(primary_disease))
+  ) {
+    stop("`primary_disease` must be NULL or a non-empty character vector.", call. = FALSE)
+  }
+  primary_disease <- unique(primary_disease)
+  missing_primary <- setdiff(primary_disease, diseases)
+  if (length(missing_primary) > 0L) {
+    stop(
+      sprintf(
+        "Primary disease(s) not found in disease definitions: %s",
+        paste(missing_primary, collapse = ", ")
+      ),
+      call. = FALSE
+    )
   }
 
   message("[build_survival_dataset] Extracting diagnosis records...")
@@ -188,18 +226,6 @@ build_survival_dataset <- function(dt,
       time_valid_followup = !is.na(baseline_date) & !is.na(end_date) & default_surv_time >= 0
     )]
     all_eids[, c("lost_to_followup_date", "followup_end_date") := NULL]
-  }
-
-  diseases <- names(disease_definitions)
-  if (length(diseases) == 0) {
-    stop("No disease definitions provided")
-  }
-
-  if (is.null(primary_disease)) {
-    primary_disease <- diseases[[1]]
-  }
-  if (!primary_disease %in% diseases) {
-    stop(sprintf("Primary disease '%s' not found in disease definitions", primary_disease))
   }
 
   if (output == "long") {
@@ -292,49 +318,14 @@ build_survival_dataset <- function(dt,
     outcome_long = outcome_cases_dt
   )
 
-  primary_outcome_cases <- outcome_cases_dt[disease == primary_disease]
-  primary_prevalent_cases <- prevalent_cases_dt[disease == primary_disease & prevalent_case == TRUE]
-  
-  # Get all prevalent eids for primary disease
-  prevalent_eids <- character(0)
-  if (nrow(primary_prevalent_cases) > 0) {
-    prevalent_eids <- primary_prevalent_cases$eid
-  }
-  
-  outcome_dt <- data.table::copy(all_eids)
-  outcome_dt[, `:=`(
-    outcome_status = 0L,
-    outcome_surv_time = default_surv_time
-  )]
-
-  # Set outcome status and time from outcome_sources only
-  # Only for participants who are NOT prevalent cases
-  if (nrow(primary_outcome_cases) > 0) {
-    non_prevalent_outcomes <- primary_outcome_cases[!eid %in% prevalent_eids]
-    
-    if (nrow(non_prevalent_outcomes) > 0) {
-      outcome_dt[non_prevalent_outcomes,
-        `:=`(
-          outcome_status = i.status,
-          outcome_surv_time = i.surv_time
-        ),
-        on = "eid"
-      ]
-    }
-  }
-  
-  # CRITICAL: Set outcome_status = NA and outcome_surv_time = NA for prevalent cases
-  # These participants had the primary disease at or before baseline, 
-
-  # so they are not at risk for incident disease and should be excluded from survival analysis
-  if (length(prevalent_eids) > 0) {
-    outcome_dt[eid %in% prevalent_eids, `:=`(
-      outcome_status = NA_integer_,
-      outcome_surv_time = NA_real_
-    )]
-  }
-
-  outcome_dt[, c("baseline_date", "death_date", "end_date", "default_surv_time") := NULL]
+  endpoint_columns <- .survival_endpoint_columns(primary_disease)
+  outcome_dt <- .survival_build_wide_endpoints(
+    all_eids = all_eids,
+    prevalent_cases_dt = prevalent_cases_dt,
+    outcome_cases_dt = outcome_cases_dt,
+    primary_diseases = primary_disease,
+    endpoint_columns = endpoint_columns
+  )
 
   result_dt <- data.table::merge.data.table(
     data.table::copy(dt),
@@ -350,93 +341,229 @@ build_survival_dataset <- function(dt,
   data.table::setorder(result_dt, eid)
 
   if (isTRUE(show_flow)) {
-    history_col <- paste0(primary_disease, "_history")
-    idx_non_missing_status <- !is.na(result_dt$outcome_status)
-
-    history_rule <- sprintf("Keep %s == 0", history_col)
-    idx_non_prevalent <- idx_non_missing_status
-    if (history_col %in% names(result_dt)) {
-      history_vec <- result_dt[[history_col]]
-      idx_non_prevalent <- idx_non_missing_status & !is.na(history_vec) & history_vec == 0L
-    } else {
-      history_rule <- sprintf("Column %s not found; skip this filter", history_col)
-    }
-
-    idx_valid_time <- idx_non_prevalent & !is.na(result_dt$outcome_surv_time) & result_dt$outcome_surv_time >= 0
-
-    n_raw <- nrow(dt)
-    n_result <- nrow(result_dt)
-    n_non_missing_status <- sum(idx_non_missing_status)
-    n_non_prevalent <- sum(idx_non_prevalent)
-    n_valid_time <- sum(idx_valid_time)
-
-    flow_dt <- data.table::data.table(
-      step = c(
-        "Raw cohort",
-        "After build_survival_dataset",
-        "Keep non-missing outcome_status",
-        sprintf("Exclude baseline prevalent %s", primary_disease),
-        "Keep valid outcome_surv_time"
-      ),
-      n_before = as.integer(c(
-        n_raw,
-        n_raw,
-        n_result,
-        n_non_missing_status,
-        n_non_prevalent
-      )),
-      n_after = as.integer(c(
-        n_raw,
-        n_result,
-        n_non_missing_status,
-        n_non_prevalent,
-        n_valid_time
-      )),
-      exclusion_rule = c(
-        "None",
-        "Function output row count check",
-        "Exclude outcome_status is NA",
-        history_rule,
-        "Keep !is.na(outcome_surv_time) & outcome_surv_time >= 0"
+    flow_list <- lapply(seq_along(primary_disease), function(index) {
+      disease <- primary_disease[[index]]
+      columns <- endpoint_columns[[index]]
+      flow_dt <- .survival_participant_flow(
+        result_dt = result_dt,
+        raw_n = nrow(dt),
+        disease = disease,
+        status_col = columns[["status"]],
+        time_col = columns[["time"]]
       )
-    )
 
-    flow_dt$excluded <- flow_dt$n_before - flow_dt$n_after
-    flow_dt$retained_from_prev <- ifelse(
-      flow_dt$n_before > 0,
-      flow_dt$n_after / flow_dt$n_before,
-      NA_real_
-    )
-    flow_dt$retained_from_raw <- if (n_raw > 0) {
-      flow_dt$n_after / n_raw
+      flow_print <- data.table::copy(flow_dt)
+      flow_print$retained_from_prev <- ifelse(
+        is.na(flow_print$retained_from_prev),
+        NA_character_,
+        sprintf("%.2f%%", flow_print$retained_from_prev * 100)
+      )
+      flow_print$retained_from_raw <- ifelse(
+        is.na(flow_print$retained_from_raw),
+        NA_character_,
+        sprintf("%.2f%%", flow_print$retained_from_raw * 100)
+      )
+
+      message(sprintf(
+        "[build_survival_dataset] Participant flow (primary disease: %s)",
+        disease
+      ))
+      print(flow_print)
+      flow_dt
+    })
+
+    if (length(flow_list) == 1L) {
+      attr(result_dt, "participant_flow") <- flow_list[[1L]]
     } else {
-      rep(NA_real_, nrow(flow_dt))
+      named_flow <- lapply(seq_along(flow_list), function(index) {
+        flow <- data.table::copy(flow_list[[index]])
+        flow[, disease := primary_disease[[index]]]
+        data.table::setcolorder(flow, c("disease", setdiff(names(flow), "disease")))
+        flow
+      })
+      attr(result_dt, "participant_flow") <- data.table::rbindlist(
+        named_flow,
+        use.names = TRUE
+      )
     }
-
-    flow_print <- data.table::copy(flow_dt)
-    flow_print$retained_from_prev <- ifelse(
-      is.na(flow_print$retained_from_prev),
-      NA_character_,
-      sprintf("%.2f%%", flow_print$retained_from_prev * 100)
-    )
-    flow_print$retained_from_raw <- ifelse(
-      is.na(flow_print$retained_from_raw),
-      NA_character_,
-      sprintf("%.2f%%", flow_print$retained_from_raw * 100)
-    )
-
-    attr(result_dt, "participant_flow") <- flow_dt
-
-    message(sprintf(
-      "[build_survival_dataset] Participant flow (primary disease: %s)",
-      primary_disease
-    ))
-    print(flow_print)
   }
 
   message("[build_survival_dataset] Complete")
 
   return(result_dt)
+}
+
+.survival_endpoint_columns <- function(primary_diseases) {
+  multiple <- length(primary_diseases) > 1L
+  lapply(primary_diseases, function(disease) {
+    if (multiple) {
+      c(
+        status = paste0(disease, "_status"),
+        time = paste0(disease, "_surv_time")
+      )
+    } else {
+      c(status = "outcome_status", time = "outcome_surv_time")
+    }
+  })
+}
+
+.survival_build_wide_endpoints <- function(all_eids,
+                                           prevalent_cases_dt,
+                                           outcome_cases_dt,
+                                           primary_diseases,
+                                           endpoint_columns) {
+  outcome_dt <- data.table::copy(all_eids)
+
+  for (index in seq_along(primary_diseases)) {
+    disease_key <- primary_diseases[[index]]
+    status_col <- endpoint_columns[[index]][["status"]]
+    time_col <- endpoint_columns[[index]][["time"]]
+
+    data.table::set(outcome_dt, j = status_col, value = 0L)
+    data.table::set(
+      outcome_dt,
+      j = time_col,
+      value = as.numeric(outcome_dt[["default_surv_time"]])
+    )
+
+    prevalent_records <- prevalent_cases_dt[
+      disease == disease_key & prevalent_case == TRUE
+    ]
+    prevalent_eids <- prevalent_records[["eid"]]
+
+    disease_outcomes <- outcome_cases_dt[disease == disease_key]
+    if (length(prevalent_eids) > 0L && nrow(disease_outcomes) > 0L) {
+      disease_outcomes <- disease_outcomes[!eid %in% prevalent_eids]
+    }
+
+    if (nrow(disease_outcomes) > 0L) {
+      outcome_index <- match(disease_outcomes[["eid"]], outcome_dt[["eid"]])
+      keep <- !is.na(outcome_index)
+      if (any(keep)) {
+        data.table::set(
+          outcome_dt,
+          i = outcome_index[keep],
+          j = status_col,
+          value = as.integer(disease_outcomes[["status"]][keep])
+        )
+        data.table::set(
+          outcome_dt,
+          i = outcome_index[keep],
+          j = time_col,
+          value = as.numeric(disease_outcomes[["surv_time"]][keep])
+        )
+      }
+    }
+
+    if (length(prevalent_eids) > 0L) {
+      prevalent_index <- match(prevalent_eids, outcome_dt[["eid"]])
+      prevalent_index <- prevalent_index[!is.na(prevalent_index)]
+      if (length(prevalent_index) > 0L) {
+        data.table::set(
+          outcome_dt,
+          i = prevalent_index,
+          j = status_col,
+          value = NA_integer_
+        )
+        data.table::set(
+          outcome_dt,
+          i = prevalent_index,
+          j = time_col,
+          value = NA_real_
+        )
+      }
+    }
+  }
+
+  outcome_dt[, c("baseline_date", "death_date", "end_date", "default_surv_time") := NULL]
+  outcome_dt
+}
+
+.survival_participant_flow <- function(result_dt,
+                                       raw_n,
+                                       disease,
+                                       status_col,
+                                       time_col) {
+  history_col <- paste0(disease, "_history")
+  status_vec <- result_dt[[status_col]]
+  time_vec <- result_dt[[time_col]]
+  idx_non_missing_status <- !is.na(status_vec)
+
+  history_rule <- sprintf("Keep %s == 0", history_col)
+  idx_non_prevalent <- idx_non_missing_status
+  if (history_col %in% names(result_dt)) {
+    history_vec <- result_dt[[history_col]]
+    idx_non_prevalent <- idx_non_missing_status &
+      !is.na(history_vec) &
+      history_vec == 0L
+  } else {
+    history_rule <- sprintf("Column %s not found; skip this filter", history_col)
+  }
+
+  idx_valid_time <- idx_non_prevalent &
+    !is.na(time_vec) &
+    time_vec >= 0
+
+  result_n <- nrow(result_dt)
+  non_missing_status_n <- sum(idx_non_missing_status)
+  non_prevalent_n <- sum(idx_non_prevalent)
+  valid_time_n <- sum(idx_valid_time)
+
+  flow_dt <- data.table::data.table(
+    step = c(
+      "Raw cohort",
+      "After build_survival_dataset",
+      sprintf("Keep non-missing %s", status_col),
+      sprintf("Exclude baseline prevalent %s", disease),
+      sprintf("Keep valid %s", time_col)
+    ),
+    n_before = as.integer(c(
+      raw_n,
+      raw_n,
+      result_n,
+      non_missing_status_n,
+      non_prevalent_n
+    )),
+    n_after = as.integer(c(
+      raw_n,
+      result_n,
+      non_missing_status_n,
+      non_prevalent_n,
+      valid_time_n
+    )),
+    exclusion_rule = c(
+      "None",
+      "Function output row count check",
+      sprintf("Exclude %s is NA", status_col),
+      history_rule,
+      sprintf("Keep !is.na(%s) & %s >= 0", time_col, time_col)
+    )
+  )
+
+  data.table::set(
+    flow_dt,
+    j = "excluded",
+    value = flow_dt[["n_before"]] - flow_dt[["n_after"]]
+  )
+  data.table::set(
+    flow_dt,
+    j = "retained_from_prev",
+    value = data.table::fifelse(
+      flow_dt[["n_before"]] > 0,
+      flow_dt[["n_after"]] / flow_dt[["n_before"]],
+      NA_real_
+    )
+  )
+  data.table::set(
+    flow_dt,
+    j = "retained_from_raw",
+    value = if (raw_n > 0L) {
+      flow_dt[["n_after"]] / raw_n
+    } else {
+      rep(NA_real_, nrow(flow_dt))
+    }
+  )
+  flow_dt
 }
 
 .survival_prepare_time_skeleton <- function(time_skeleton,

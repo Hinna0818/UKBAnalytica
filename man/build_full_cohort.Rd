@@ -44,9 +44,12 @@ interest is a surgery or procedure-based phenotype.}
 
 \item{baseline_col}{Column name for baseline assessment date (default: "p53_i0").}
 
-\item{primary_disease}{Disease key used to compute follow-up time and event
-status (must be in \code{disease_definitions}). If NULL, the first disease
-in the list is used.}
+\item{primary_disease}{One or more disease keys used to compute follow-up
+time and event status (all must be in \code{disease_definitions}). If
+\code{NULL}, the first disease in the list is used. For wide output, a
+single key preserves the legacy \code{outcome_status} and
+\code{outcome_surv_time} columns. Multiple keys produce independent
+\code{<Disease>_status} and \code{<Disease>_surv_time} columns in one call.}
 
 \item{exclude_prevalent}{Logical; if TRUE, excludes prevalent cases from output.}
 

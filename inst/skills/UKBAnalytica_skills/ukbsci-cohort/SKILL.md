@@ -339,7 +339,7 @@ cohort <- build_survival_dataset(
   censor_date         = as.Date("2023-10-31"),
   baseline_col        = "p53_i0",
   time_skeleton       = time_skel,
-  primary_disease     = "AA",          # which disease drives outcome_*
+  primary_disease     = "AA",          # one key, or a vector for independent endpoints
   output              = "wide",        # or "long"
   include_all         = TRUE,
   show_flow           = TRUE,
@@ -369,10 +369,13 @@ Column semantics added by `build_survival_dataset()`:
 | `<Disease>_incident` | 1 = incident case (> baseline from `outcome_sources`); 0 otherwise |
 | `outcome_status` | 1 = incident `primary_disease` event; 0 = censored; **NA** = prevalent (not at risk) |
 | `outcome_surv_time` | Follow-up time in years; **NA** for prevalent |
+| `<Disease>_status` | Multi-primary mode: independent 1 / 0 / NA event indicator |
+| `<Disease>_surv_time` | Multi-primary mode: independent follow-up time in years |
 
 **Prevalent ≠ at risk.** Participants with `<primary>_history = 1` have
 `outcome_status = NA` and `outcome_surv_time = NA` so that downstream Cox
-fits drop them automatically.
+fits drop them automatically. When `primary_disease` is a vector, use the
+corresponding disease-specific `_status` and `_surv_time` columns instead.
 
 ### Phase 5 — Optional: stratify incident cases by years since enrollment
 
@@ -408,8 +411,9 @@ Pause and ask before generating code if any of these is ambiguous:
    and `names(get_predefined_diseases())` first. Only build custom definitions
    if the requested endpoint is absent or the protocol requires different
    source/code rules.
-2. **`primary_disease`?** Required for `outcome_status` / `outcome_surv_time`.
-   Default to the first disease, but confirm.
+2. **`primary_disease`?** One key returns `outcome_status` /
+   `outcome_surv_time`; multiple keys return independent disease-specific
+   status/time columns. Default to the first disease, but confirm.
 3. **`prevalent_sources` vs `outcome_sources`?** Defaults are:
    - prevalent: `c("ICD10", "ICD9", "Self-report", "Death")` — broad,
      because we want to *exclude* people who already have the disease

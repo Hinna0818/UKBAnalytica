@@ -69,6 +69,20 @@ surv_dt <- build_survival_dataset(
 
 table(surv_dt$outcome_status, useNA = "ifany")
 attr(surv_dt, "participant_flow")
+
+## Build several independent survival endpoints in one pass.
+multi_defs <- get_predefined_diseases()[
+  c("Hypertension", "T2DM", "Dementia")
+]
+multi_surv <- build_survival_dataset(
+  dt = ukb_raw,
+  disease_definitions = multi_defs,
+  primary_disease = names(multi_defs),
+  show_flow = FALSE
+)
+
+## Multi-endpoint output uses disease-specific columns such as
+## Hypertension_status / Hypertension_surv_time.
 ```
 
 ## Disease Definition Sources

@@ -54,9 +54,12 @@ used to calculate default follow-up time for non-cases. The
 \code{censor_date} argument remains the common administrative censoring
 date used by endpoint extraction.}
 
-\item{primary_disease}{Disease key used to compute follow-up time and event
-status (must be in \code{disease_definitions}). If NULL, the first disease
-in the list is used.}
+\item{primary_disease}{One or more disease keys used to compute follow-up
+time and event status (all must be in \code{disease_definitions}). If
+\code{NULL}, the first disease in the list is used. For wide output, a
+single key preserves the legacy \code{outcome_status} and
+\code{outcome_surv_time} columns. Multiple keys produce independent
+\code{<Disease>_status} and \code{<Disease>_surv_time} columns in one call.}
 
 \item{output}{Output format: \code{"wide"} (default) returns the original data
 with disease indicator columns; \code{"long"} returns case-level records.}
@@ -78,8 +81,14 @@ A data.table with columns:
 \item{eid}{Participant identifier}
 \item{\code{<Disease>_history}}{1 if prevalent case (from prevalent_sources), 0 otherwise}
 \item{\code{<Disease>_incident}}{1 if incident case (from outcome_sources), 0 otherwise}
-\item{outcome_status}{Event indicator for primary disease (1=event, 0=censored, NA=prevalent case)}
-\item{outcome_surv_time}{Follow-up time in years for primary disease (NA for prevalent cases)}
+\item{outcome_status}{For one primary disease, event indicator
+(1=event, 0=censored, NA=prevalent case).}
+\item{outcome_surv_time}{For one primary disease, follow-up time in
+years (NA for prevalent cases).}
+\item{\code{<Disease>_status}}{For multiple primary diseases, an
+independent event indicator for each disease.}
+\item{\code{<Disease>_surv_time}}{For multiple primary diseases,
+independent follow-up time in years for each disease.}
 }
 }
 \description{
@@ -110,7 +119,8 @@ because they are not at risk for incident disease.
 \item \strong{Censored}: No diagnosis by end of follow-up (status = 0)
 }
 
-Follow-up time calculation (controlled by primary_disease):
+Follow-up time calculation (independently for every selected
+\code{primary_disease}):
 \itemize{
 \item Prevalent case (primary disease): NA (not at risk)
 \item Incident case: (diagnosis_date - baseline_date) / 365.25
