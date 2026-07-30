@@ -274,6 +274,7 @@ Here we provide some learning materials for UK Biobank in which you may be inter
 - [UK Biobank RAP platform](https://ukbiobank.dnanexus.com/landing)
 - [UK Biobank GitHub resources](https://github.com/UK-Biobank)
 - [UK Biobank RAP platform user guide](https://dnanexus.gitbook.io/uk-biobank-rap)
+- [UK Biobank GP description](https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/primary_care_data.pdf)
 - [UK Biobank learning guides supported by our team](https://hinna0818.github.io/Bioinfo-SMU/Epidemiology/UK_Biobank/) 
 
 ## Star History
