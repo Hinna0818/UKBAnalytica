@@ -85,6 +85,101 @@ multi_surv <- build_survival_dataset(
 ## Hypertension_status / Hypertension_surv_time.
 ```
 
+## GWAS and PheWAS phenotype preparation
+
+The GWAS/PheWAS module accepts outputs from the existing phenotyping workflow
+without modifying them. It builds REGENIE-compatible phenotype/covariate files
+and the four-column ICD-10 table used by the PheWAS R package. The builder is
+in-memory only; writing participant-level files is a separate, explicit RAP
+operation.
+
+```r
+icd10_long <- parse_icd10_diagnoses(ukb_raw)
+
+gwas_phewas <- build_gwas_phewas_phenotype(
+  data = surv_dt,
+  phenotype_cols = "outcome_status",
+  diagnoses = icd10_long,
+  covariates = c("p31", "p21022"),
+  categorical_covariates = "p31",
+  diagnosis_date_col = "diag_date",
+  sex_col = "p31",
+  sample_qc = ukb_gwas_qc_profile("none")
+)
+
+gwas_phewas$trait_summary
+gwas_phewas$qc_flow
+
+# Inside RAP only; defaults to requiring a path below /mnt/project.
+# files <- ukb_write_gwas_phewas_phenotype(
+#   gwas_phewas,
+#   "/mnt/project/Analysis/GWAS_PheWAS/phenotype"
+# )
+```
+
+Use `ukb_plan_regenie()` and `ukb_plan_plink2_dosage()` to create auditable
+dry-run command plans. Execution remains opt-in. See the
+[GWAS and PheWAS workflow](https://hinna0818.github.io/UKBAnalytica/14-gwas-phewas.html)
+for the complete RAP example.
+
+The structured REGENIE planner accepts additional non-conflicting official
+tokens through `step1_args` and `step2_args`. For complete control, use
+`ukb_plan_regenie_command()`:
+
+```r
+custom_regenie <- ukb_plan_regenie_command(
+  args = c(
+    "--step", "2",
+    "--pgen", "/mnt/project/Genotype/cohort",
+    "--phenoFile", "/mnt/project/Analysis/phenotype.tsv",
+    "--phenoColList", "disease",
+    "--bt",
+    "--pred", "/mnt/project/Analysis/step1_pred.list",
+    "--bsize", "400",
+    "--minMAC", "20",
+    "--minINFO", "0.8",
+    "--chr", "19",
+    "--gz",
+    "--out", "/mnt/project/Analysis/disease_chr19"
+  ),
+  label = "disease_chr19"
+)
+
+ukb_run_regenie(custom_regenie)  # dry run
+```
+
+Raw tokens are preserved, but their validity depends on the REGENIE version
+installed in the execution environment.
+
+Common genotype formats can be converted through the same PLINK2 execution
+boundary:
+
+```r
+# BED/BIM/FAM -> BGEN 1.2; creates a plan and does not execute by default.
+conversion <- convert_gwas_datatype(
+  input = "/mnt/project/Genotype/array/ukb_array.bed",
+  from = "auto",
+  to = "bgen",
+  output_prefix = "/mnt/project/Analysis/converted/ukb_array",
+  bgen_bits = 8,
+  plink2_args = c("--maf", "0.01", "--threads", "16")
+)
+
+conversion$commands$convert$display
+
+# Explicit execution in a RAP environment with PLINK2 on PATH:
+# conversion_run <- convert_gwas_datatype(
+#   input = "/mnt/project/Genotype/array/ukb_array.bed",
+#   to = "bgen",
+#   output_prefix = "/mnt/project/Analysis/converted/ukb_array",
+#   execute = TRUE
+# )
+```
+
+For PLINK2 functionality without a dedicated wrapper, pass the official
+command-line tokens to `ukb_plan_plink2()`, then execute the returned plan with
+`ukb_run_plink2(..., execute = TRUE)`.
+
 ## Disease Definition Sources
 
 UKBAnalytica builds disease phenotypes by taking the earliest valid evidence
@@ -178,6 +273,7 @@ Here we provide some learning materials for UK Biobank in which you may be inter
 - [UK Biobank database browser](https://biobank.ndph.ox.ac.uk/ukb/index.cgi)
 - [UK Biobank RAP platform](https://ukbiobank.dnanexus.com/landing)
 - [UK Biobank GitHub resources](https://github.com/UK-Biobank)
+- [UK Biobank RAP platform user guide](https://dnanexus.gitbook.io/uk-biobank-rap)
 - [UK Biobank learning guides supported by our team](https://hinna0818.github.io/Bioinfo-SMU/Epidemiology/UK_Biobank/) 
 
 ## Star History
