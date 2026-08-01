@@ -18,6 +18,9 @@ project:
     - 11-ukbanalytica-skills.qmd
     - 12-skill-creator.qmd
     - 13-ukb-research-skill.qmd
+    - 14-gwas-phewas.qmd
+    - 15-primary-care-gp.qmd
+    - 16-prs.qmd
     - case-study.qmd
 
 website:
@@ -45,7 +48,11 @@ website:
           - text: "RAP extraction"
             href: 01-rap-download.qmd
       - text: "Phenotyping"
-        href: 03-disease-definitions.qmd
+        menu:
+          - text: "Disease definitions"
+            href: 03-disease-definitions.qmd
+          - text: "Primary-care GP data"
+            href: 15-primary-care-gp.qmd
       - text: "Analysis"
         menu:
           - text: "Baseline table"
@@ -62,6 +69,10 @@ website:
             href: 09-machine-learning.qmd
           - text: "Bioinformatics and omics analyses"
             href: bioinformatics-omics.qmd
+          - text: "GWAS and PheWAS"
+            href: 14-gwas-phewas.qmd
+          - text: "Polygenic risk scores"
+            href: 16-prs.qmd
       - text: "Skills"
         menu:
           - text: "UKBAnalytica Skills"
@@ -90,6 +101,7 @@ website:
       - section: "Cohort construction"
         contents:
           - 03-disease-definitions.qmd
+          - 15-primary-care-gp.qmd
           - 04-survival-analysis.qmd
           - 05-baseline-table.qmd
       - section: "Analysis modules"
@@ -100,6 +112,8 @@ website:
           - 09-machine-learning.qmd
           - 10-visualization.qmd
           - bioinformatics-omics.qmd
+          - 14-gwas-phewas.qmd
+          - 16-prs.qmd
       - section: "AI Agent Skills"
         contents:
           - 11-ukbanalytica-skills.qmd

@@ -75,6 +75,22 @@ utils::globalVariables(c(
   "diagnosed", "incident_case",
   "default_surv_time", "control_surv_time", "primary_outcome_prevalent",
   "outcome_status", "outcome_surv_time", "outcome_prevalent",
+  # Primary-care GP module
+  "gp_record_id", "event_dt", "event_date", "read_2", "read_3",
+  "code_field", "code_system", "code", "date_quality",
+  "usable_for_timing", "provider_label", "gp_registration_id",
+  "reg_date", "deduct_date", "reg_date_quality", "deduct_date_quality",
+  "open_ended", "reversed_interval", "interval_quality",
+  "usable_for_coverage", "coverage_start_i", "coverage_end_i",
+  "usable_in_window", "coverage_status", "gp_case", "first_gp_date",
+  "gp_case_reason", "has_gp_clinical_record",
+  "n_usable_registration_records",
+  "valid_window", "index_in_window", "interval_start", "interval_end",
+  "overlap_start_i", "overlap_end_i", "overlap_days", "contains_index",
+  "continuous_lookback_i", "continuous_followup_i", "coverage_fraction",
+  "target_window_days", "covered_window_days", "control_eligible",
+  "coverage_at_index", "continuous_lookback_days",
+  "continuous_followup_days", "gp_observability_reason",
   # Algorithm and spirometry module
   "algo_date", "algo_source",
   "COPD_prevalent", "COPD_prevalent_icd", "COPD_prevalent_spirometry",
@@ -116,5 +132,8 @@ utils::globalVariables(c(
   "importance", "variable", "sensitivity", "specificity", "model",
   "feature", "mean_abs_shap", "shap", "value_norm", "feature_value",
   "shap_value", "color_value", "direction", "feature_label", "metric",
-  "Predicted", "Actual", "Freq", "Proportion", "Label"
+  "Predicted", "Actual", "Freq", "Proportion", "Label",
+  "FID", "IID", "score_sum", "allele_ct", "denom", "source_file",
+  "PRS_SUM", "ALLELE_CT", "DENOM", "N_FILES", "KEY", "SCORE", "N",
+  "ID", "A1", "A2", "CHR", "POS"
 ))

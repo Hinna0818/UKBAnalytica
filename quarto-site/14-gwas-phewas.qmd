@@ -1,0 +1,465 @@
+---
+title: "GWAS and PheWAS phenotype workflow"
+description: "Prepare aligned UKB phenotypes, plan REGENIE and PLINK2 commands, and run an ICD-10 PheWAS inside RAP."
+---
+
+## Scope and privacy boundary
+
+This module prepares the phenotype-side inputs for an end-to-end UK Biobank
+GWAS followed by PheWAS. It does not bundle UK Biobank source data, cache
+participant-level records, download genetic data, or submit a DNAnexus job.
+Participant-level files are only written after an explicit call to
+`ukb_write_gwas_phewas_phenotype()`, which defaults to requiring RAP and a
+path below `/mnt/project`.
+
+The interface is additive: the existing disease, survival, extraction, and
+analysis functions are unchanged. Their outputs can be passed directly to the
+new builder.
+
+## Why these tools?
+
+The first supported path follows the
+[DNAnexus end-to-end GWAS/PheWAS example](https://dnanexus.gitbook.io/uk-biobank-rap/science-corner/end-to-end-target-discovery-with-gwas-and-phewas)
+and current upstream documentation.
+
+| Tool | Role in this module | Decision |
+|---|---|---|
+| [REGENIE](https://rgcgithub.github.io/regenie/) | Two-step GWAS with related samples and multiple traits | Primary GWAS backend |
+| [PLINK2](https://www.cog-genomics.org/plink/2.0/) | Genotype QC, extraction, conversion, and lead-variant dosage export | Primary utility |
+| [PheWAS R package](https://github.com/PheWAS/PheWAS) | ICD-10 to phecode conversion, exclusions, association tests, and annotation | Primary optional PheWAS backend |
+| [SAIGE](https://saigegit.github.io/SAIGE-doc/) | Mixed-model association testing for strongly imbalanced binary traits | Planned alternative |
+| [PHESANT](https://github.com/MRCIEU/PHESANT) | Automated scans across heterogeneous UKB fields | Interoperable, but a different task from ICD-only PheWAS |
+| [DeepPheWAS](https://github.com/Richard-Packer/DeepPheWAS) | Richer phenotype construction and phenome scans | Interoperable input |
+
+The literature screen was deliberately used for tool prioritization rather
+than as proof that one method is universally superior. A snapshot on
+2026-07-29 found the following OpenAlex citation counts for the original
+method papers: PLINK 2, 14,183; BOLT-LMM, 1,808; SAIGE, 1,588; REGENIE, 1,582;
+the PheWAS R package, 532; PHESANT, 251; and DeepPheWAS, 23. A separate rough
+Europe PMC title/abstract/full-text term search combining each tool name with
+“UK Biobank” returned 4,839, 917, 671, 669, 1,981, 166, and 18 records,
+respectively. These are discovery statistics, not validated counts of analyses
+that actually used each program; ambiguous names such as “PheWAS” especially
+inflate term-search results. REGENIE was selected over BOLT-LMM for the first
+implementation because it is the current official RAP example path, supports
+binary and quantitative multi-trait analysis, and has maintained upstream
+guidance for UKB-scale runs. SAIGE remains important when case-control
+imbalance is the dominant concern.
+
+Use `ukb_gwas_phewas_tools()` to inspect the same support decisions in R.
+
+## 1. Build the disease phenotype with existing UKBAnalytica functions
+
+The example below studies incident hypertension. Prevalent cases are encoded
+as missing by `build_survival_dataset()`, so they are not silently used as
+controls. If the scientific question is lifetime/ever hypertension instead,
+construct that explicit 0/1 definition before calling the new builder.
+
+```r
+library(UKBAnalytica)
+
+# raw_dt is an approved UKB table already available inside the RAP project.
+hypertension_def <- get_predefined_diseases()["Hypertension"]
+
+analysis_dt <- build_survival_dataset(
+  dt = raw_dt,
+  disease_definitions = hypertension_def,
+  prevalent_sources = c("ICD10", "ICD9", "Self-report", "Death"),
+  outcome_sources = c("ICD10", "ICD9", "Death"),
+  primary_disease = "Hypertension",
+  baseline_col = "p53_i0",
+  censor_date = as.Date("2023-10-31"),
+  show_flow = TRUE
+)
+
+icd10_long <- parse_icd10_diagnoses(raw_dt)
+```
+
+`outcome_status` is the GWAS trait in this single-disease example:
+0 is an eligible non-case, 1 is an incident case, and `NA` is not analysed for
+that phenotype.
+
+## 2. Create aligned GWAS and PheWAS inputs
+
+```r
+pc_cols <- intersect(paste0("p22009_a", 1:10), names(analysis_dt))
+gwas_covariates <- intersect(
+  c("p31", "p21022", "p22000", pc_cols),
+  names(analysis_dt)
+)
+
+# Read IID values from the actual genotype .sample/.psam file used in the run.
+# Supplying them here makes the intersection explicit and auditable.
+imputed_sample_ids <- genotype_sample_table$IID
+
+phenotype <- build_gwas_phewas_phenotype(
+  data = analysis_dt,
+  phenotype_cols = "outcome_status",
+  diagnoses = icd10_long,
+  covariates = gwas_covariates,
+  categorical_covariates = intersect(c("p31", "p22000"), gwas_covariates),
+  id_col = "eid",
+  diagnosis_id_col = "eid",
+  diagnosis_code_col = "icd10_code",
+  diagnosis_date_col = "diag_date",
+  genotype_ids = imputed_sample_ids,
+  trait_types = c(outcome_status = "binary"),
+  covariate_missing = "complete_case",
+  sex_col = "p31",
+  sample_qc = ukb_gwas_qc_profile("none")
+)
+
+phenotype
+phenotype$trait_summary
+phenotype$qc_flow
+phenotype$covariate_missing
+```
+
+The default QC profile does not impose an ancestry restriction. This is
+intentional: ancestry definition, multi-ancestry analysis, relatedness policy,
+and transferability checks belong in the study protocol. The following
+profile reproduces the four sample filters in the DNAnexus tutorial and is
+available only when it is scientifically appropriate:
+
+```r
+tutorial_qc <- ukb_gwas_qc_profile(
+  "rap_example",
+  ancestry_values = 1,
+  require_pca_sample = TRUE
+)
+```
+
+The builder returns:
+
+- `gwas`: `FID`, `IID`, selected trait columns, and selected covariates;
+- `covariates`: a standalone REGENIE-compatible `FID`/`IID` covariate table;
+- `phewas_long`: `id`, `vocabulary_id`, `code`, and `count`;
+- sample, sex, trait-summary, missingness, and QC-flow tables.
+
+It remains entirely in memory until the following explicit write:
+
+```r
+files <- ukb_write_gwas_phewas_phenotype(
+  phenotype,
+  output_dir = "/mnt/project/Analysis/GWAS_PheWAS/phenotype",
+  prefix = "incident_hypertension",
+  require_rap = TRUE
+)
+```
+
+## 3. Plan and run REGENIE
+
+The planner generates direct REGENIE commands for an existing Swiss Army Knife
+or controlled RAP execution environment. It does not submit a job.
+
+```r
+regenie_plan <- ukb_plan_regenie(
+  files = files,
+  bed_prefix = "/mnt/project/Bulk/Genotype/array/ukb_array_qc",
+  step1_extract = "/mnt/project/Analysis/GWAS_PheWAS/qc/array_step1.snplist",
+  step2_bgen = sprintf(
+    "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb_c%d_b0_v3.bgen",
+    1:22
+  ),
+  step2_sample = "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb22828_c1_b0_v3_s487395.sample",
+  step2_extract = "/mnt/project/Analysis/GWAS_PheWAS/qc/imputed_qc.snplist",
+  output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/results/hypertension",
+  threads = 16,
+  lowmem = TRUE,
+  firth = TRUE,
+  step1_args = c("--cv", "10", "--keep-l0"),
+  step2_args = c("--minMAC", "20", "--minINFO", "0.8", "--gz")
+)
+
+print(regenie_plan)
+
+# Dry run: returns the plan and performs no computation.
+ukb_run_regenie(regenie_plan)
+
+# Explicit execution only inside an environment where the reviewed REGENIE
+# binary and all inputs are already available.
+# ukb_run_regenie(regenie_plan, execute = TRUE, require_rap = TRUE)
+```
+
+`step1_args` and `step2_args` preserve additional token boundaries while the
+structured wrapper continues to own inputs, phenotype selection, trait type,
+prediction files, core association settings, and output paths. Passing a
+managed flag such as `--out` through these arguments is rejected instead of
+silently creating an ambiguous command.
+
+### Access to the rest of REGENIE
+
+For survival analysis, gene-based testing, conditional analysis, interactions,
+LD calculation, split level-0 jobs, or a newer official option that does not
+fit the structured wrapper, use the raw-token planner:
+
+```r
+survival_plan <- ukb_plan_regenie_command(
+  args = c(
+    "--step", "2",
+    "--pgen", "/mnt/project/Genotype/cohort",
+    "--phenoFile", "/mnt/project/Analysis/survival.tsv",
+    "--phenoColList", "dementia_time",
+    "--eventColList", "dementia",
+    "--t2e",
+    "--covarFile", "/mnt/project/Analysis/covariates.tsv",
+    "--pred", "/mnt/project/Analysis/step1_pred.list",
+    "--bsize", "400",
+    "--minMAC", "20",
+    "--chr", "19",
+    "--range", "19:44900000-45900000",
+    "--gz",
+    "--write-samples",
+    "--out", "/mnt/project/Analysis/dementia_chr19"
+  ),
+  expected_outputs =
+    "/mnt/project/Analysis/dementia_chr19_dementia_time.regenie.gz",
+  label = "dementia_chr19"
+)
+
+survival_plan$commands$dementia_chr19$display
+ukb_run_regenie(survival_plan)  # dry run
+# ukb_run_regenie(survival_plan, execute = TRUE, require_rap = TRUE)
+```
+
+The generic planner validates that every entry is a non-empty token and quotes
+tokens before execution. It deliberately does not maintain a second copy of
+REGENIE's evolving option table or validate cross-option semantics. Check the
+[official REGENIE option reference](https://rgcgithub.github.io/regenie/options/)
+and record `regenie --version`; an older binary can reject options such as
+`--t2e`, which was added in REGENIE 4.0.
+
+For the managed DNAnexus REGENIE app, use the generated phenotype, covariate,
+keep, and variant-list files as versioned app inputs. The direct runner is not
+a replacement for DNAnexus job orchestration or project billing controls.
+
+## 4. Export lead-variant dosages with PLINK2
+
+After GWAS QC, significance testing, and protocol-defined LD clumping, put the
+selected variant IDs in a one-column file. The PLINK2 planner follows the
+official RAP example's `--bgen ... ref-first --extract ... --export A` path.
+
+```r
+plink2_plan <- ukb_plan_plink2_dosage(
+  bgen = sprintf(
+    "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb_c%d_b0_v3.bgen",
+    1:22
+  ),
+  sample = "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb22828_c1_b0_v3_s487395.sample",
+  variant_file = "/mnt/project/Analysis/GWAS_PheWAS/results/lead_variants.txt",
+  output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/phewas/lead_dosage",
+  keep_file = files$paths[["sample_keep"]]
+)
+
+ukb_run_plink2(plink2_plan)  # dry run
+# ukb_run_plink2(plink2_plan, execute = TRUE, require_rap = TRUE)
+```
+
+## Convert BED, PGEN, BGEN, VCF, and BCF
+
+`convert_gwas_datatype()` provides a validated high-level interface for common
+genotype format conversions. It follows the same safety contract: dry-run by
+default, explicit RAP execution, and no automatic software installation.
+
+```r
+# PLINK 1 BED/BIM/FAM -> BGEN 1.2
+bed_to_bgen <- convert_gwas_datatype(
+  input = "/mnt/project/Genotype/array/ukb_array.bed",
+  from = "auto",
+  to = "bgen",
+  output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/converted/ukb_array",
+  bgen_version = "1.2",
+  bgen_bits = 8,
+  plink2_args = c("--maf", "0.01", "--threads", "16")
+)
+
+bed_to_bgen$commands$convert$display
+bed_to_bgen$expected_outputs
+
+# BGEN -> PLINK 2 PGEN/PVAR/PSAM
+bgen_to_pgen <- convert_gwas_datatype(
+  input = "/mnt/project/Genotype/imputed/ukb_c1.bgen",
+  from = "bgen",
+  to = "pgen",
+  sample_file = "/mnt/project/Genotype/imputed/ukb.sample",
+  output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/converted/ukb_c1"
+)
+
+# VCF dosage import -> BED/BIM/FAM
+vcf_to_bed <- convert_gwas_datatype(
+  input = "/mnt/project/Genotype/cohort.vcf.gz",
+  to = "bed",
+  vcf_dosage = "DS",
+  output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/converted/cohort"
+)
+
+# Execution is always explicit.
+# convert_gwas_datatype(
+#   input = "/mnt/project/Genotype/imputed/ukb_c1.bgen",
+#   from = "bgen",
+#   to = "pgen",
+#   sample_file = "/mnt/project/Genotype/imputed/ukb.sample",
+#   output_prefix = "/mnt/project/Analysis/GWAS_PheWAS/converted/ukb_c1",
+#   execute = TRUE,
+#   require_rap = TRUE
+# )
+```
+
+The supported high-level conversion targets are:
+
+| `to` | PLINK2 operation | Expected data files |
+|---|---|---|
+| `"bed"` | `--make-bed` | `.bed`, `.bim`, `.fam` |
+| `"pgen"` | `--make-pgen` | `.pgen`, `.pvar`, `.psam` |
+| `"bgen"` | `--export bgen-1.x` | `.bgen`, `.sample` |
+| `"vcf"` | `--export vcf [bgz]` | `.vcf` or `.vcf.gz` |
+| `"bcf"` | `--export bcf` | `.bcf` |
+
+Format conversion is not automatically lossless. PLINK2 collapses raw
+GEN/BGEN genotype probabilities to dosages on import, BED primarily stores
+hard calls, and VCF dosage output requires an explicit
+`vcf_dosage_export` mode. Prefer PGEN when reference alleles, phase, dosage,
+or multiallelic variants need to be retained, and verify the output before
+deleting or retiring a source fileset.
+
+### Access to the rest of PLINK2
+
+The dedicated wrappers expose the parameters needed for their specific tasks.
+They do not try to duplicate PLINK2's complete, frequently updated flag
+surface as hundreds of R formal arguments.
+
+Additional compatible filters and resource options can be passed as tokens:
+
+```r
+conversion <- convert_gwas_datatype(
+  input = "/mnt/project/Genotype/cohort.pgen",
+  to = "bed",
+  output_prefix = "/mnt/project/Analysis/converted/cohort_qc",
+  plink2_args = c(
+    "--maf", "0.01",
+    "--geno", "0.05",
+    "--mind", "0.02",
+    "--threads", "16",
+    "--memory", "64000"
+  )
+)
+```
+
+For an operation without a dedicated wrapper, the generic planner preserves
+the complete command-line token sequence:
+
+```r
+glm_plan <- ukb_plan_plink2(
+  args = c(
+    "--pfile", "/mnt/project/Genotype/cohort",
+    "--glm", "hide-covar", "firth-fallback",
+    "--pheno", files$paths[["gwas"]],
+    "--covar", files$paths[["covariates"]],
+    "--threads", "16",
+    "--out", "/mnt/project/Analysis/results/plink2_gwas"
+  )
+)
+
+glm_plan$commands$plink2$display
+ukb_run_plink2(glm_plan)  # dry run
+# ukb_run_plink2(glm_plan, execute = TRUE, require_rap = TRUE)
+```
+
+This raw-argument route can express current PLINK2 flags, but UKBAnalytica
+cannot validate every flag combination. The installed PLINK2 version remains
+the authority and will reject unsupported or incompatible arguments. Review
+the [complete PLINK2 flag index](https://www.cog-genomics.org/plink/2.0/index)
+and record `plink2 --version` with the analysis provenance.
+
+## 5. Run ICD-10 PheWAS
+
+The optional upstream PheWAS dependency is not installed automatically:
+
+```r
+# Run once in a reviewed RAP R environment if PheWAS is not already present.
+# remotes::install_github("PheWAS/PheWAS")
+```
+
+Read and merge the `.raw` files produced by the PLINK2 plan, retaining `IID`
+and dosage columns:
+
+```r
+dosage_parts <- lapply(plink2_plan$expected_raw, function(path) {
+  part <- data.table::fread(path)
+  metadata <- c("#FID", "FID", "PAT", "MAT", "SEX", "PHENOTYPE")
+  keep <- c("IID", setdiff(names(part), c(metadata, "IID")))
+  part[, ..keep]
+})
+lead_dosages <- Reduce(
+  function(left, right) merge(left, right, by = "IID", all = FALSE),
+  dosage_parts
+)
+
+phewas_result <- ukb_run_phewas(
+  phenotype,
+  genotypes = lead_dosages,
+  genotype_id_col = "IID",
+  covariate_cols = gwas_covariates,
+  min_code_count = 1,
+  min_records = 20,
+  cores = 8,
+  add_phecode_exclusions = TRUE,
+  sex_restrictions = TRUE,
+  vocabulary_map = "icd10",
+  significance_threshold = c("p-value", "bonferroni", "fdr")
+)
+
+head(phewas_result$results)
+```
+
+`ukb_run_phewas()` uses the upstream ICD-10 phecode map, preserves the full
+eligible population when creating controls, applies phecode exclusion rules,
+and can apply sex-specific restrictions when `sex_col` was supplied to the
+builder.
+
+## Python and `basilisk`
+
+The initial supported path does not need Python: REGENIE and PLINK2 are
+external binaries already commonly run through RAP environments, and PheWAS
+is an R package. Therefore this module does not create a hidden Conda
+environment. If a later backend has a genuine Python API and a stable pinned
+dependency set, `basilisk` can be added for that backend without changing this
+interface.
+
+## Interpretation safeguards
+
+- Freeze phenotype definitions, covariates, ancestry strategy, QC thresholds,
+  genetic build, and primary/secondary analyses before the final scan.
+- Do not interpret discovery counts as independent replication.
+- Harmonize variant IDs and alleles before clumping or dosage extraction.
+- Use association methods appropriate to case-control imbalance and rare
+  variants; consider the planned SAIGE backend when imbalance is severe.
+- Report all sample attrition using `qc_flow`, covariate missingness, and the
+  DNAnexus job/version provenance.
+
+## Primary sources
+
+- DNAnexus:
+  [End-to-end target discovery with GWAS and PheWAS](https://dnanexus.gitbook.io/uk-biobank-rap/science-corner/end-to-end-target-discovery-with-gwas-and-phewas)
+  and
+  [GWAS using Alzheimer's disease](https://dnanexus.gitbook.io/uk-biobank-rap/science-corner/gwas-using-alzheimers-disease).
+- Mbatchou et al.:
+  [Computationally efficient whole-genome regression for quantitative and binary traits](https://doi.org/10.1038/s41588-021-00870-7)
+  (REGENIE).
+- Zhou et al.:
+  [Efficiently controlling for case-control imbalance and sample relatedness in large-scale genetic association studies](https://doi.org/10.1038/s41588-018-0184-y)
+  (SAIGE).
+- Chang et al.:
+  [Second-generation PLINK: rising to the challenge of larger and richer datasets](https://doi.org/10.1186/s13742-015-0047-8).
+- Carroll et al.:
+  [R PheWAS: data analysis and plotting tools for phenome-wide association studies in the R environment](https://doi.org/10.1093/bioinformatics/btu197).
+- Millard et al.:
+  [PHESANT: a tool for performing automated phenome scans in UK Biobank](https://pmc.ncbi.nlm.nih.gov/articles/PMC5837456/).
+- Packer et al.:
+  [DeepPheWAS](https://doi.org/10.1093/bioinformatics/btad073).
+- Wu et al.:
+  [Mapping ICD-10 and ICD-10-CM codes to phecodes](https://doi.org/10.2196/14325).
+
+Citation counts in the tool-screen snapshot were read from
+[OpenAlex](https://docs.openalex.org/) DOI records. The rough UKB term counts
+used the [Europe PMC search API](https://europepmc.org/RestfulWebService).

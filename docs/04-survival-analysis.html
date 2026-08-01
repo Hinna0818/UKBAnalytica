@@ -68,7 +68,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
 <link href="./05-baseline-table.html" rel="next">
-<link href="./03-disease-definitions.html" rel="prev">
+<link href="./15-primary-care-gp.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -314,10 +314,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="./03-disease-definitions.html"> 
-<span class="menu-text">Phenotyping</span></a>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-phenotyping" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Phenotyping</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-phenotyping">    
+        <li>
+    <a class="dropdown-item" href="./03-disease-definitions.html">
+ <span class="dropdown-text">Disease definitions</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./15-primary-care-gp.html">
+ <span class="dropdown-text">Primary-care GP data</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item dropdown ">
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-analysis" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Analysis</span>
@@ -350,6 +361,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="./bioinformatics-omics.html">
  <span class="dropdown-text">Bioinformatics and omics analyses</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./14-gwas-phewas.html">
+ <span class="dropdown-text">GWAS and PheWAS</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./16-prs.html">
+ <span class="dropdown-text">Polygenic risk scores</span></a>
   </li>  
     </ul>
   </li>
@@ -467,6 +486,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./15-primary-care-gp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Primary-care GP phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./04-survival-analysis.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Survival Analysis</span></a>
   </div>
@@ -522,6 +547,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Bioinformatics and omics analyses</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./14-gwas-phewas.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GWAS and PheWAS phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./16-prs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Polygenic risk score workflow</span></a>
   </div>
 </li>
       </ul>
@@ -608,7 +645,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="survival-analysis" class="level1">
 <h1>Survival Analysis</h1>
-<p>The main function for building a Cox-regression-ready dataset is <code>build_survival_dataset()</code>. It handles prevalent/incident classification, follow-up time calculation, and supports separate source definitions for baseline exclusion and outcome ascertainment. It also supports participant-flow reporting (<code>show_flow</code>) and temporary <code>data.table</code> thread tuning (<code>dt_threads</code>) for large datasets.</p>
+<p>The main function for building a Cox-regression-ready dataset is <code>build_survival_dataset()</code>. It handles prevalent/incident classification, follow-up time calculation, and supports separate source definitions for baseline exclusion and outcome ascertainment. It also supports participant-flow reporting (<code>show_flow</code>) and temporary <code>data.table</code> thread tuning (<code>dt_threads</code>) for large datasets. One or more <code>primary_disease</code> keys can be calculated in the same wide-format call.</p>
 <section id="quick-start" class="level2">
 <h2 class="anchored" data-anchor-id="quick-start">Quick start</h2>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
@@ -660,9 +697,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: left;"><code>outcome_surv_time</code></td>
 <td style="text-align: left;">Follow-up time in years (NA for prevalent cases)</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;"><code>{Disease}_status</code></td>
+<td style="text-align: left;">Multi-primary mode: independent event indicator for that disease</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>{Disease}_surv_time</code></td>
+<td style="text-align: left;">Multi-primary mode: independent follow-up time for that disease</td>
+</tr>
 </tbody>
 </table>
-<p>Prevalent cases of the <strong>primary disease</strong> receive <code>NA</code> for both <code>outcome_status</code> and <code>outcome_surv_time</code> because they are not at risk for incident disease. In a Cox model you should exclude or handle them explicitly.</p>
+<p>Prevalent cases of the <strong>primary disease</strong> receive <code>NA</code> for both <code>outcome_status</code> and <code>outcome_surv_time</code> because they are not at risk for incident disease. With multiple primary diseases, pass a character vector such as <code>primary_disease = c("Hypertension", "T2DM", "Dementia")</code>; the function returns disease-specific <code>_status</code> and <code>_surv_time</code> columns instead of the ambiguous generic <code>outcome_*</code> columns. Single-primary calls remain unchanged.</p>
 </section>
 <section id="participant-flow-reporting" class="level2">
 <h2 class="anchored" data-anchor-id="participant-flow-reporting">Participant flow reporting</h2>
@@ -686,7 +731,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>For most prospective UKB analyses, use <code>build_survival_dataset()</code> as the only disease-phenotyping entry point. The user-facing workflow is:</p>
 <ol type="1">
 <li>Choose diseases with <code>get_predefined_diseases()</code> or create one custom definition with <code>create_disease_definition()</code>.</li>
-<li>Choose <code>primary_disease</code>, which controls <code>outcome_status</code> and <code>outcome_surv_time</code>.</li>
+<li>Choose one or more <code>primary_disease</code> keys. One key controls <code>outcome_status</code> / <code>outcome_surv_time</code>; multiple keys produce independent <code>&lt;Disease&gt;_status</code> / <code>&lt;Disease&gt;_surv_time</code> columns.</li>
 <li>Use <code>prevalent_sources</code> for baseline exclusion/history covariates.</li>
 <li>Use <code>outcome_sources</code> for incident endpoint ascertainment.</li>
 <li>After the function returns, keep participants with non-missing <code>outcome_status</code> and valid non-negative <code>outcome_surv_time</code> for Cox models.</li>
@@ -717,7 +762,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="follow-up-time" class="level2">
 <h2 class="anchored" data-anchor-id="follow-up-time">Follow-up time</h2>
-<p>Follow-up time for the primary disease is calculated as:</p>
+<p>Follow-up time for each selected primary disease is calculated independently as:</p>
 <ul>
 <li><strong>Prevalent case</strong>: <code>NA</code> (not at risk).</li>
 <li><strong>Incident case</strong>: <code>(diagnosis_date - baseline_date) / 365.25</code>.</li>
@@ -1281,8 +1326,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./03-disease-definitions.html" class="pagination-link" aria-label="Disease Definitions">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Disease Definitions</span>
+      <a href="./15-primary-care-gp.html" class="pagination-link" aria-label="Primary-care GP phenotype workflow">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Primary-care GP phenotype workflow</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

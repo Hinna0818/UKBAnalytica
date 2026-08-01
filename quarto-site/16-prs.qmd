@@ -1,0 +1,456 @@
+---
+title: "Polygenic risk score workflow"
+description: "Load published UK Biobank scores or calculate harmonized single and multi-trait PRS with PLINK2 inside RAP."
+---
+
+## Scope
+
+UKBAnalytica supports two distinct polygenic risk score (PRS) workflows:
+
+1. load participant-level PRS fields already released by UK Biobank; or
+2. calculate a custom fixed-weight PRS from published weights with PLINK2.
+
+The custom workflow standardizes and harmonizes the weight table in R, then
+constructs auditable PLINK2 commands. Genotype files remain on the Research
+Analysis Platform (RAP): the package does not load BGEN, PGEN, or BED data into
+R and does not cache participant-level UK Biobank data.
+
+::: {.callout-important}
+A PRS is meaningful only when its target population, genome build, variant
+identifiers, alleles, weight scale, and sample eligibility agree with the
+source study. Generating a successful PLINK2 command does not establish that
+these scientific conditions have been met.
+:::
+
+## Workflow overview
+
+```{mermaid}
+flowchart LR
+  A["Published PRS weights"] --> B["prepare_prs_weights()"]
+  C["Target PVAR/BIM variant map"] --> D["harmonize_prs_weights()"]
+  B --> D
+  D --> E["combine_prs_weights()"]
+  E --> F["split_prs_weights()"]
+  F --> G["ukb_plan_prs()"]
+  H["BGEN / PGEN / BED"] --> G
+  G --> I["Inspect or dry-run"]
+  I --> J["ukb_run_prs()"]
+  J --> K["Participant-level PRS sums"]
+```
+
+For one score, `combine_prs_weights()` is unnecessary. For several scores
+that use the same target genotype data, the combined wide weight matrix lets
+PLINK2 calculate every score during one genotype scan per chromosome through
+`--score-col-nums`.
+
+## Main interfaces
+
+| Function | Main input | Main output | Purpose |
+|:--|:--|:--|:--|
+| `ukb_prs_catalog()` | score type and trait | UKB PRS field catalogue | Inspect Standard and Enhanced UKB PRS fields |
+| `load_ukb_prs()` | participant table or RAP dataset | participant-level published scores | Load scores released by UKB without recalculation |
+| `prepare_prs_weights()` | public weight table | `ukb_prs_weights` | Normalize ID, effect allele, weight scale, build, position, and frequency |
+| `harmonize_prs_weights()` | prepared weights and target variant map | `ukb_prs_harmonized` plus QC attributes | Match variants and align effect alleles to target genotypes |
+| `combine_prs_weights()` | two or more harmonized scores | wide `ukb_prs_weight_matrix` | Calculate multiple scores in one genotype scan |
+| `split_prs_weights()` | harmonized or wide weights | chromosome-specific score files | Skip chromosomes without contributing variants |
+| `ukb_plan_prs()` | weights, genotypes, samples, and output prefix | auditable `ukb_prs_plan` | Build PLINK2 commands without execution |
+| `ukb_run_prs()` | a PRS plan | execution logs and combined score table | Execute commands, resume completed work, and read results |
+| `read_prs_scores()` | existing `.sscore` files | participant-level score sums | Combine chromosome outputs without rerunning PLINK2 |
+
+## Route A: load PRS already released by UK Biobank
+
+Use this route when the released UKB score matches the research question and
+the analysis does not require a new training GWAS or a different set of
+weights.
+
+```r
+library(UKBAnalytica)
+
+ukb_prs_catalog("standard", c("HT", "T2D"))
+
+published_prs <- load_ukb_prs(
+  data = participant_data,
+  trait = c("HT", "T2D"),
+  type = "standard",
+  id_col = "eid",
+  standardize = TRUE
+)
+
+published_prs[, .(
+  eid,
+  prs_ht_standard,
+  prs_t2d_standard,
+  prs_ht_standard_z,
+  prs_t2d_standard_z
+)]
+```
+
+When `data = NULL`, `load_ukb_prs()` uses the package's existing RAP phenotype
+extractor. Enhanced scores were partly trained inside UKB and are available
+only in the designated testing subgroup recorded in field 26200. The default
+`eligibility = "set_na"` keeps participants but sets Enhanced scores outside
+that subgroup to `NA`; use `eligibility = "require"` to keep eligible testing
+participants only.
+
+## Route B: complete custom multi-PRS workflow
+
+The example calculates hypertension and type 2 diabetes PRS from two published
+weight tables. It assumes all paths and participant-level data remain inside
+an approved RAP project.
+
+### Required inputs
+
+The workflow needs:
+
+- one public weight table per PRS, including variant ID, effect allele, other
+  allele, chromosome, position, effect-allele frequency when available, and
+  beta, log-odds, odds-ratio, or direct weight;
+- a target variant map derived from the exact genotype files to be scored;
+- BGEN plus `.sample`, PGEN/PVAR/PSAM, or BED/BIM/FAM genotype files;
+- an optional two-column PLINK keep file defining the analysis participants;
+- preferably a fixed target/reference allele-frequency file for reproducible
+  mean imputation; and
+- existing output directories and a reviewed PLINK2 executable.
+
+### 1. Normalize the published weights
+
+```r
+ht_prepared <- prepare_prs_weights(
+  weights = ht_public_weights,
+  variant_col = "rsid",
+  effect_allele_col = "effect_allele",
+  other_allele_col = "other_allele",
+  weight_col = "odds_ratio",
+  chr_col = "chromosome",
+  pos_col = "position",
+  effect_allele_freq_col = "effect_allele_frequency",
+  weight_type = "or",       # converted to log(OR)
+  genome_build = "GRCh37"
+)
+
+t2d_prepared <- prepare_prs_weights(
+  weights = t2d_public_weights,
+  variant_col = "rsid",
+  effect_allele_col = "effect_allele",
+  other_allele_col = "other_allele",
+  weight_col = "beta",
+  chr_col = "chromosome",
+  pos_col = "position",
+  effect_allele_freq_col = "effect_allele_frequency",
+  weight_type = "beta",
+  genome_build = "GRCh37"
+)
+```
+
+`weight_type = "or"` applies `log()` before scoring. `"beta"`, `"log_or"`,
+and `"direct"` are passed through unchanged. The declared build is metadata
+used to prevent silent mixing of GRCh37 and GRCh38; this function does not
+perform liftOver.
+
+### 2. Build a filtered target variant map
+
+Do not collect all 22 chromosome PVAR files into R for a small PRS. Let PLINK2
+scan them and write only candidate variants. The example assumes stable rsIDs,
+one PGEN/PVAR/PSAM set per autosome, and biallelic target variants.
+
+```r
+library(data.table)
+
+pgen_prefixes <- sprintf(
+  "/mnt/project/Genotype/pgen/ukb_chr%d",
+  1:22
+)
+
+dir.create(
+  "/mnt/project/Analysis/PRS/target_map",
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+candidate_id_file <- "/mnt/project/Analysis/PRS/target_map/candidate_ids.txt"
+writeLines(unique(c(ht_prepared$ID, t2d_prepared$ID)), candidate_id_file)
+
+target_map_plans <- lapply(seq_along(pgen_prefixes), function(i) {
+  output_prefix <- sprintf(
+    "/mnt/project/Analysis/PRS/target_map/candidate_chr%d",
+    i
+  }
+  ukb_plan_plink2(
+    args = c(
+      "--pfile", pgen_prefixes[[i]],
+      "--extract", candidate_id_file,
+      "--max-alleles", "2",
+      "--make-just-pvar",
+      "--out", output_prefix
+    ),
+    expected_outputs = paste0(output_prefix, ".pvar"),
+    label = paste0("target_chr", i)
+  )
+})
+
+# Inspect before executing.
+target_map_plans[[1]]$commands$target_chr1$display
+
+# Explicit execution inside RAP.
+target_map_runs <- lapply(
+  target_map_plans,
+  ukb_run_plink2,
+  execute = TRUE,
+  require_rap = TRUE
+)
+
+target_variant_map <- rbindlist(lapply(
+  sprintf(
+    "/mnt/project/Analysis/PRS/target_map/candidate_chr%d.pvar",
+    1:22
+  ),
+  fread
+), use.names = TRUE)
+```
+
+Use the variant map from the files that will actually be scored. If the input
+contains multiallelic variants, duplicated IDs, or allele representations that
+require normalization, resolve them according to a prespecified protocol
+before harmonization. When source IDs are unavailable or inconsistent, create
+a separately reviewed position-based target query instead of reading the full
+PVAR files into the R session.
+
+### 3. Harmonize alleles separately for each score
+
+```r
+ht_weights <- harmonize_prs_weights(
+  ht_prepared,
+  variant_map = target_variant_map,
+  target_id_col = "ID",
+  target_chr_col = "#CHROM",
+  target_pos_col = "POS",
+  target_allele1_col = "ALT",
+  target_allele2_col = "REF",
+  target_build = "GRCh37",
+  match_by = "id",
+  palindromic = "drop"
+)
+
+t2d_weights <- harmonize_prs_weights(
+  t2d_prepared,
+  variant_map = target_variant_map,
+  target_id_col = "ID",
+  target_chr_col = "#CHROM",
+  target_pos_col = "POS",
+  target_allele1_col = "ALT",
+  target_allele2_col = "REF",
+  target_build = "GRCh37",
+  match_by = "id",
+  palindromic = "drop"
+)
+```
+
+Inspect the retained and excluded variants before proceeding:
+
+```r
+attr(ht_weights, "harmonization_qc")
+attr(ht_weights, "harmonization_exclusions")
+
+attr(t2d_weights, "harmonization_qc")
+attr(t2d_weights, "harmonization_exclusions")
+```
+
+`match_by = "id"` matches the filtered rsID target map constructed above.
+`match_by = "auto"` is also available when the supplied map supports a
+position fallback. Direct, swapped, strand, and strand-swapped SNPs are
+handled. Palindromic variants are dropped by default. They should be inferred
+by frequency only when both source and target frequencies are appropriate and
+the tolerance is justified.
+
+### 4. Combine scores and split weights by chromosome
+
+```r
+multi_weights <- combine_prs_weights(
+  weights = list(
+    HT_PRS = ht_weights,
+    T2D_PRS = t2d_weights
+  ),
+  output = "/mnt/project/Analysis/PRS/weights/ht_t2d_all.tsv"
+)
+
+weights_by_chr <- split_prs_weights(
+  weights = multi_weights,
+  output_dir = "/mnt/project/Analysis/PRS/weights/by_chr",
+  prefix = "ht_t2d"
+)
+
+multi_weights
+weights_by_chr
+```
+
+The combined file contains `ID`, `A1`, `HT_PRS`, and `T2D_PRS` score columns,
+followed by target metadata. A zero is used when a variant contributes to one
+score but not the other. `split_prs_weights()` writes only chromosomes with at
+least one contributing variant.
+
+### 5. Create and inspect the PLINK2 plan
+
+```r
+dir.create(
+  "/mnt/project/Analysis/PRS/results",
+  recursive = TRUE,
+  showWarnings = FALSE
+)
+
+prs_plan <- ukb_plan_prs(
+  weights = weights_by_chr,
+  genotype = paste0(pgen_prefixes, ".pgen"),
+  genotype_format = "pgen",
+  keep_file = "/mnt/project/Analysis/PRS/cohort.keep",
+  frequency_file = "/mnt/project/Analysis/PRS/reference.acount",
+  output_prefix = "/mnt/project/Analysis/PRS/results/ht_t2d",
+  list_variants = TRUE,
+  plink2_args = c("--threads", "4", "--memory", "16000")
+)
+
+print(prs_plan)
+prs_plan$commands$chr1$display
+prs_plan$expected_sscore
+prs_plan$expected_variants
+
+# Dry run: returns the unchanged plan and launches no process.
+ukb_run_prs(prs_plan)
+```
+
+The planner accepts these genotype formats:
+
+| `genotype_format` | Files | PLINK2 input flag | `sample` argument |
+|:--|:--|:--|:--|
+| `"bgen"` | `.bgen` plus `.sample` | `--bgen ... ref-first --sample ...` | required |
+| `"pgen"` | `.pgen`, `.pvar`/`.pvar.zst`, `.psam` | `--pfile` | must be `NULL` |
+| `"bed"` | `.bed`, `.bim`, `.fam` | `--bfile` | must be `NULL` |
+| `"auto"` | recognizable extension or local prefix | inferred | depends on format |
+
+The older `bgen = ...` and `sample = ...` interface remains supported. Extra
+compatible PLINK2 tokens can be supplied through `plink2_args`; flags already
+managed by the wrapper, such as `--score`, `--out`, `--pfile`, and `--bgen`,
+are rejected there to avoid conflicting commands.
+
+### 6. Execute with controlled parallelism and resume
+
+```r
+prs_result <- ukb_run_prs(
+  plan = prs_plan,
+  execute = TRUE,
+  executable = "plink2",
+  require_rap = TRUE,
+  workers = 4,
+  resume = TRUE,
+  read_scores = TRUE,
+  standardize = TRUE
+)
+
+prs_result$scores[, .(
+  IID,
+  HT_PRS,
+  T2D_PRS,
+  HT_PRS_Z,
+  T2D_PRS_Z,
+  ALLELE_CT,
+  DENOM,
+  N_FILES
+)]
+```
+
+`workers` is the number of chromosome-level PLINK2 processes, while
+`--threads` controls threads within each process. In the example, the maximum
+requested CPU count is approximately `4 workers × 4 threads = 16`; keep this
+within the RAP instance allocation.
+
+With `resume = TRUE`, a chromosome is skipped only when all expected non-empty
+outputs exist. With `list_variants = TRUE`, this means both `.sscore` and
+`.sscore.vars`. A partial output is not silently trusted; set
+`overwrite = TRUE` to rerun that chromosome after reviewing why it stopped.
+
+### 7. Inspect and retain QC evidence
+
+At minimum, retain:
+
+- input weight source, release, ancestry, and training-sample description;
+- weight and target genome builds;
+- harmonization settings, exclusion counts, and retained variant counts;
+- PLINK2 version and the command displays stored in `prs_plan`;
+- the exact keep file and fixed frequency file, when used;
+- per-chromosome `.sscore.vars` files;
+- participant counts and score distributions; and
+- RAP job or session provenance.
+
+```r
+summary(prs_result$scores$HT_PRS)
+summary(prs_result$scores$T2D_PRS)
+
+vapply(
+  prs_result$execution$results,
+  function(x) x$success,
+  logical(1)
+)
+
+prs_result$skipped
+```
+
+If PLINK2 was run outside this wrapper, existing chromosome outputs can still
+be combined:
+
+```r
+scores <- read_prs_scores(
+  files = sprintf(
+    "/mnt/project/Analysis/PRS/results/ht_t2d_chr%d.sscore",
+    1:22
+  ),
+  score_name = c("HT_PRS", "T2D_PRS"),
+  standardize = TRUE
+)
+```
+
+## Single-score version
+
+For one PRS, write the harmonized weight file directly and skip the wide-table
+step:
+
+```r
+ht_weights <- harmonize_prs_weights(
+  ht_prepared,
+  target_variant_map,
+  target_chr_col = "#CHROM",
+  target_build = "GRCh37",
+  output = "/mnt/project/Analysis/PRS/weights/ht_harmonized.tsv"
+)
+
+ht_plan <- ukb_plan_prs(
+  weights = ht_weights,
+  genotype = paste0(pgen_prefixes, ".pgen"),
+  genotype_format = "pgen",
+  output_prefix = "/mnt/project/Analysis/PRS/results/ht",
+  score_name = "HT_PRS"
+)
+```
+
+Use `split_prs_weights(ht_weights, ...)` first when avoiding empty chromosome
+commands is more important than keeping a single weight file.
+
+## Common mistakes
+
+- Treating an odds ratio as a beta without applying `log()`.
+- Combining GRCh37 weights with GRCh38 target positions.
+- Scoring before effect and other alleles have been aligned to the target
+  genotype files.
+- Keeping ambiguous palindromic variants without suitable allele frequencies.
+- Using the discovery/training participants again for unbiased PRS evaluation.
+- Comparing raw PRS values across scores that use different weights and
+  scales; standardization is analysis-sample-specific and should be reported.
+- Setting `workers × PLINK2 threads` above the available RAP CPU allocation.
+- Treating a partial `.sscore` file as a completed chromosome.
+- Deleting source genotype files after a format conversion without verifying
+  that dosage, reference-allele, phase, and multiallelic information were
+  preserved as required.
+
+## Primary software references
+
+- [PLINK2 score documentation](https://www.cog-genomics.org/plink/2.0/score)
+- [PLINK2 input formats](https://www.cog-genomics.org/plink/2.0/input)
+- [UK Biobank PRS category](https://biobank.ndph.ox.ac.uk/showcase/label.cgi?id=300)

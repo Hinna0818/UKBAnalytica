@@ -67,7 +67,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./11-ukbanalytica-skills.html" rel="next">
+<link href="./14-gwas-phewas.html" rel="next">
 <link href="./10-visualization.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -314,10 +314,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="./03-disease-definitions.html"> 
-<span class="menu-text">Phenotyping</span></a>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-phenotyping" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Phenotyping</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-phenotyping">    
+        <li>
+    <a class="dropdown-item" href="./03-disease-definitions.html">
+ <span class="dropdown-text">Disease definitions</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./15-primary-care-gp.html">
+ <span class="dropdown-text">Primary-care GP data</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item dropdown ">
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-analysis" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Analysis</span>
@@ -350,6 +361,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="./bioinformatics-omics.html">
  <span class="dropdown-text">Bioinformatics and omics analyses</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./14-gwas-phewas.html">
+ <span class="dropdown-text">GWAS and PheWAS</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./16-prs.html">
+ <span class="dropdown-text">Polygenic risk scores</span></a>
   </li>  
     </ul>
   </li>
@@ -467,6 +486,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./15-primary-care-gp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Primary-care GP phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./04-survival-analysis.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Survival Analysis</span></a>
   </div>
@@ -522,6 +547,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Bioinformatics and omics analyses</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./14-gwas-phewas.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GWAS and PheWAS phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./16-prs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Polygenic risk score workflow</span></a>
   </div>
 </li>
       </ul>
@@ -590,7 +627,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#volcano-visualization" id="toc-volcano-visualization" class="nav-link" data-scroll-target="#volcano-visualization">Volcano visualization</a></li>
   <li><a href="#gene-enrichment-analysis" id="toc-gene-enrichment-analysis" class="nav-link" data-scroll-target="#gene-enrichment-analysis">Gene enrichment analysis</a></li>
   <li><a href="#ppi-network-analysis" id="toc-ppi-network-analysis" class="nav-link" data-scroll-target="#ppi-network-analysis">PPI network analysis</a></li>
-  <li><a href="#fast-greedy-clustering-of-ppi-modules" id="toc-fast-greedy-clustering-of-ppi-modules" class="nav-link" data-scroll-target="#fast-greedy-clustering-of-ppi-modules">Fast greedy clustering of PPI modules</a></li>
+  <li><a href="#ppi-module-clustering" id="toc-ppi-module-clustering" class="nav-link" data-scroll-target="#ppi-module-clustering">PPI module clustering</a></li>
   <li><a href="#metabolomics-input-and-metabolite-mapping" id="toc-metabolomics-input-and-metabolite-mapping" class="nav-link" data-scroll-target="#metabolomics-input-and-metabolite-mapping">Metabolomics input and metabolite mapping</a></li>
   <li><a href="#metabolite-over-representation-analysis" id="toc-metabolite-over-representation-analysis" class="nav-link" data-scroll-target="#metabolite-over-representation-analysis">Metabolite over-representation analysis</a></li>
   <li><a href="#notes-on-metabolomics-interpretation" id="toc-notes-on-metabolomics-interpretation" class="nav-link" data-scroll-target="#notes-on-metabolomics-interpretation">Notes on metabolomics interpretation</a></li>
@@ -776,23 +813,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(node_rank<span class="sc">$</span>table)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
-<section id="fast-greedy-clustering-of-ppi-modules" class="level2">
-<h2 class="anchored" data-anchor-id="fast-greedy-clustering-of-ppi-modules">Fast greedy clustering of PPI modules</h2>
-<p>For module detection, <code>run_protein_ppi_fastgreedy()</code> applies igraph fast-greedy community detection to the PPI graph. By default, it works on the largest connected component and stores cluster labels in the <code>fast_greedy_cluster</code> vertex attribute.</p>
+<section id="ppi-module-clustering" class="level2">
+<h2 class="anchored" data-anchor-id="ppi-module-clustering">PPI module clustering</h2>
+<p>For module detection, <code>run_protein_ppi_clustering()</code> provides a unified interface to fast-greedy, Louvain, MCODE, and MCL clustering. The example below uses fast-greedy community detection on the largest connected component and stores cluster labels in the <code>fast_greedy_cluster</code> vertex attribute.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ppi_fg <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_fastgreedy</span>(</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ppi_fg <span class="ot">&lt;-</span> <span class="fu">run_protein_ppi_clustering</span>(</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  ppi_metrics,</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">largest_component =</span> <span class="cn">TRUE</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>fg_scores <span class="ot">&lt;-</span> <span class="fu">score_protein_ppi_clusters</span>(</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  ppi_fg,</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">cluster_attr =</span> <span class="st">"fast_greedy_cluster"</span>,</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_size =</span> <span class="dv">3</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>fg_scores</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"fastgreedy"</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">largest_component =</span> <span class="cn">TRUE</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>fg_scores <span class="ot">&lt;-</span> <span class="fu">score_protein_ppi_clusters</span>(</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  ppi_fg,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">cluster_attr =</span> <span class="st">"fast_greedy_cluster"</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_size =</span> <span class="dv">3</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>fg_scores</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Cluster labels can be used for module-specific biological interpretation. A common strategy is to run GO BP enrichment separately for proteins in each cluster or to pass cluster-specific gene lists to <code>clusterProfiler::compareCluster()</code>.</p>
 <div class="cell">
@@ -1353,8 +1391,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./11-ukbanalytica-skills.html" class="pagination-link" aria-label="UKBAnalytica Skills">
-        <span class="nav-page-text">UKBAnalytica Skills</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./14-gwas-phewas.html" class="pagination-link" aria-label="GWAS and PheWAS phenotype workflow">
+        <span class="nav-page-text">GWAS and PheWAS phenotype workflow</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

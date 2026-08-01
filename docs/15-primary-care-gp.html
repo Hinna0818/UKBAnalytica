@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Query UK Biobank primary-care records in RAP, assess registration coverage, and construct coverage-aware disease phenotypes.">
+
+<title>Primary-care GP phenotype workflow – UKBAnalytica</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./04-survival-analysis.html" rel="next">
+<link href="./03-disease-definitions.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-d0ae9245876894da5ac7e18953ecc5cc.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-8d640fe20dd848cb562c120c9498edfb.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-d3b5dcc3148c0cb01e1385104a28165f.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-8d640fe20dd848cb562c120c9498edfb.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-sidebar docked nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./assets/logo.png" alt="" class="navbar-logo light-content">
+    <img src="./assets/logo.png" alt="" class="navbar-logo dark-content">
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="./index.html" aria-current="page"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-rap-workflow" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">RAP workflow</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-rap-workflow">    
+        <li>
+    <a class="dropdown-item" href="./00-rap_env_check.html">
+ <span class="dropdown-text">RAP environment check</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./01-rap-download.html">
+ <span class="dropdown-text">RAP extraction</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-phenotyping" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Phenotyping</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-phenotyping">    
+        <li>
+    <a class="dropdown-item" href="./03-disease-definitions.html">
+ <span class="dropdown-text">Disease definitions</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./15-primary-care-gp.html">
+ <span class="dropdown-text">Primary-care GP data</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-analysis" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Analysis</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-analysis">    
+        <li>
+    <a class="dropdown-item" href="./05-baseline-table.html">
+ <span class="dropdown-text">Baseline table</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./06-imputation.html">
+ <span class="dropdown-text">Multiple imputation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./07-main-analysis.html">
+ <span class="dropdown-text">Main analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./08-advanced-analysis.html">
+ <span class="dropdown-text">Advanced analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./04-survival-analysis.html">
+ <span class="dropdown-text">Survival analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./09-machine-learning.html">
+ <span class="dropdown-text">Machine learning</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./bioinformatics-omics.html">
+ <span class="dropdown-text">Bioinformatics and omics analyses</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./14-gwas-phewas.html">
+ <span class="dropdown-text">GWAS and PheWAS</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./16-prs.html">
+ <span class="dropdown-text">Polygenic risk scores</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-skills" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Skills</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-skills">    
+        <li>
+    <a class="dropdown-item" href="./11-ukbanalytica-skills.html">
+ <span class="dropdown-text">UKBAnalytica Skills</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./12-skill-creator.html">
+ <span class="dropdown-text">Skill Creator</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./13-ukb-research-skill.html">
+ <span class="dropdown-text">UKB Research Skill</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./10-visualization.html"> 
+<span class="menu-text">Visualization</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./case-study.html"> 
+<span class="menu-text">Case study</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="https://github.com/Hinna0818/UKBAnalytica"> 
+<span class="menu-text">GitHub</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+  <a href="" class="quarto-reader-toggle quarto-navigation-tool px-1" onclick="window.quartoToggleReader(); return false;" title="Toggle reader mode">
+  <div class="quarto-reader-toggle-btn">
+  <i class="bi"></i>
+  </div>
+</a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./03-disease-definitions.html">Cohort construction</a></li><li class="breadcrumb-item"><a href="./15-primary-care-gp.html">Primary-care GP phenotype workflow</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Start</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">What the package covers</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./00-rap_env_check.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RAP environment check</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./01-rap-download.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">RAP-internal Data Extraction</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./02-preprocessing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Variable Preprocessing</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Cohort construction</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./03-disease-definitions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Disease Definitions</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./15-primary-care-gp.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Primary-care GP phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./04-survival-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Survival Analysis</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./05-baseline-table.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Baseline Table</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Analysis modules</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./06-imputation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Multiple Imputation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./07-main-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Main analysis</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./08-advanced-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Advanced analysis</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./09-machine-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Machine Learning Workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10-visualization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Visualization</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Bioinformatics and omics analyses</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./14-gwas-phewas.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GWAS and PheWAS phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./16-prs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Polygenic risk score workflow</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">AI Agent Skills</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11-ukbanalytica-skills.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">UKBAnalytica Skills</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12-skill-creator.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Skill Creator</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./13-ukb-research-skill.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">UKB Research Skill</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Case study</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./case-study.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring the relationship between Air pollution and incident arrhythmia: a UKBAnalytica demo case study</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#scope" id="toc-scope" class="nav-link active" data-scroll-target="#scope">Scope</a></li>
+  <li><a href="#the-three-ukb-primary-care-tables" id="toc-the-three-ukb-primary-care-tables" class="nav-link" data-scroll-target="#the-three-ukb-primary-care-tables">The three UKB primary-care tables</a></li>
+  <li><a href="#workflow-overview" id="toc-workflow-overview" class="nav-link" data-scroll-target="#workflow-overview">Workflow overview</a></li>
+  <li><a href="#before-querying-rap" id="toc-before-querying-rap" class="nav-link" data-scroll-target="#before-querying-rap">Before querying RAP</a></li>
+  <li><a href="#define-an-exact-gp-phenotype-query" id="toc-define-an-exact-gp-phenotype-query" class="nav-link" data-scroll-target="#define-an-exact-gp-phenotype-query">1. Define an exact GP phenotype query</a></li>
+  <li><a href="#inspect-the-sql-before-execution" id="toc-inspect-the-sql-before-execution" class="nav-link" data-scroll-target="#inspect-the-sql-before-execution">2. Inspect the SQL before execution</a></li>
+  <li><a href="#run-a-strict-end-to-end-phenotype-workflow" id="toc-run-a-strict-end-to-end-phenotype-workflow" class="nav-link" data-scroll-target="#run-a-strict-end-to-end-phenotype-workflow">3. Run a strict end-to-end phenotype workflow</a></li>
+  <li><a href="#understanding-strict-observability" id="toc-understanding-strict-observability" class="nav-link" data-scroll-target="#understanding-strict-observability">Understanding strict observability</a></li>
+  <li><a href="#interpreting-the-final-phenotype" id="toc-interpreting-the-final-phenotype" class="nav-link" data-scroll-target="#interpreting-the-final-phenotype">Interpreting the final phenotype</a></li>
+  <li><a href="#a-reproducible-local-example" id="toc-a-reproducible-local-example" class="nav-link" data-scroll-target="#a-reproducible-local-example">A reproducible local example</a></li>
+  <li><a href="#lower-level-workflow" id="toc-lower-level-workflow" class="nav-link" data-scroll-target="#lower-level-workflow">Lower-level workflow</a>
+  <ul class="collapse">
+  <li><a href="#clinical-events" id="toc-clinical-events" class="nav-link" data-scroll-target="#clinical-events">Clinical events</a></li>
+  <li><a href="#registration-coverage" id="toc-registration-coverage" class="nav-link" data-scroll-target="#registration-coverage">Registration coverage</a></li>
+  <li><a href="#final-integration" id="toc-final-integration" class="nav-link" data-scroll-target="#final-integration">Final integration</a></li>
+  </ul></li>
+  <li><a href="#date-and-provider-quality-rules" id="toc-date-and-provider-quality-rules" class="nav-link" data-scroll-target="#date-and-provider-quality-rules">Date and provider quality rules</a></li>
+  <li><a href="#performance-guidance" id="toc-performance-guidance" class="nav-link" data-scroll-target="#performance-guidance">Performance guidance</a></li>
+  <li><a href="#common-mistakes" id="toc-common-mistakes" class="nav-link" data-scroll-target="#common-mistakes">Common mistakes</a>
+  <ul class="collapse">
+  <li><a href="#treating-every-unmatched-participant-as-a-control" id="toc-treating-every-unmatched-participant-as-a-control" class="nav-link" data-scroll-target="#treating-every-unmatched-participant-as-a-control">Treating every unmatched participant as a control</a></li>
+  <li><a href="#using-the-hospital-censoring-date-for-gp-data" id="toc-using-the-hospital-censoring-date-for-gp-data" class="nav-link" data-scroll-target="#using-the-hospital-censoring-date-for-gp-data">Using the hospital censoring date for GP data</a></li>
+  <li><a href="#supplying-only-cohort_table" id="toc-supplying-only-cohort_table" class="nav-link" data-scroll-target="#supplying-only-cohort_table">Supplying only <code>cohort_table</code></a></li>
+  <li><a href="#assuming-a-prescription-was-issued-for-a-same-day-diagnosis" id="toc-assuming-a-prescription-was-issued-for-a-same-day-diagnosis" class="nav-link" data-scroll-target="#assuming-a-prescription-was-issued-for-a-same-day-diagnosis">Assuming a prescription was issued for a same-day diagnosis</a></li>
+  <li><a href="#exporting-raw-gp-records-unnecessarily" id="toc-exporting-raw-gp-records-unnecessarily" class="nav-link" data-scroll-target="#exporting-raw-gp-records-unnecessarily">Exporting raw GP records unnecessarily</a></li>
+  </ul></li>
+  <li><a href="#function-reference" id="toc-function-reference" class="nav-link" data-scroll-target="#function-reference">Function reference</a></li>
+  <li><a href="#reproducibility-checklist" id="toc-reproducibility-checklist" class="nav-link" data-scroll-target="#reproducibility-checklist">Reproducibility checklist</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/15-primary-care-gp.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./03-disease-definitions.html">Cohort construction</a></li><li class="breadcrumb-item"><a href="./15-primary-care-gp.html">Primary-care GP phenotype workflow</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Primary-care GP phenotype workflow</h1>
+</div>
+
+<div>
+  <div class="description">
+    Query UK Biobank primary-care records in RAP, assess registration coverage, and construct coverage-aware disease phenotypes.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="scope" class="level2">
+<h2 class="anchored" data-anchor-id="scope">Scope</h2>
+<p>UK Biobank primary-care records provide longitudinal information recorded in general practice. UKBAnalytica keeps this workflow separate from the ordinary participant-wide phenotype table because the GP tables are record-level, provider-dependent, and much larger than a typical analysis cohort.</p>
+<p>This module supports:</p>
+<ul>
+<li>exact Read v2 and CTV3 disease-code queries;</li>
+<li>Spark-side filtering to an approved cohort;</li>
+<li>Spark-side participant-by-disease aggregation;</li>
+<li>clinical-event and registration-table standardization;</li>
+<li>GP observation-window assessment;</li>
+<li>coverage-aware <code>1</code>, <code>0</code>, and <code>NA</code> disease phenotypes.</li>
+</ul>
+<p>It does not bundle or cache UK Biobank participant data. Queries execute against tables already available in the active RAP project. GP prescriptions and full numeric laboratory harmonization are outside the current module.</p>
+</section>
+<section id="the-three-ukb-primary-care-tables" class="level2">
+<h2 class="anchored" data-anchor-id="the-three-ukb-primary-care-tables">The three UKB primary-care tables</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">RAP table</th>
+<th style="text-align: left;">Main columns</th>
+<th style="text-align: left;">Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>gp_clinical</code></td>
+<td style="text-align: left;"><code>eid</code>, <code>data_provider</code>, <code>event_dt</code>, <code>read_2</code>, <code>read_3</code>, <code>value1</code>–<code>value3</code></td>
+<td style="text-align: left;">diagnoses, symptoms, procedures, tests, and other coded events</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>gp_scripts</code></td>
+<td style="text-align: left;"><code>eid</code>, <code>data_provider</code>, <code>issue_date</code>, Read/BNF/dm+d codes, drug name, quantity</td>
+<td style="text-align: left;">prescriptions; not yet parsed by this module</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>gp_registrations</code></td>
+<td style="text-align: left;"><code>eid</code>, <code>data_provider</code>, <code>reg_date</code>, <code>deduct_date</code></td>
+<td style="text-align: left;">periods during which GP data may be observable</td>
+</tr>
+</tbody>
+</table>
+<p>Record-level access requires the appropriate UKB fields in the approved data basket: 42038 for registrations, 42039 for prescriptions, and 42040 for clinical events.</p>
+<p>The official reference is the <a href="https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/primary_care_data.pdf">UK Biobank Primary Care Linked Data guide</a>. The release is minimally curated, availability differs between providers, and the absence of a diagnosis code does not by itself establish absence of disease.</p>
+</section>
+<section id="workflow-overview" class="level2">
+<h2 class="anchored" data-anchor-id="workflow-overview">Workflow overview</h2>
+<div class="cell" data-layout-align="default">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode default code-with-copy"><code class="sourceCode default"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>flowchart LR</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  A["Disease code table"] --&gt; B["parse_gp_query()"]</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  C["Spark cohort table"] --&gt; D["LEFT SEMI JOIN"]</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  B --&gt; D</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  D --&gt; E["gp_clinical filtering"]</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  D --&gt; F["gp_registrations filtering"]</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  E --&gt; G["Spark disease summary"]</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  F --&gt; H["Registration parsing"]</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  H --&gt; I["Coverage and observability"]</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  G --&gt; J["integrate_gp_results()"]</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  I --&gt; J</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  J --&gt; K["gp_case: 1 / 0 / NA"]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>The matched diagnosis establishes a case. Registration coverage is used only to decide whether an unmatched participant can be treated as a non-case.</p>
+</section>
+<section id="before-querying-rap" class="level2">
+<h2 class="anchored" data-anchor-id="before-querying-rap">Before querying RAP</h2>
+<p>Load the package and connect to Spark inside an approved RAP RStudio session:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sparklyr)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">ukb_check_rap_env</span>()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>master <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"spark://master:"</span>, <span class="fu">Sys.getenv</span>(<span class="st">"SPARK_MASTER_PORT"</span>))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>sc <span class="ot">&lt;-</span> <span class="fu">spark_connect</span>(master)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Set the database and cohort table that exist in the active project:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>database_name <span class="ot">&lt;-</span> <span class="st">"app12345_20260101000000"</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>cohort_table <span class="ot">&lt;-</span> <span class="st">"analysis_cohort"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>analysis_cohort</code> must contain one <code>eid</code> column. It may contain additional analysis dates, but the Spark query only needs <code>eid</code> for filtering.</p>
+<p>Keep a lightweight participant table in the RAP R session so that people with no GP diagnosis and no registration record are retained in the final result:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">eid =</span> <span class="fu">c</span>(<span class="dv">1000001</span>, <span class="dv">1000002</span>, <span class="dv">1000003</span>),</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">study_start =</span> <span class="fu">as.Date</span>(<span class="st">"2010-01-01"</span>),</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">baseline_date =</span> <span class="fu">as.Date</span>(<span class="st">"2011-01-01"</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">study_end =</span> <span class="fu">as.Date</span>(<span class="st">"2016-06-30"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In a real analysis, these dates can differ by participant. The table remains inside RAP and should not be exported outside the approved project.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>cohort_table</code> and <code>participants</code> have different roles. <code>cohort_table</code> limits the Spark scan before records are collected. <code>participants</code> defines the final participant grid and supplies individual study dates. Supplying only the Spark table may omit cohort members who have neither a matching event nor a registration row.</p>
+</div>
+</div>
+</section>
+<section id="define-an-exact-gp-phenotype-query" class="level2">
+<h2 class="anchored" data-anchor-id="define-an-exact-gp-phenotype-query">1. Define an exact GP phenotype query</h2>
+<p>The official UKB guide uses <code>F26..</code> as a simple migraine illustration in both Read v2 and CTV3:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>migraine_query <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="fu">c</span>(<span class="st">"Migraine"</span>, <span class="st">"Migraine"</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">code_system =</span> <span class="fu">c</span>(<span class="st">"Read2"</span>, <span class="st">"CTV3"</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">code =</span> <span class="fu">c</span>(<span class="st">"F26.."</span>, <span class="st">"F26.."</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">parse_gp_query</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This is an exact-code example, not a validated comprehensive migraine phenotype. A research phenotype should use a reviewed code list and normally include separate rows for every accepted Read2 and CTV3 code.</p>
+<p>Optional filters can be applied during query construction:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>migraine_query <span class="ot">&lt;-</span> <span class="fu">parse_gp_query</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">codes =</span> migraine_codes,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">date_from =</span> <span class="fu">as.Date</span>(<span class="st">"2010-01-01"</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">date_to =</span> <span class="fu">as.Date</span>(<span class="st">"2016-06-30"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">providers =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Provider codes are:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Code</th>
+<th style="text-align: left;">Provider</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">England Vision</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Scotland</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">England TPP</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Wales</td>
+</tr>
+</tbody>
+</table>
+<p>Do not use broad Read-code prefixes without reviewing their descendants. Hierarchies may contain family history, suspected diagnoses, screening, or explicit negative concepts.</p>
+</section>
+<section id="inspect-the-sql-before-execution" class="level2">
+<h2 class="anchored" data-anchor-id="inspect-the-sql-before-execution">2. Inspect the SQL before execution</h2>
+<p>Use <code>dry_run = TRUE</code> to generate both the clinical-event and registration SQL without connecting to or collecting data:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>gp_plan <span class="ot">&lt;-</span> migraine_query <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">run_gp_workflow</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">database =</span> database_name,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cohort_table =</span> cohort_table,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">collect =</span> <span class="st">"summary"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">dry_run =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>gp_plan</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>With <code>cohort_table</code> supplied, both queries use a Spark left-semi join:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">FROM</span> gp_clinical <span class="kw">AS</span> g</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">LEFT</span> SEMI <span class="kw">JOIN</span> analysis_cohort <span class="kw">AS</span> c</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ON</span> <span class="fu">CAST</span>(g.eid <span class="kw">AS</span> STRING) <span class="op">=</span> <span class="fu">CAST</span>(c.eid <span class="kw">AS</span> STRING)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This retains GP records only for EIDs in the cohort without copying cohort columns into every GP row.</p>
+<p><code>collect = "summary"</code> additionally performs the following work in Spark:</p>
+<ul>
+<li>match Read2/CTV3 codes to disease labels;</li>
+<li>group by <code>eid</code> and disease;</li>
+<li>calculate the earliest usable GP date;</li>
+<li>count matching records and distinct codes.</li>
+</ul>
+<p>The result returned to R is therefore participant-level rather than a large record-level table. Use <code>collect = "records"</code> only when individual rows are needed for code review or data-quality investigation.</p>
+<p>If <code>cohort_table</code> is a session-local temporary Spark view rather than a table inside <code>database_name</code>, set <code>cohort_database = NULL</code>.</p>
+</section>
+<section id="run-a-strict-end-to-end-phenotype-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="run-a-strict-end-to-end-phenotype-workflow">3. Run a strict end-to-end phenotype workflow</h2>
+<p>Choose an observation end justified by the active GP release and provider. The following date is illustrative only:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>gp_observation_end <span class="ot">&lt;-</span> <span class="fu">as.Date</span>(<span class="st">"2016-06-30"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For mixed providers, use a defensible common end date or run provider-specific analyses. Do not automatically reuse the hospital/death censoring date because those sources are updated on different schedules.</p>
+<p>Run the complete workflow:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gp_migraine <span class="ot">&lt;-</span> migraine_query <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">run_gp_workflow</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">connection =</span> sc,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">database =</span> database_name,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cohort_table =</span> cohort_table,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">collect =</span> <span class="st">"summary"</span>,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">participants =</span> cohort,</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">observation_end =</span> gp_observation_end,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">window_start =</span> <span class="st">"study_start"</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">window_end =</span> <span class="st">"study_end"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">index_date =</span> <span class="st">"baseline_date"</span>,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_lookback_days =</span> <span class="dv">365</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_followup_days =</span> <span class="dv">365</span>,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_coverage_fraction =</span> <span class="fl">0.80</span>,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">clinical_output =</span> <span class="st">"gp_migraine_summary.csv"</span>,</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">registration_output =</span> <span class="st">"gp_registration_records.csv"</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>window_start</code>, <code>window_end</code>, and <code>index_date</code> accept:</p>
+<ul>
+<li>one date shared by all participants;</li>
+<li>a date-column name in <code>participants</code>;</li>
+<li>one date value per participant.</li>
+</ul>
+<p>Open registration intervals are closed only when <code>observation_end</code> is provided. Registration dates after this cutoff do not establish coverage.</p>
+</section>
+<section id="understanding-strict-observability" class="level2">
+<h2 class="anchored" data-anchor-id="understanding-strict-observability">Understanding strict observability</h2>
+<p><code>assess_gp_observability()</code> merges overlapping and adjacent registration intervals before calculating coverage. This avoids counting duplicated days twice.</p>
+<p>For each participant it calculates:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Output</th>
+<th style="text-align: left;">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>target_window_days</code></td>
+<td style="text-align: left;">inclusive number of days from <code>window_start</code> through <code>window_end</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>covered_window_days</code></td>
+<td style="text-align: left;">unique days overlapped by usable merged registration intervals</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>coverage_fraction</code></td>
+<td style="text-align: left;"><code>covered_window_days / target_window_days</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>coverage_at_index</code></td>
+<td style="text-align: left;">whether <code>index_date</code> lies inside a usable interval</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>continuous_lookback_days</code></td>
+<td style="text-align: left;">uninterrupted covered days immediately before the index, bounded by the window</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>continuous_followup_days</code></td>
+<td style="text-align: left;">uninterrupted covered days immediately after the index, bounded by the window</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>control_eligible</code></td>
+<td style="text-align: left;">whether all requested control criteria pass</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>gp_observability_reason</code></td>
+<td style="text-align: left;">first reason a participant was not eligible</td>
+</tr>
+</tbody>
+</table>
+<p>A participant is an eligible GP control only when:</p>
+<pre class="text"><code>valid study window
++ registration coverage inside the window
++ covered on the index date
++ minimum continuous lookback
++ minimum continuous follow-up
++ minimum complete-window coverage fraction</code></pre>
+<p>The thresholds are study-design choices, not UKB defaults. Specify and justify them in the protocol and sensitivity analyses.</p>
+</section>
+<section id="interpreting-the-final-phenotype" class="level2">
+<h2 class="anchored" data-anchor-id="interpreting-the-final-phenotype">Interpreting the final phenotype</h2>
+<p>Inspect the most important columns:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gp_migraine[, .(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  eid,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  disease,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  gp_case,</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  first_gp_date,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  coverage_fraction,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  coverage_at_index,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  continuous_lookback_days,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  continuous_followup_days,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  control_eligible,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  gp_observability_reason,</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  gp_case_reason</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>gp_case</code> is intentionally three-state:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"><code>gp_case</code></th>
+<th style="text-align: left;">Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;">at least one requested Read2/CTV3 code matched</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;">no requested code matched and <code>control_eligible = TRUE</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>NA</code></td>
+<td style="text-align: left;">no requested code matched, but the requested observation window was insufficient or unknown</td>
+</tr>
+</tbody>
+</table>
+<p>A matched record remains a case even if registration metadata are incomplete; observability governs assignment of unmatched controls.</p>
+<p>Typical reasons include:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Reason</th>
+<th style="text-align: left;">Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>eligible</code></td>
+<td style="text-align: left;">all requested conditions passed</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>no_coverage_in_window</code></td>
+<td style="text-align: left;">registration exists only outside the requested window, or no usable interval exists</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>not_covered_at_index</code></td>
+<td style="text-align: left;">the index date falls in a registration gap</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>insufficient_lookback</code></td>
+<td style="text-align: left;">continuous pre-index coverage is too short</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>insufficient_followup</code></td>
+<td style="text-align: left;">continuous post-index coverage is too short</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>insufficient_window_coverage</code></td>
+<td style="text-align: left;">overall coverage fraction is below the threshold</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>invalid_window</code></td>
+<td style="text-align: left;">the end precedes the start</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="a-reproducible-local-example" class="level2">
+<h2 class="anchored" data-anchor-id="a-reproducible-local-example">A reproducible local example</h2>
+<p>Pre-extracted or synthetic tables can use the same workflow without a Spark connection:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>clinical_demo <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">eid =</span> <span class="dv">1</span>L,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">data_provider =</span> <span class="dv">1</span>L,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">event_dt =</span> <span class="st">"2015-05-01"</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">read_2 =</span> <span class="st">"F26.."</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">read_3 =</span> <span class="cn">NA_character_</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>registrations_demo <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">eid =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>,</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">data_provider =</span> <span class="dv">1</span>L,</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">reg_date =</span> <span class="fu">c</span>(<span class="st">"2010-01-01"</span>, <span class="st">"2010-01-01"</span>, <span class="st">"2000-01-01"</span>),</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">deduct_date =</span> <span class="fu">c</span>(<span class="st">"2016-06-30"</span>, <span class="st">"2016-06-30"</span>, <span class="st">"2005-12-31"</span>)</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>cohort_demo <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">eid =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>,</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">study_start =</span> <span class="fu">as.Date</span>(<span class="st">"2010-01-01"</span>),</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">baseline_date =</span> <span class="fu">as.Date</span>(<span class="st">"2011-01-01"</span>),</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">study_end =</span> <span class="fu">as.Date</span>(<span class="st">"2016-06-30"</span>)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>demo_result <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">disease =</span> <span class="st">"Migraine"</span>,</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">code_system =</span> <span class="st">"Read2"</span>,</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">"F26.."</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">parse_gp_query</span>() <span class="sc">|&gt;</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">run_gp_workflow</span>(</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">clinical_data =</span> clinical_demo,</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">registration_data =</span> registrations_demo,</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">participants =</span> cohort_demo,</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">observation_end =</span> <span class="fu">as.Date</span>(<span class="st">"2016-06-30"</span>),</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">window_start =</span> <span class="st">"study_start"</span>,</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">window_end =</span> <span class="st">"study_end"</span>,</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">index_date =</span> <span class="st">"baseline_date"</span>,</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_lookback_days =</span> <span class="dv">365</span>,</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_followup_days =</span> <span class="dv">365</span>,</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_coverage_fraction =</span> <span class="fl">0.80</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>demo_result[, .(</span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>  eid,</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>  gp_case,</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>  first_gp_date,</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>  coverage_fraction,</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>  control_eligible,</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>  gp_observability_reason,</span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>  gp_case_reason</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Expected interpretation:</p>
+<ul>
+<li>EID 1 is a case because <code>F26..</code> matched;</li>
+<li>EID 2 is an eligible non-case because coverage is sufficient and no code matched;</li>
+<li>EID 3 remains <code>NA</code> because its GP registration ended before the study window.</li>
+</ul>
+</section>
+<section id="lower-level-workflow" class="level2">
+<h2 class="anchored" data-anchor-id="lower-level-workflow">Lower-level workflow</h2>
+<p>Use the lower-level functions when record-level inspection or custom integration is needed.</p>
+<section id="clinical-events" class="level3">
+<h3 class="anchored" data-anchor-id="clinical-events">Clinical events</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gp_records <span class="ot">&lt;-</span> migraine_query <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rap_plan_gp_query</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">database =</span> database_name,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">cohort_table =</span> cohort_table,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">collect =</span> <span class="st">"records"</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rap_run_gp_query</span>(</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">connection =</span> sc,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">output =</span> <span class="st">"gp_migraine_records.csv"</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>gp_diagnoses <span class="ot">&lt;-</span> gp_records <span class="sc">|&gt;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">parse_gp_clinical</span>() <span class="sc">|&gt;</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise_gp_diagnoses</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="registration-coverage" class="level3">
+<h3 class="anchored" data-anchor-id="registration-coverage">Registration coverage</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gp_registrations <span class="ot">&lt;-</span> <span class="fu">parse_gp_registrations</span>(gp_registrations_raw)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>gp_coverage <span class="ot">&lt;-</span> <span class="fu">summarise_gp_coverage</span>(</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  gp_registrations,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">clinical_records =</span> gp_records,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">participants =</span> cohort,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">observation_end =</span> gp_observation_end</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>gp_observability <span class="ot">&lt;-</span> <span class="fu">assess_gp_observability</span>(</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  gp_registrations,</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">participants =</span> cohort,</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">window_start =</span> <span class="st">"study_start"</span>,</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">window_end =</span> <span class="st">"study_end"</span>,</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">index_date =</span> <span class="st">"baseline_date"</span>,</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">observation_end =</span> gp_observation_end,</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_lookback_days =</span> <span class="dv">365</span>,</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_followup_days =</span> <span class="dv">365</span>,</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">min_coverage_fraction =</span> <span class="fl">0.80</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="final-integration" class="level3">
+<h3 class="anchored" data-anchor-id="final-integration">Final integration</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>gp_phenotype <span class="ot">&lt;-</span> <span class="fu">integrate_gp_results</span>(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  gp_diagnoses,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  gp_coverage,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">participants =</span> cohort,</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">diseases =</span> <span class="st">"Migraine"</span>,</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">gp_observability =</span> gp_observability</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+</section>
+<section id="date-and-provider-quality-rules" class="level2">
+<h2 class="anchored" data-anchor-id="date-and-provider-quality-rules">Date and provider quality rules</h2>
+<p><code>parse_gp_clinical()</code> and <code>parse_gp_registrations()</code> flag UKB placeholder dates rather than treating them as valid event times:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Package label</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>1900-01-01</code></td>
+<td style="text-align: left;"><code>no_event_date</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>1901-01-01</code></td>
+<td style="text-align: left;"><code>before_birth</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>1902-02-02</code></td>
+<td style="text-align: left;"><code>birth_date_proxy</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>1903-03-03</code></td>
+<td style="text-align: left;"><code>birth_year_proxy</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>1909-09-09</code></td>
+<td style="text-align: left;"><code>future_placeholder</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>2037-07-07</code></td>
+<td style="text-align: left;"><code>future_placeholder</code></td>
+</tr>
+</tbody>
+</table>
+<p>Such dates can identify a coded event but are not used as a reliable diagnosis time or coverage boundary. Use <code>special_date_action = "exclude"</code> only when the entire affected row should be removed.</p>
+</section>
+<section id="performance-guidance" class="level2">
+<h2 class="anchored" data-anchor-id="performance-guidance">Performance guidance</h2>
+<p>For RAP-scale analysis:</p>
+<ol type="1">
+<li>construct or persist a one-column Spark cohort table;</li>
+<li>always inspect <code>dry_run</code> SQL;</li>
+<li>use <code>cohort_table</code> instead of a very large vector in <code>parse_gp_query(eids=)</code>;</li>
+<li>use <code>collect = "summary"</code> for phenotype construction;</li>
+<li>request record-level output only for focused audits;</li>
+<li>set explicit row guards with <code>max_clinical_rows</code> and <code>max_registration_rows</code>;</li>
+<li>keep participant-level exports in approved RAP storage.</li>
+</ol>
+<p><code>clinical_output</code> contains a disease summary when <code>collect = "summary"</code> and record-level rows when <code>collect = "records"</code>. <code>registration_output</code> remains a filtered registration table because interval-level records are needed for exact coverage calculations.</p>
+</section>
+<section id="common-mistakes" class="level2">
+<h2 class="anchored" data-anchor-id="common-mistakes">Common mistakes</h2>
+<section id="treating-every-unmatched-participant-as-a-control" class="level3">
+<h3 class="anchored" data-anchor-id="treating-every-unmatched-participant-as-a-control">Treating every unmatched participant as a control</h3>
+<p>Use strict window parameters. Without them, the workflow retains the earlier registration-based behavior for backward compatibility.</p>
+</section>
+<section id="using-the-hospital-censoring-date-for-gp-data" class="level3">
+<h3 class="anchored" data-anchor-id="using-the-hospital-censoring-date-for-gp-data">Using the hospital censoring date for GP data</h3>
+<p>GP, hospital, cancer, and death data have different provider-specific update dates. Choose the GP cutoff independently.</p>
+</section>
+<section id="supplying-only-cohort_table" class="level3">
+<h3 class="anchored" data-anchor-id="supplying-only-cohort_table">Supplying only <code>cohort_table</code></h3>
+<p>The semi-join improves query efficiency but does not create final rows for cohort members absent from both GP result tables. Supply <code>participants</code> to retain them as <code>NA</code> where appropriate.</p>
+</section>
+<section id="assuming-a-prescription-was-issued-for-a-same-day-diagnosis" class="level3">
+<h3 class="anchored" data-anchor-id="assuming-a-prescription-was-issued-for-a-same-day-diagnosis">Assuming a prescription was issued for a same-day diagnosis</h3>
+<p>The interim GP data do not provide a stable consultation identifier. Same-day events are temporally associated but not necessarily causally linked.</p>
+</section>
+<section id="exporting-raw-gp-records-unnecessarily" class="level3">
+<h3 class="anchored" data-anchor-id="exporting-raw-gp-records-unnecessarily">Exporting raw GP records unnecessarily</h3>
+<p>Prefer Spark summaries. Raw and participant-level data must remain inside the approved RAP project.</p>
+</section>
+</section>
+<section id="function-reference" class="level2">
+<h2 class="anchored" data-anchor-id="function-reference">Function reference</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Function</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>parse_gp_query()</code></td>
+<td style="text-align: left;">validate disease labels and exact Read2/CTV3 codes</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>rap_plan_gp_query()</code></td>
+<td style="text-align: left;">build auditable clinical-event Spark SQL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>rap_run_gp_query()</code></td>
+<td style="text-align: left;">execute a reviewed clinical plan with a row guard</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>parse_gp_clinical()</code></td>
+<td style="text-align: left;">standardize matched clinical rows</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>summarise_gp_diagnoses()</code></td>
+<td style="text-align: left;">reduce matched rows to participant-disease cases</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>parse_gp_registrations()</code></td>
+<td style="text-align: left;">standardize provider registration intervals</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>summarise_gp_coverage()</code></td>
+<td style="text-align: left;">summarize overall registration coverage</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>assess_gp_observability()</code></td>
+<td style="text-align: left;">evaluate a specified study window and control eligibility</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>integrate_gp_results()</code></td>
+<td style="text-align: left;">combine cases, coverage, and observability into <code>1/0/NA</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>run_gp_workflow()</code></td>
+<td style="text-align: left;">run the end-to-end RAP or local workflow</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="reproducibility-checklist" class="level2">
+<h2 class="anchored" data-anchor-id="reproducibility-checklist">Reproducibility checklist</h2>
+<p>Before using a GP phenotype in a manuscript, record:</p>
+<ul>
+<li>UKB primary-care release and provider cutoff dates;</li>
+<li>included providers;</li>
+<li>complete Read2/CTV3 code list and version;</li>
+<li>include/exclude logic for history, suspected, screening, and negative codes;</li>
+<li>cohort-table construction;</li>
+<li>study window, index date, lookback, follow-up, and coverage threshold;</li>
+<li>counts of <code>1</code>, <code>0</code>, and <code>NA</code>;</li>
+<li>GP-only, hospital-only, and overlapping cases when other sources are used;</li>
+<li>generated SQL and package version;</li>
+<li>sensitivity analyses for alternative coverage thresholds.</li>
+</ul>
+<p>Further official references:</p>
+<ul>
+<li><a href="https://biobank.ndph.ox.ac.uk/showcase/rectab.cgi?id=1061"><code>gp_registrations</code> record table</a></li>
+<li><a href="https://biobank.ndph.ox.ac.uk/showcase/coding.cgi?id=819">UKB GP date coding 819</a></li>
+<li><a href="https://biobank.ndph.ox.ac.uk/ukb/exinfo.cgi?src=Data_providers_and_dates.html">UKB data providers and availability dates</a></li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./03-disease-definitions.html" class="pagination-link" aria-label="Disease Definitions">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Disease Definitions</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./04-survival-analysis.html" class="pagination-link" aria-label="Survival Analysis">
+        <span class="nav-page-text">Survival Analysis</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>UKBAnalytica</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Hinna0818/UKBAnalytica/blob/main/quarto-site/15-primary-care-gp.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/Hinna0818/UKBAnalytica/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div>
+    <div class="nav-footer-right">
+<p>Built with Quarto. Real UK Biobank participant-level data should remain inside approved RAP projects.</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

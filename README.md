@@ -180,6 +180,117 @@ For PLINK2 functionality without a dedicated wrapper, pass the official
 command-line tokens to `ukb_plan_plink2()`, then execute the returned plan with
 `ukb_run_plink2(..., execute = TRUE)`.
 
+## Polygenic risk scores
+
+Published UK Biobank PRS Release V2 fields can be inspected and loaded without
+reading genotype files:
+
+```r
+ukb_prs_catalog("standard", c("HT", "T2D"))
+
+# From a participant table already extracted in RAP:
+published_prs <- load_ukb_prs(
+  participant_data,
+  trait = c("HT", "T2D"),
+  type = "standard",
+  standardize = TRUE
+)
+
+# Enhanced PRS defaults to setting scores outside field 26200 to NA.
+# Use eligibility = "require" to retain testing-subgroup participants only.
+
+# Or omit `data` to use the existing RAP phenotype extractor:
+# published_prs <- load_ukb_prs(
+#   trait = c("HT", "T2D"), type = "standard"
+# )
+```
+
+For a custom fixed-weight PRS, first normalize a public weight table, then
+create and explicitly execute a PLINK2 plan. The package passes genotype paths
+to PLINK2 and never loads or caches UKB BGEN data in R.
+
+```r
+weights <- prepare_prs_weights(
+  published_weights,
+  variant_col = "rsid",
+  effect_allele_col = "effect_allele",
+  other_allele_col = "other_allele",
+  chr_col = "chr",
+  pos_col = "position",
+  effect_allele_freq_col = "effect_allele_frequency",
+  weight_col = "odds_ratio",
+  weight_type = "or",       # converted to log(OR)
+  genome_build = "GRCh37"
+)
+
+# ukb_variant_map is a target-map table with ID/CHR/POS/ALT/REF/ALT_FREQ.
+# Builds must match; no silent liftOver is performed.
+weights <- harmonize_prs_weights(
+  weights,
+  variant_map = ukb_variant_map,
+  target_allele1_freq_col = "ALT_FREQ",
+  target_build = "GRCh37",
+  palindromic = "infer_by_af",
+  output = "/mnt/project/Analysis/PRS/t2d_weights_harmonized.tsv"
+)
+
+attr(weights, "harmonization_qc")
+
+prs_plan <- ukb_plan_prs(
+  weights = weights,
+  bgen = sprintf(
+    "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb_c%d_b0_v3.bgen",
+    1:22
+  ),
+  sample = "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb22828_c1_b0_v3_s487395.sample",
+  keep_file = "/mnt/project/Analysis/PRS/cohort.keep",
+  frequency_file = "/mnt/project/Analysis/PRS/ukb_reference.acount",
+  output_prefix = "/mnt/project/Analysis/PRS/t2d",
+  score_name = "T2D_PRS",
+  plink2_args = c("--threads", "16")
+)
+
+ukb_run_prs(prs_plan) # dry run
+# result <- ukb_run_prs(prs_plan, execute = TRUE)
+# result$scores
+```
+
+When several scores use the same target genotype map, combine their
+harmonized weights before planning. This produces one PLINK2 genotype scan per
+chromosome, with one score column per PRS. Splitting the weights also prevents
+commands from being created for chromosomes with no contributing variants.
+
+```r
+multi_weights <- combine_prs_weights(
+  list(HT_PRS = ht_weights, T2D_PRS = t2d_weights),
+  output = "/mnt/project/Analysis/PRS/ht_t2d_weights.tsv"
+)
+
+weights_by_chr <- split_prs_weights(
+  multi_weights,
+  output_dir = "/mnt/project/Analysis/PRS/weights_by_chr"
+)
+
+multi_plan <- ukb_plan_prs(
+  weights = weights_by_chr,
+  genotype = sprintf("/mnt/project/Genotype/pgen/ukb_chr%d.pgen", 1:22),
+  genotype_format = "pgen", # BED/BIM/FAM is also accepted with "bed"
+  keep_file = "/mnt/project/Analysis/PRS/cohort.keep",
+  output_prefix = "/mnt/project/Analysis/PRS/ht_t2d"
+)
+
+# Reruns only incomplete chromosomes; up to four PLINK2 processes at once.
+# multi_result <- ukb_run_prs(
+#   multi_plan, execute = TRUE, workers = 4, resume = TRUE
+# )
+# multi_result$scores[, .(IID, HT_PRS, T2D_PRS)]
+```
+
+`workers` controls independent chromosome-level PLINK2 processes. Keep the
+sum of PLINK2 threads across workers within the RAP instance CPU allocation.
+With `resume = TRUE`, complete `.sscore` (and `.sscore.vars`, when requested)
+outputs are reused; partial outputs require `overwrite = TRUE` before rerun.
+
 ## Disease Definition Sources
 
 UKBAnalytica builds disease phenotypes by taking the earliest valid evidence
@@ -231,6 +342,168 @@ dt <- ukb_clean_missing(dt, action = "na")
 ukb_snapshot(dt, "Clinical core extracted and cleaned")
 ```
 
+## Primary-care GP query workflow
+
+GP linked records are queried separately from `build_survival_dataset()`.
+The workflow filters `gp_clinical` in RAP Spark SQL, reads the much smaller
+`gp_registrations` table, standardizes both tables, and returns one row per
+participant and disease with a coverage-aware `gp_case` value.
+
+The example below reproduces the migraine code used in the official UK
+Biobank Primary Care documentation (`F26..` in Read v2 or CTV3). UKB states
+that this code is an illustration of the table structure, not a complete
+validated migraine phenotype.
+
+```r
+library(UKBAnalytica)
+library(sparklyr)
+
+master <- paste0("spark://master:", Sys.getenv("SPARK_MASTER_PORT"))
+sc <- spark_connect(master)
+
+# Replace these with the current database and approved cohort in your project.
+database_name <- "app12345_20260101000000"
+cohort_table <- "analysis_cohort" # Spark table/view with an eid column
+cohort <- data.frame(
+  eid = c(1000001, 1000002, 1000003),
+  study_start = as.Date("2010-01-01"),
+  baseline_date = as.Date("2011-01-01"),
+  study_end = as.Date("2020-12-31")
+)
+gp_observation_end <- as.Date("2020-12-31") # example; use your release cut-off
+
+migraine_query <- data.frame(
+  disease = c("Migraine", "Migraine"),
+  code_system = c("Read2", "CTV3"),
+  code = c("F26..", "F26..")
+) |>
+  parse_gp_query()
+
+# Inspect both the gp_clinical and gp_registrations SQL before execution.
+migraine_query |>
+  run_gp_workflow(
+    database = database_name,
+    cohort_table = cohort_table,
+    collect = "summary",
+    dry_run = TRUE
+  )
+
+gp_migraine <- migraine_query |>
+  run_gp_workflow(
+    connection = sc,
+    database = database_name,
+    cohort_table = cohort_table,
+    collect = "summary",
+    participants = cohort,
+    observation_end = gp_observation_end,
+    window_start = "study_start",
+    window_end = "study_end",
+    index_date = "baseline_date",
+    min_lookback_days = 365,
+    min_followup_days = 365,
+    min_coverage_fraction = 0.8,
+    clinical_output = "gp_migraine_summary.csv",
+    registration_output = "gp_registration_records.csv"
+  )
+
+gp_migraine[, .(
+  eid,
+  disease,
+  gp_case,
+  first_gp_date,
+  coverage_status,
+  coverage_fraction,
+  control_eligible,
+  gp_case_reason
+)]
+```
+
+`cohort_table` causes both GP SQL queries to use a Spark left-semi join before
+collection. With `collect = "summary"`, matching and earliest-date/count
+aggregation are also performed in Spark; this is the preferred mode for an
+end-to-end phenotype workflow. Use `collect = "records"` only when individual
+GP rows are required for record-level review.
+
+`gp_case` is intentionally three-state:
+
+- `1`: at least one exact Read v2 / CTV3 code matched;
+- `0`: no code matched and `control_eligible = TRUE` for the requested window;
+- `NA`: observation-window coverage was insufficient or unknown.
+
+The strict control check merges overlapping registration periods before
+calculating observed days. `min_lookback_days` and `min_followup_days` require
+continuous coverage immediately around `index_date`; `min_coverage_fraction`
+checks the complete requested window. If no window is supplied, the workflow
+retains the earlier, less strict registration-based behavior for compatibility.
+
+The lower-level registration workflow is also pipe-friendly:
+
+```r
+gp_coverage <- gp_registrations_raw |>
+  parse_gp_registrations() |>
+  summarise_gp_coverage(
+    clinical_records = gp_filtered_records,
+    participants = cohort_eids,
+    observation_end = gp_observation_end
+  )
+
+gp_observability <- gp_registrations_raw |>
+  parse_gp_registrations() |>
+  assess_gp_observability(
+    participants = cohort,
+    window_start = "study_start",
+    window_end = "study_end",
+    index_date = "baseline_date",
+    observation_end = gp_observation_end,
+    min_lookback_days = 365,
+    min_followup_days = 365,
+    min_coverage_fraction = 0.8
+  )
+```
+
+For pre-extracted or synthetic data, the same end-to-end function can be run
+without a Spark connection:
+
+```r
+gp_result <- migraine_query |>
+  run_gp_workflow(
+    clinical_data = gp_clinical_raw,
+    registration_data = gp_registrations_raw,
+    participants = cohort,
+    observation_end = gp_observation_end,
+    window_start = "study_start",
+    window_end = "study_end",
+    index_date = "baseline_date"
+  )
+```
+
+The two RAP outputs are written to the active worker filesystem. Upload them
+with `dx upload` if they need to persist as project files. The observation end
+must be chosen from the data release/provider information for the active RAP
+project; a missing GP code alone is never sufficient evidence that a
+participant is disease-free.
+
+Official references: [UK Biobank Primary Care
+Data](https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/primary_care_data.pdf),
+[`gp_registrations` record
+table](https://biobank.ndph.ox.ac.uk/showcase/rectab.cgi?id=1061), and [GP date
+coding 819](https://biobank.ndph.ox.ac.uk/showcase/coding.cgi?id=819).
+
+The original lower-level clinical interface remains available:
+
+```r
+gp_raw <- migraine_query |>
+  rap_plan_gp_query(database = database_name) |>
+  rap_run_gp_query(
+    connection = sc,
+    output = "gp_migraine_records.csv"
+  )
+
+gp_cases <- gp_raw |>
+  parse_gp_clinical() |>
+  summarise_gp_diagnoses()
+```
+
 
 ## AI Agent Skills for UKB data analyses
 
@@ -267,6 +540,63 @@ All skills enforce a strict **script-generation-only** boundary:
 
 The workflow is: describe your schema → the agent generates an R script → you run the script inside RAP → you share only aggregate results back for interpretation. Real participant-level data should remain inside the approved RAP project and RAP-controlled storage at all times.
 
+
+## Reuse an R environment on RAP
+
+RStudio workers on UKB-RAP are temporary, so packages installed only on the
+worker are removed when the instance is terminated. To reuse an existing
+project and its installed R packages, initialize an `renv` project and back up
+the complete project directory to persistent RAP project storage.
+
+After installing the required packages, create or update the dependency
+snapshot:
+
+```r
+install.packages("renv")
+renv::init()      # run once for a new project
+install.packages("UKBAnalytica")
+renv::snapshot()  # run again after changing package dependencies
+```
+
+In the RStudio Terminal, move into the project directory and create the
+backup:
+
+```bash
+cd ~/ukbanalytica_project
+dx-backup-folder -d /.Backups/ukbanalytica_environment.tar.gz
+```
+
+The archive is uploaded to the `.Backups` folder in the current RAP project,
+not retained only on the temporary worker. It therefore remains available
+after the RStudio instance is terminated. Its presence can be checked with:
+
+```bash
+dx ls -a /.Backups/
+```
+
+After starting a new RStudio instance, restore the project from RAP storage:
+
+```bash
+dx-restore-folder \
+  /.Backups/ukbanalytica_environment.tar.gz \
+  ~/ukbanalytica_project
+```
+
+Then activate the restored environment in R:
+
+```r
+setwd("~/ukbanalytica_project")
+renv::activate()
+renv::restore()
+library(UKBAnalytica)
+```
+
+The backup should contain project-local R package libraries, configuration
+files, and analysis scripts only. System-level dependencies installed with
+tools such as `apt` are not captured reliably and should instead be packaged
+in a Docker image. UK Biobank participant-level data should remain in approved
+RAP-controlled data locations and should not be included in an environment
+archive.
 
 ## Supplementary Materials
 Here we provide some learning materials for UK Biobank in which you may be interested:

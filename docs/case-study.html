@@ -313,10 +313,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </li>  
     </ul>
   </li>
-  <li class="nav-item">
-    <a class="nav-link" href="./03-disease-definitions.html"> 
-<span class="menu-text">Phenotyping</span></a>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-phenotyping" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Phenotyping</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-phenotyping">    
+        <li>
+    <a class="dropdown-item" href="./03-disease-definitions.html">
+ <span class="dropdown-text">Disease definitions</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./15-primary-care-gp.html">
+ <span class="dropdown-text">Primary-care GP data</span></a>
+  </li>  
+    </ul>
+  </li>
   <li class="nav-item dropdown ">
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-analysis" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Analysis</span>
@@ -349,6 +360,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li>
     <a class="dropdown-item" href="./bioinformatics-omics.html">
  <span class="dropdown-text">Bioinformatics and omics analyses</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./14-gwas-phewas.html">
+ <span class="dropdown-text">GWAS and PheWAS</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./16-prs.html">
+ <span class="dropdown-text">Polygenic risk scores</span></a>
   </li>  
     </ul>
   </li>
@@ -466,6 +485,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./15-primary-care-gp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Primary-care GP phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./04-survival-analysis.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Survival Analysis</span></a>
   </div>
@@ -521,6 +546,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./bioinformatics-omics.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Bioinformatics and omics analyses</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./14-gwas-phewas.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">GWAS and PheWAS phenotype workflow</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./16-prs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Polygenic risk score workflow</span></a>
   </div>
 </li>
       </ul>
@@ -616,8 +653,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>This document demonstrates an end-to-end UKBAnalytica workflow using <code>ukb_demo()</code> as a RAP-style raw table. The case study evaluates associations between air pollution exposure and incident cardiac arrhythmia. The workflow covers raw field extraction, phenotype definition, baseline preprocessing, participant flow, baseline table generation, Cox regression, and sensitivity analyses.</p>
-<p>The demo data are <strong>synthetic and do not contain UK Biobank participant-level source records. Results are for workflow illustration only.</strong></p>
+<p>This document demonstrates an end-to-end UKBAnalytica workflow using <code>ukb_demo()</code> to generate a RAP-style toy table at runtime. The case study evaluates associations between air pollution exposure and incident cardiac arrhythmia. The workflow covers raw field extraction, phenotype definition, baseline preprocessing, participant flow, baseline table generation, Cox regression, and sensitivity analyses.</p>
+<p>The demo data are <strong>fully synthetic, generated from toy random distributions, and do not contain UK Biobank participant-level source records. Results are for workflow illustration only.</strong></p>
 <section id="load-demo-data" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="load-demo-data"><span class="header-section-number">1</span> Load demo data</h2>
 <div class="cell">
@@ -627,9 +664,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(UKBAnalytica)</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>demo_raw <span class="ot">&lt;-</span> <span class="fu">ukb_demo</span>()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>demo_raw <span class="ot">&lt;-</span> <span class="fu">ukb_demo</span>(<span class="at">seed =</span> <span class="dv">20260618</span>)</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(demo_raw)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 5000  754</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 500 754</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(demo_raw)[<span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>]</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  [1] "eid"       "p31"       "p53_i0"    "p53_i1"    "p53_i2"    "p53_i3"   </span></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  [7] "p21022"    "p21001_i0" "p21001_i1" "p21001_i2" "p21001_i3" "p21000_i0"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -705,53 +742,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                     step n_before n_after</span></span>
 <span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                   &lt;char&gt;    &lt;int&gt;   &lt;int&gt;</span></span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                            Raw cohort     5000    5000</span></span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          After build_survival_dataset     5000    5000</span></span>
-<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:       Keep non-missing outcome_status     5000    4880</span></span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: Exclude baseline prevalent Arrhythmia     4880    4880</span></span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          Keep valid outcome_surv_time     4880    4879</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                            Raw cohort      500     500</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          After build_survival_dataset      500     500</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:       Keep non-missing outcome_status      500     478</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: Exclude baseline prevalent Arrhythmia      478     478</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          Keep valid outcome_surv_time      478     464</span></span>
 <span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                             exclusion_rule excluded</span></span>
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                                     &lt;char&gt;    &lt;int&gt;</span></span>
 <span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                                                    None        0</span></span>
 <span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:                         Function output row count check        0</span></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:                            Exclude outcome_status is NA      120</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:                            Exclude outcome_status is NA       22</span></span>
 <span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:                            Keep Arrhythmia_history == 0        0</span></span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: Keep !is.na(outcome_surv_time) &amp; outcome_surv_time &gt;= 0        1</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: Keep !is.na(outcome_surv_time) &amp; outcome_surv_time &gt;= 0       14</span></span>
 <span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    retained_from_prev retained_from_raw</span></span>
 <span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                &lt;char&gt;            &lt;char&gt;</span></span>
 <span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:            100.00%           100.00%</span></span>
 <span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:            100.00%           100.00%</span></span>
-<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:             97.60%            97.60%</span></span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:            100.00%            97.60%</span></span>
-<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:             99.98%            97.58%</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:             95.60%            95.60%</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:            100.00%            95.60%</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:             97.07%            92.80%</span></span>
 <span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(demo_surv<span class="sc">$</span>outcome_status, <span class="at">useNA =</span> <span class="st">"ifany"</span>)</span>
 <span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    0    1 &lt;NA&gt; </span></span>
-<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4601  279  120</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  441   37   22</span></span>
 <span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>participant_flow <span class="ot">&lt;-</span> <span class="fu">attr</span>(demo_surv, <span class="st">"participant_flow"</span>)</span>
 <span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>participant_flow</span>
 <span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                     step n_before n_after</span></span>
 <span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                   &lt;char&gt;    &lt;int&gt;   &lt;int&gt;</span></span>
-<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                            Raw cohort     5000    5000</span></span>
-<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          After build_survival_dataset     5000    5000</span></span>
-<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:       Keep non-missing outcome_status     5000    4880</span></span>
-<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: Exclude baseline prevalent Arrhythmia     4880    4880</span></span>
-<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          Keep valid outcome_surv_time     4880    4879</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                            Raw cohort      500     500</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          After build_survival_dataset      500     500</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:       Keep non-missing outcome_status      500     478</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: Exclude baseline prevalent Arrhythmia      478     478</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          Keep valid outcome_surv_time      478     464</span></span>
 <span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                             exclusion_rule excluded</span></span>
 <span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                                                     &lt;char&gt;    &lt;int&gt;</span></span>
 <span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:                                                    None        0</span></span>
 <span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:                         Function output row count check        0</span></span>
-<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:                            Exclude outcome_status is NA      120</span></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:                            Exclude outcome_status is NA       22</span></span>
 <span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:                            Keep Arrhythmia_history == 0        0</span></span>
-<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: Keep !is.na(outcome_surv_time) &amp; outcome_surv_time &gt;= 0        1</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: Keep !is.na(outcome_surv_time) &amp; outcome_surv_time &gt;= 0       14</span></span>
 <span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    retained_from_prev retained_from_raw</span></span>
 <span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                 &lt;num&gt;             &lt;num&gt;</span></span>
-<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:          1.0000000            1.0000</span></span>
-<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          1.0000000            1.0000</span></span>
-<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:          0.9760000            0.9760</span></span>
-<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:          1.0000000            0.9760</span></span>
-<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          0.9997951            0.9758</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:          1.0000000             1.000</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:          1.0000000             1.000</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:          0.9560000             0.956</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:          1.0000000             0.956</span></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:          0.9707113             0.928</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p><code>outcome_status = 1</code> indicates incident arrhythmia, <code>outcome_status = 0</code> indicates censoring, and <code>NA</code> indicates baseline prevalent arrhythmia.</p>
 </section>
@@ -783,20 +820,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>demo_prepared[, <span class="fu">c</span>(exposure_vars, covariates), with <span class="ot">=</span> <span class="cn">FALSE</span>][<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>]</span>
 <span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    no2_2005 no2_2006 no2_2007 no2_2010   nox  pm25 pm10_2007 pm10_2010   age</span></span>
 <span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       &lt;num&gt;    &lt;num&gt;    &lt;num&gt;    &lt;num&gt; &lt;num&gt; &lt;num&gt;     &lt;num&gt;     &lt;num&gt; &lt;num&gt;</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1: 25.87681 33.00003 21.65425 26.55422 38.93  9.58  20.47389  19.41812    65</span></span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2: 23.50962 43.24436 25.87041 26.11995 33.46 10.46  14.56945  20.27382    40</span></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3: 24.25328 32.60647 35.07644 35.74929 21.42  9.66  18.44245  16.42343    40</span></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: 33.71577 14.96466 59.59763 21.16373 19.74 11.59  17.89864  18.63921    56</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: 25.59150 17.85625 29.26812 23.25018 23.60 10.03  20.56380  18.79965    52</span></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6: 40.89862 18.45907 24.00232 21.81041 41.88 10.53  16.16288  22.69649    62</span></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       sex        tdi ethnicity education  smoking drinking</span></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    &lt;fctr&gt;      &lt;num&gt;    &lt;fctr&gt;    &lt;fctr&gt;   &lt;fctr&gt;   &lt;fctr&gt;</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:   Male -2.0376928     White      High Previous  Current</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:   Male  3.5060881      &lt;NA&gt;    Medium    Never  Current</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3: Female -6.8393976      &lt;NA&gt;      High Previous  Current</span></span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: Female  0.2687084     White      High Previous  Current</span></span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: Female  0.8966171     White      High  Current  Current</span></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6: Female  3.5251987     White      High Previous  Current</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:    12.81    13.20    14.16    15.47 41.40  9.39     14.16     13.52  67.6</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:    31.55    33.77    34.00    31.29 52.86 10.10     16.64     16.66  54.4</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:    24.51    21.24    22.58    24.58 37.58  9.37     25.85     24.10  47.0</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:    26.26    26.13    23.33    22.41 55.11 10.64     17.47     19.95  64.5</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:    24.87    24.60    26.70    23.37 35.48  8.34     16.43     17.08  71.0</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6:    27.45    30.21    27.86    29.32 53.44  6.98      7.68      7.76  45.4</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       sex   tdi ethnicity education  smoking drinking</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    &lt;fctr&gt; &lt;num&gt;    &lt;fctr&gt;    &lt;fctr&gt;   &lt;fctr&gt;   &lt;fctr&gt;</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1: Female  1.64     White    Medium    Never Previous</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:   Male -0.78     White      High    Never  Current</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:   Male  4.36     White    Medium    Never Previous</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:   Male  2.13     White      High    Never  Current</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:   Male  2.50     White      High    Never Previous</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6: Female -1.87     White    Medium Previous Previous</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>NO2 is summarized as the mean of 2005, 2006, and 2007 estimates for the main analysis. The main PM10 exposure uses 2007 estimates. The 2010 NO2 and PM10 fields are retained for sensitivity analysis.</p>
 <div class="cell">
@@ -817,14 +854,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>demo_prepared[, <span class="fu">c</span>(main_exposures, main_exposures_z), with <span class="ot">=</span> <span class="cn">FALSE</span>][<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>]</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    no2_main   nox  pm25 pm10_2007 no2_main_z      nox_z      pm25_z pm10_2007_z</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       &lt;num&gt; &lt;num&gt; &lt;num&gt;     &lt;num&gt;      &lt;num&gt;      &lt;num&gt;       &lt;num&gt;       &lt;num&gt;</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1: 26.84370 38.93  9.58  20.47389 -0.4429355 -0.3086792 -0.39206038   0.5889900</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2: 30.87480 33.46 10.46  14.56945  0.3117576 -0.6611652  0.45551279  -2.4134918</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3: 30.64539 21.42  9.66  18.44245  0.2688093 -1.4370211 -0.31500827  -0.4440239</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: 36.09268 19.74 11.59  17.89864  1.2886389 -1.5452801  1.54387379  -0.7205570</span></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: 24.23862 23.60 10.03  20.56380 -0.9306518 -1.2965422  0.04135772   0.6347081</span></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6: 27.78667 41.88 10.53  16.16288 -0.2663944 -0.1185816  0.52293338  -1.6032127</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    no2_main   nox  pm25 pm10_2007  no2_main_z       nox_z     pm25_z</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       &lt;num&gt; &lt;num&gt; &lt;num&gt;     &lt;num&gt;       &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1: 13.39000 41.40  9.39     14.16 -1.98107965 -0.04713709 -0.2325075</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2: 33.10667 52.86 10.10     16.64  1.33380183  0.96928388  0.1078715</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3: 22.77667 37.58  9.37     25.85 -0.40293828 -0.38594408 -0.2420956</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4: 25.24000 55.11 10.64     17.47  0.01121175  1.16884297  0.3667513</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5: 25.39000 35.48  8.34     16.43  0.03643063 -0.57219923 -0.7358849</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6: 28.50667 53.44  6.98      7.68  0.56042289  1.02072577 -1.3878785</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    pm10_2007_z</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;          &lt;num&gt;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1:  -0.9767831</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2:  -0.4112271</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3:   1.6890837</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4:  -0.2219483</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5:  -0.4591169</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6:  -2.4545262</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="assemble-the-analytic-cohort" class="level2" data-number="5">
@@ -847,64 +892,64 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      step    variable n_before n_missing_in_remaining n_after n_removed</span></span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     &lt;int&gt;      &lt;char&gt;    &lt;int&gt;                  &lt;int&gt;   &lt;int&gt;     &lt;int&gt;</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:     1  no2_main_z     4879                      0    4879         0</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:     2       nox_z     4879                      0    4879         0</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:     3      pm25_z     4879                      0    4879         0</span></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:     4 pm10_2007_z     4879                      0    4879         0</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:     5         age     4879                      0    4879         0</span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:     6         sex     4879                      0    4879         0</span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:     7         tdi     4879                      0    4879         0</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:     8   ethnicity     4879                     29    4850        29</span></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:     9   education     4850                     92    4758        92</span></span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:    10     smoking     4758                     21    4737        21</span></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:    11    drinking     4737                     15    4722        15</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:     1  no2_main_z      464                      0     464         0</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:     2       nox_z      464                     15     449        15</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:     3      pm25_z      449                     13     436        13</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:     4 pm10_2007_z      436                     12     424        12</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:     5         age      424                      0     424         0</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:     6         sex      424                      0     424         0</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:     7         tdi      424                     17     407        17</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:     8   ethnicity      407                     13     394        13</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:     9   education      394                     23     371        23</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:    10     smoking      371                     20     351        20</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:    11    drinking      351                     15     336        15</span></span>
 <span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     retained_from_previous retained_from_input</span></span>
 <span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                      &lt;num&gt;               &lt;num&gt;</span></span>
 <span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:              1.0000000           1.0000000</span></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:              1.0000000           1.0000000</span></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:              1.0000000           1.0000000</span></span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:              1.0000000           1.0000000</span></span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:              1.0000000           1.0000000</span></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:              1.0000000           1.0000000</span></span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:              1.0000000           1.0000000</span></span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:              0.9940562           0.9940562</span></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:              0.9810309           0.9751998</span></span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:              0.9955864           0.9708957</span></span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:              0.9968334           0.9678213</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:              0.9676724           0.9676724</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:              0.9710468           0.9396552</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:              0.9724771           0.9137931</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:              1.0000000           0.9137931</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:              1.0000000           0.9137931</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:              0.9599057           0.8771552</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:              0.9680590           0.8491379</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:              0.9416244           0.7995690</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:              0.9460916           0.7564655</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:              0.9572650           0.7241379</span></span>
 <span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>complete_case_flow <span class="ot">&lt;-</span> <span class="fu">attr</span>(analysis_data, <span class="st">"complete_case_flow"</span>)</span>
 <span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>complete_case_flow</span>
 <span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      step    variable n_before n_missing_in_remaining n_after n_removed</span></span>
 <span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     &lt;int&gt;      &lt;char&gt;    &lt;int&gt;                  &lt;int&gt;   &lt;int&gt;     &lt;int&gt;</span></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:     1  no2_main_z     4879                      0    4879         0</span></span>
-<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:     2       nox_z     4879                      0    4879         0</span></span>
-<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:     3      pm25_z     4879                      0    4879         0</span></span>
-<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:     4 pm10_2007_z     4879                      0    4879         0</span></span>
-<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:     5         age     4879                      0    4879         0</span></span>
-<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:     6         sex     4879                      0    4879         0</span></span>
-<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:     7         tdi     4879                      0    4879         0</span></span>
-<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:     8   ethnicity     4879                     29    4850        29</span></span>
-<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:     9   education     4850                     92    4758        92</span></span>
-<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:    10     smoking     4758                     21    4737        21</span></span>
-<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:    11    drinking     4737                     15    4722        15</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:     1  no2_main_z      464                      0     464         0</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:     2       nox_z      464                     15     449        15</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:     3      pm25_z      449                     13     436        13</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:     4 pm10_2007_z      436                     12     424        12</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:     5         age      424                      0     424         0</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:     6         sex      424                      0     424         0</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:     7         tdi      424                     17     407        17</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:     8   ethnicity      407                     13     394        13</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:     9   education      394                     23     371        23</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:    10     smoking      371                     20     351        20</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:    11    drinking      351                     15     336        15</span></span>
 <span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     retained_from_previous retained_from_input</span></span>
 <span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                      &lt;num&gt;               &lt;num&gt;</span></span>
 <span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1:              1.0000000           1.0000000</span></span>
-<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:              1.0000000           1.0000000</span></span>
-<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:              1.0000000           1.0000000</span></span>
-<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:              1.0000000           1.0000000</span></span>
-<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:              1.0000000           1.0000000</span></span>
-<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:              1.0000000           1.0000000</span></span>
-<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:              1.0000000           1.0000000</span></span>
-<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:              0.9940562           0.9940562</span></span>
-<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:              0.9810309           0.9751998</span></span>
-<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:              0.9955864           0.9708957</span></span>
-<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:              0.9968334           0.9678213</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2:              0.9676724           0.9676724</span></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3:              0.9710468           0.9396552</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4:              0.9724771           0.9137931</span></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5:              1.0000000           0.9137931</span></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6:              1.0000000           0.9137931</span></span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7:              0.9599057           0.8771552</span></span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8:              0.9680590           0.8491379</span></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9:              0.9416244           0.7995690</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10:              0.9460916           0.7564655</span></span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11:              0.9572650           0.7241379</span></span>
 <span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(analysis_data<span class="sc">$</span>outcome_status)</span>
 <span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    0    1 </span></span>
-<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4455  267</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   0   1 </span></span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 309  27</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="baseline-characteristics" class="level2" data-number="6">
@@ -922,27 +967,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(table1, <span class="at">quote =</span> <span class="cn">FALSE</span>, <span class="at">noSpaces =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                         Stratified by outcome_status</span></span>
 <span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;                          0             1             p     test</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   n                      4455          267                     </span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   sex = Male (%)         2063 (46.3)   132 (49.4)    0.351     </span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ethnicity = Others (%) 231 (5.2)     16 (6.0)      0.664     </span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   education (%)                                      0.923     </span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Low                 716 (16.1)    42 (15.7)               </span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Medium              1006 (22.6)   58 (21.7)               </span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      High                2733 (61.3)   167 (62.5)              </span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   smoking (%)                                        0.670     </span></span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Never               2404 (54.0)   144 (53.9)              </span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Previous            1573 (35.3)   90 (33.7)               </span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Current             478 (10.7)    33 (12.4)               </span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   drinking (%)                                       0.477     </span></span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Never               208 (4.7)     12 (4.5)                </span></span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Previous            154 (3.5)     13 (4.9)                </span></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Current             4093 (91.9)   242 (90.6)              </span></span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   age (mean (SD))        56.51 (8.04)  56.60 (8.12)  0.861     </span></span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   tdi (mean (SD))        0.03 (3.03)   0.10 (2.97)   0.712     </span></span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   no2_main (mean (SD))   29.22 (5.37)  29.06 (4.80)  0.638     </span></span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   nox (mean (SD))        43.72 (15.58) 42.78 (15.07) 0.337     </span></span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pm25 (mean (SD))       9.99 (1.05)   10.00 (0.95)  0.928     </span></span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pm10_2007 (mean (SD))  19.32 (1.96)  19.31 (2.01)  0.893</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   n                      309           27                      </span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   sex = Male (%)         165 (53.4)    10 (37.0)     0.152     </span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ethnicity = Others (%) 43 (13.9)     2 (7.4)       0.511     </span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   education = High (%)   147 (47.6)    17 (63.0)     0.182     </span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   smoking (%)                                        0.183     </span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Never               173 (56.0)    12 (44.4)               </span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Previous            95 (30.7)     8 (29.6)                </span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Current             41 (13.3)     7 (25.9)                </span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   drinking (%)                                       0.629     </span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Never               28 (9.1)      1 (3.7)                 </span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Previous            209 (67.6)    19 (70.4)               </span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      Current             72 (23.3)     7 (25.9)                </span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   age (mean (SD))        57.33 (8.56)  57.50 (10.29) 0.925     </span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   tdi (mean (SD))        0.09 (3.07)   0.85 (3.51)   0.221     </span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   no2_main (mean (SD))   25.00 (6.07)  27.78 (5.65)  0.023     </span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   nox (mean (SD))        42.13 (10.91) 35.87 (13.70) 0.005     </span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pm25 (mean (SD))       9.93 (2.09)   9.96 (2.48)   0.948     </span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pm10_2007 (mean (SD))  18.59 (4.19)  18.03 (4.93)  0.518</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="cox-regression" class="level2" data-number="7">
@@ -966,16 +1008,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>cox_results<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_results<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>cox_results<span class="sc">$</span>p_bonferroni <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_results<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"bonferroni"</span>)</span>
 <span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>cox_results[<span class="fu">order</span>(cox_results<span class="sc">$</span>pvalue), ]</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      variable         coef         se           z        HR   lower95  upper95</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2       nox_z -0.063747275 0.06483359 -0.98324464 0.9382421 0.8262823 1.065372</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  no2_main_z -0.021747364 0.06167636 -0.35260455 0.9784874 0.8670741 1.104217</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4      pm25_z  0.003932429 0.06103574  0.06442830 1.0039402 0.8907465 1.131518</span></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 pm10_2007_z -0.001610040 0.06166102 -0.02611114 0.9983913 0.8847383 1.126644</span></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      pvalue    n n_event pollutant      p_bh p_bonferroni</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 0.3254871 4722     267       NOx 0.9791687            1</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 0.7243849 4722     267       NO2 0.9791687            1</span></span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 0.9486292 4722     267     PM2.5 0.9791687            1</span></span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 0.9791687 4722     267      PM10 0.9791687            1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      variable    contrast         coef        se           z        HR</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2       nox_z       nox_z -0.571962396 0.1946940 -2.93775115 0.5644167</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  no2_main_z  no2_main_z  0.409119575 0.2001311  2.04425836 1.5054917</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 pm10_2007_z pm10_2007_z -0.105484213 0.1969988 -0.53545613 0.8998887</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4      pm25_z      pm25_z -0.005581028 0.1906796 -0.02926914 0.9944345</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     lower95   upper95      pvalue   n n_event pollutant       p_bh p_bonferroni</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 0.3853684 0.8266538 0.003306023 336      27       NOx 0.01322409   0.01322409</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 1.0170130 2.2285903 0.040928030 336      27       NO2 0.08185606   0.16371212</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 0.6116502 1.3239588 0.592334486 336      27      PM10 0.78977931   1.00000000</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 0.6843361 1.4450502 0.976649936 336      27     PM2.5 0.97664994   1.00000000</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="sensitivity-analysis-1-exclude-early-events" class="level2" data-number="8">
@@ -1010,40 +1052,40 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>lag_results <span class="ot">&lt;-</span> data.table<span class="sc">::</span><span class="fu">rbindlist</span>(lag_results, <span class="at">use.names =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>lag_results[, p_bh <span class="sc">:</span><span class="er">=</span> <span class="fu">p.adjust</span>(pvalue, <span class="at">method =</span> <span class="st">"BH"</span>), by <span class="ot">=</span> lag_years]</span>
 <span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="fu">as.data.frame</span>(lag_results[<span class="fu">order</span>(pollutant, lag_years)])</span>
-<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       variable         coef         se           z        HR   lower95  upper95</span></span>
-<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1   no2_main_z -0.021747364 0.06167636 -0.35260455 0.9784874 0.8670741 1.104217</span></span>
-<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2   no2_main_z -0.033544328 0.06384072 -0.52543779 0.9670120 0.8532780 1.095906</span></span>
-<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3   no2_main_z -0.026291084 0.06506894 -0.40404966 0.9740515 0.8574230 1.106544</span></span>
-<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4   no2_main_z -0.017692038 0.07011299 -0.25233609 0.9824635 0.8563201 1.127189</span></span>
-<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5        nox_z -0.063747275 0.06483359 -0.98324464 0.9382421 0.8262823 1.065372</span></span>
-<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6        nox_z -0.073663585 0.06736998 -1.09341846 0.9289842 0.8140721 1.060117</span></span>
-<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7        nox_z -0.082574976 0.06922629 -1.19282675 0.9207424 0.8039196 1.054541</span></span>
-<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8        nox_z -0.075093548 0.07402062 -1.01449499 0.9276567 0.8023813 1.072491</span></span>
-<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 9  pm10_2007_z -0.001610040 0.06166102 -0.02611114 0.9983913 0.8847383 1.126644</span></span>
-<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 pm10_2007_z  0.017366439 0.06325203  0.27455938 1.0175181 0.8988804 1.151814</span></span>
-<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11 pm10_2007_z  0.012027099 0.06463569  0.18607519 1.0120997 0.8916724 1.148792</span></span>
-<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 12 pm10_2007_z  0.007437510 0.06979918  0.10655583 1.0074652 0.8786520 1.155163</span></span>
-<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 13      pm25_z  0.003932429 0.06103574  0.06442830 1.0039402 0.8907465 1.131518</span></span>
-<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 14      pm25_z  0.009610136 0.06286195  0.15287685 1.0096565 0.8926176 1.142041</span></span>
-<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 15      pm25_z -0.001146960 0.06438523 -0.01781403 0.9988537 0.8804345 1.133200</span></span>
-<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 16      pm25_z -0.014898763 0.06980074 -0.21344707 0.9852117 0.8592411 1.129650</span></span>
-<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       pvalue    n n_event lag_years pollutant      p_bh</span></span>
-<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  0.7243849 4722     267         0       NO2 0.9791687</span></span>
-<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2  0.5992789 4706     251         1       NO2 0.8784954</span></span>
-<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3  0.6861762 4696     241         2       NO2 0.9857872</span></span>
-<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4  0.8007813 4662     207         4       NO2 0.9151414</span></span>
-<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5  0.3254871 4722     267         0       NOx 0.9791687</span></span>
-<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6  0.2742101 4706     251         1       NOx 0.8784954</span></span>
-<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7  0.2329372 4696     241         2       NOx 0.9317489</span></span>
-<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8  0.3103466 4662     207         4       NOx 0.9151414</span></span>
-<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 9  0.9791687 4722     267         0      PM10 0.9791687</span></span>
-<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 0.7836548 4706     251         1      PM10 0.8784954</span></span>
-<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11 0.8523858 4696     241         2      PM10 0.9857872</span></span>
-<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 12 0.9151414 4662     207         4      PM10 0.9151414</span></span>
-<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 13 0.9486292 4722     267         0     PM2.5 0.9791687</span></span>
-<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 14 0.8784954 4706     251         1     PM2.5 0.8784954</span></span>
-<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 15 0.9857872 4696     241         2     PM2.5 0.9857872</span></span>
-<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 16 0.8309783 4662     207         4     PM2.5 0.9151414</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;       variable    contrast         coef        se           z        HR</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1   no2_main_z  no2_main_z  0.409119575 0.2001311  2.04425836 1.5054917</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2   no2_main_z  no2_main_z  0.331617070 0.2052272  1.61585358 1.3932192</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3   no2_main_z  no2_main_z  0.345371242 0.2144938  1.61016880 1.4125142</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4   no2_main_z  no2_main_z  0.070924639 0.2635680  0.26909425 1.0735003</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5        nox_z       nox_z -0.571962396 0.1946940 -2.93775115 0.5644167</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6        nox_z       nox_z -0.519883339 0.2024629 -2.56779585 0.5945899</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7        nox_z       nox_z -0.540419935 0.2084588 -2.59245423 0.5825036</span></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8        nox_z       nox_z -0.487907336 0.2571520 -1.89734964 0.6139098</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 9  pm10_2007_z pm10_2007_z -0.105484213 0.1969988 -0.53545613 0.8998887</span></span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 pm10_2007_z pm10_2007_z -0.133536912 0.2073504 -0.64401582 0.8749952</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11 pm10_2007_z pm10_2007_z -0.165176210 0.2212433 -0.74658172 0.8477443</span></span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 12 pm10_2007_z pm10_2007_z -0.221675303 0.2906503 -0.76268723 0.8011755</span></span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 13      pm25_z      pm25_z -0.005581028 0.1906796 -0.02926914 0.9944345</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 14      pm25_z      pm25_z  0.050700808 0.2019440  0.25106369 1.0520081</span></span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 15      pm25_z      pm25_z  0.173807521 0.2189226  0.79392217 1.1898265</span></span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 16      pm25_z      pm25_z  0.483974513 0.3007344  1.60930856 1.6225103</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      lower95   upper95      pvalue   n n_event lag_years pollutant       p_bh</span></span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  1.0170130 2.2285903 0.040928030 336      27         0       NO2 0.08185606</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2  0.9318152 2.0830954 0.106125974 333      24         1       NO2 0.21225195</span></span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3  0.9277167 2.1506527 0.107361011 331      22         2       NO2 0.21472202</span></span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4  0.6404020 1.7994993 0.787857153 323      14         4       NO2 0.78785715</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5  0.3853684 0.8266538 0.003306023 336      27         0       NOx 0.01322409</span></span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6  0.3998350 0.8842076 0.010234741 333      24         1       NOx 0.04093896</span></span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7  0.3871312 0.8764741 0.009529386 331      22         2       NOx 0.03811754</span></span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8  0.3708654 1.0162317 0.057781808 323      14         4       NOx 0.21509777</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 9  0.6116502 1.3239588 0.592334486 336      27         0      PM10 0.78977931</span></span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 0.5827855 1.3137194 0.519565176 333      24         1      PM10 0.69275357</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 11 0.5494678 1.3079391 0.455316088 331      22         2      PM10 0.45531609</span></span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 12 0.4532373 1.4162165 0.445649948 323      14         4      PM10 0.59419993</span></span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 13 0.6843361 1.4450502 0.976649936 336      27         0     PM2.5 0.97664994</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 14 0.7081480 1.5628386 0.801764866 333      24         1     PM2.5 0.80176487</span></span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 15 0.7747050 1.8273886 0.427240743 331      22         2     PM2.5 0.45531609</span></span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 16 0.8999157 2.9253180 0.107548887 323      14         4     PM2.5 0.21509777</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="sensitivity-analysis-2-2010-exposure-definition" class="level2" data-number="9">
@@ -1075,16 +1117,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>cox_results_2010<span class="sc">$</span>p_bh <span class="ot">&lt;-</span> <span class="fu">p.adjust</span>(cox_results_2010<span class="sc">$</span>pvalue, <span class="at">method =</span> <span class="st">"BH"</span>)</span>
 <span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>cox_results_2010</span>
-<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      variable         coef         se          z        HR   lower95  upper95</span></span>
-<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  no2_2010_z -0.090143975 0.06376187 -1.4137599 0.9137996 0.8064487 1.035441</span></span>
-<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2       nox_z -0.063747275 0.06483359 -0.9832446 0.9382421 0.8262823 1.065372</span></span>
-<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 pm10_2010_z  0.023125198 0.06087924  0.3798536 1.0233947 0.9082861 1.153091</span></span>
-<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4      pm25_z  0.003932429 0.06103574  0.0644283 1.0039402 0.8907465 1.131518</span></span>
-<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      pvalue    n n_event lag_years pollutant      p_bh</span></span>
-<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 0.1574324 4722     267         0  NO2_2010 0.6297296</span></span>
-<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 0.3254871 4722     267         0       NOx 0.6509741</span></span>
-<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 0.7040541 4722     267         0 PM10_2010 0.9387388</span></span>
-<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 0.9486292 4722     267         0     PM2.5 0.9486292</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      variable    contrast        coef        se          z        HR   lower95</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1  no2_2010_z  no2_2010_z  0.26568811 0.2022776  1.3134826 1.3043282 0.8774207</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2       nox_z       nox_z -0.59030583 0.2039304 -2.8946431 0.5541578 0.3715759</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 pm10_2010_z pm10_2010_z -0.15366181 0.2089349 -0.7354532 0.8575620 0.5694031</span></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4      pm25_z      pm25_z -0.02003608 0.1980889 -0.1011469 0.9801633 0.6647905</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     upper95      pvalue   n n_event lag_years pollutant       p_bh</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 1.9389468 0.189020396 326      25         0  NO2_2010 0.37804079</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 0.8264552 0.003795899 326      25         0       NOx 0.01518359</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 1.2915499 0.462063509 326      25         0 PM10_2010 0.61608468</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 1.4451471 0.919433867 326      25         0     PM2.5 0.91943387</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 
 

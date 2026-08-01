@@ -1,0 +1,540 @@
+---
+title: "Primary-care GP phenotype workflow"
+description: "Query UK Biobank primary-care records in RAP, assess registration coverage, and construct coverage-aware disease phenotypes."
+---
+
+## Scope
+
+UK Biobank primary-care records provide longitudinal information recorded in
+general practice. UKBAnalytica keeps this workflow separate from the ordinary
+participant-wide phenotype table because the GP tables are record-level,
+provider-dependent, and much larger than a typical analysis cohort.
+
+This module supports:
+
+- exact Read v2 and CTV3 disease-code queries;
+- Spark-side filtering to an approved cohort;
+- Spark-side participant-by-disease aggregation;
+- clinical-event and registration-table standardization;
+- GP observation-window assessment;
+- coverage-aware `1`, `0`, and `NA` disease phenotypes.
+
+It does not bundle or cache UK Biobank participant data. Queries execute
+against tables already available in the active RAP project. GP prescriptions
+and full numeric laboratory harmonization are outside the current module.
+
+## The three UKB primary-care tables
+
+| RAP table | Main columns | Typical use |
+|:--|:--|:--|
+| `gp_clinical` | `eid`, `data_provider`, `event_dt`, `read_2`, `read_3`, `value1`–`value3` | diagnoses, symptoms, procedures, tests, and other coded events |
+| `gp_scripts` | `eid`, `data_provider`, `issue_date`, Read/BNF/dm+d codes, drug name, quantity | prescriptions; not yet parsed by this module |
+| `gp_registrations` | `eid`, `data_provider`, `reg_date`, `deduct_date` | periods during which GP data may be observable |
+
+Record-level access requires the appropriate UKB fields in the approved data
+basket: 42038 for registrations, 42039 for prescriptions, and 42040 for
+clinical events.
+
+The official reference is the
+[UK Biobank Primary Care Linked Data guide](https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/primary_care_data.pdf).
+The release is minimally curated, availability differs between providers, and
+the absence of a diagnosis code does not by itself establish absence of
+disease.
+
+## Workflow overview
+
+```{mermaid}
+flowchart LR
+  A["Disease code table"] --> B["parse_gp_query()"]
+  C["Spark cohort table"] --> D["LEFT SEMI JOIN"]
+  B --> D
+  D --> E["gp_clinical filtering"]
+  D --> F["gp_registrations filtering"]
+  E --> G["Spark disease summary"]
+  F --> H["Registration parsing"]
+  H --> I["Coverage and observability"]
+  G --> J["integrate_gp_results()"]
+  I --> J
+  J --> K["gp_case: 1 / 0 / NA"]
+```
+
+The matched diagnosis establishes a case. Registration coverage is used only
+to decide whether an unmatched participant can be treated as a non-case.
+
+## Before querying RAP
+
+Load the package and connect to Spark inside an approved RAP RStudio session:
+
+```r
+library(UKBAnalytica)
+library(sparklyr)
+
+ukb_check_rap_env()
+
+master <- paste0("spark://master:", Sys.getenv("SPARK_MASTER_PORT"))
+sc <- spark_connect(master)
+```
+
+Set the database and cohort table that exist in the active project:
+
+```r
+database_name <- "app12345_20260101000000"
+cohort_table <- "analysis_cohort"
+```
+
+`analysis_cohort` must contain one `eid` column. It may contain additional
+analysis dates, but the Spark query only needs `eid` for filtering.
+
+Keep a lightweight participant table in the RAP R session so that people with
+no GP diagnosis and no registration record are retained in the final result:
+
+```r
+cohort <- data.frame(
+  eid = c(1000001, 1000002, 1000003),
+  study_start = as.Date("2010-01-01"),
+  baseline_date = as.Date("2011-01-01"),
+  study_end = as.Date("2016-06-30")
+)
+```
+
+In a real analysis, these dates can differ by participant. The table remains
+inside RAP and should not be exported outside the approved project.
+
+::: {.callout-important}
+`cohort_table` and `participants` have different roles. `cohort_table` limits
+the Spark scan before records are collected. `participants` defines the final
+participant grid and supplies individual study dates. Supplying only the
+Spark table may omit cohort members who have neither a matching event nor a
+registration row.
+:::
+
+## 1. Define an exact GP phenotype query
+
+The official UKB guide uses `F26..` as a simple migraine illustration in both
+Read v2 and CTV3:
+
+```r
+migraine_query <- data.frame(
+  disease = c("Migraine", "Migraine"),
+  code_system = c("Read2", "CTV3"),
+  code = c("F26..", "F26..")
+) |>
+  parse_gp_query()
+```
+
+This is an exact-code example, not a validated comprehensive migraine
+phenotype. A research phenotype should use a reviewed code list and normally
+include separate rows for every accepted Read2 and CTV3 code.
+
+Optional filters can be applied during query construction:
+
+```r
+migraine_query <- parse_gp_query(
+  codes = migraine_codes,
+  date_from = as.Date("2010-01-01"),
+  date_to = as.Date("2016-06-30"),
+  providers = c(1, 3)
+)
+```
+
+Provider codes are:
+
+| Code | Provider |
+|:--|:--|
+| 1 | England Vision |
+| 2 | Scotland |
+| 3 | England TPP |
+| 4 | Wales |
+
+Do not use broad Read-code prefixes without reviewing their descendants.
+Hierarchies may contain family history, suspected diagnoses, screening, or
+explicit negative concepts.
+
+## 2. Inspect the SQL before execution
+
+Use `dry_run = TRUE` to generate both the clinical-event and registration SQL
+without connecting to or collecting data:
+
+```r
+gp_plan <- migraine_query |>
+  run_gp_workflow(
+    database = database_name,
+    cohort_table = cohort_table,
+    collect = "summary",
+    dry_run = TRUE
+  )
+
+gp_plan
+```
+
+With `cohort_table` supplied, both queries use a Spark left-semi join:
+
+```sql
+FROM gp_clinical AS g
+LEFT SEMI JOIN analysis_cohort AS c
+  ON CAST(g.eid AS STRING) = CAST(c.eid AS STRING)
+```
+
+This retains GP records only for EIDs in the cohort without copying cohort
+columns into every GP row.
+
+`collect = "summary"` additionally performs the following work in Spark:
+
+- match Read2/CTV3 codes to disease labels;
+- group by `eid` and disease;
+- calculate the earliest usable GP date;
+- count matching records and distinct codes.
+
+The result returned to R is therefore participant-level rather than a large
+record-level table. Use `collect = "records"` only when individual rows are
+needed for code review or data-quality investigation.
+
+If `cohort_table` is a session-local temporary Spark view rather than a table
+inside `database_name`, set `cohort_database = NULL`.
+
+## 3. Run a strict end-to-end phenotype workflow
+
+Choose an observation end justified by the active GP release and provider.
+The following date is illustrative only:
+
+```r
+gp_observation_end <- as.Date("2016-06-30")
+```
+
+For mixed providers, use a defensible common end date or run provider-specific
+analyses. Do not automatically reuse the hospital/death censoring date because
+those sources are updated on different schedules.
+
+Run the complete workflow:
+
+```r
+gp_migraine <- migraine_query |>
+  run_gp_workflow(
+    connection = sc,
+    database = database_name,
+    cohort_table = cohort_table,
+    collect = "summary",
+    participants = cohort,
+
+    observation_end = gp_observation_end,
+    window_start = "study_start",
+    window_end = "study_end",
+    index_date = "baseline_date",
+    min_lookback_days = 365,
+    min_followup_days = 365,
+    min_coverage_fraction = 0.80,
+
+    clinical_output = "gp_migraine_summary.csv",
+    registration_output = "gp_registration_records.csv"
+  )
+```
+
+`window_start`, `window_end`, and `index_date` accept:
+
+- one date shared by all participants;
+- a date-column name in `participants`;
+- one date value per participant.
+
+Open registration intervals are closed only when `observation_end` is
+provided. Registration dates after this cutoff do not establish coverage.
+
+## Understanding strict observability
+
+`assess_gp_observability()` merges overlapping and adjacent registration
+intervals before calculating coverage. This avoids counting duplicated days
+twice.
+
+For each participant it calculates:
+
+| Output | Meaning |
+|:--|:--|
+| `target_window_days` | inclusive number of days from `window_start` through `window_end` |
+| `covered_window_days` | unique days overlapped by usable merged registration intervals |
+| `coverage_fraction` | `covered_window_days / target_window_days` |
+| `coverage_at_index` | whether `index_date` lies inside a usable interval |
+| `continuous_lookback_days` | uninterrupted covered days immediately before the index, bounded by the window |
+| `continuous_followup_days` | uninterrupted covered days immediately after the index, bounded by the window |
+| `control_eligible` | whether all requested control criteria pass |
+| `gp_observability_reason` | first reason a participant was not eligible |
+
+A participant is an eligible GP control only when:
+
+```text
+valid study window
++ registration coverage inside the window
++ covered on the index date
++ minimum continuous lookback
++ minimum continuous follow-up
++ minimum complete-window coverage fraction
+```
+
+The thresholds are study-design choices, not UKB defaults. Specify and justify
+them in the protocol and sensitivity analyses.
+
+## Interpreting the final phenotype
+
+Inspect the most important columns:
+
+```r
+gp_migraine[, .(
+  eid,
+  disease,
+  gp_case,
+  first_gp_date,
+  coverage_fraction,
+  coverage_at_index,
+  continuous_lookback_days,
+  continuous_followup_days,
+  control_eligible,
+  gp_observability_reason,
+  gp_case_reason
+)]
+```
+
+`gp_case` is intentionally three-state:
+
+| `gp_case` | Interpretation |
+|:--|:--|
+| `1` | at least one requested Read2/CTV3 code matched |
+| `0` | no requested code matched and `control_eligible = TRUE` |
+| `NA` | no requested code matched, but the requested observation window was insufficient or unknown |
+
+A matched record remains a case even if registration metadata are incomplete;
+observability governs assignment of unmatched controls.
+
+Typical reasons include:
+
+| Reason | Interpretation |
+|:--|:--|
+| `eligible` | all requested conditions passed |
+| `no_coverage_in_window` | registration exists only outside the requested window, or no usable interval exists |
+| `not_covered_at_index` | the index date falls in a registration gap |
+| `insufficient_lookback` | continuous pre-index coverage is too short |
+| `insufficient_followup` | continuous post-index coverage is too short |
+| `insufficient_window_coverage` | overall coverage fraction is below the threshold |
+| `invalid_window` | the end precedes the start |
+
+## A reproducible local example
+
+Pre-extracted or synthetic tables can use the same workflow without a Spark
+connection:
+
+```r
+clinical_demo <- data.frame(
+  eid = 1L,
+  data_provider = 1L,
+  event_dt = "2015-05-01",
+  read_2 = "F26..",
+  read_3 = NA_character_
+)
+
+registrations_demo <- data.frame(
+  eid = 1:3,
+  data_provider = 1L,
+  reg_date = c("2010-01-01", "2010-01-01", "2000-01-01"),
+  deduct_date = c("2016-06-30", "2016-06-30", "2005-12-31")
+)
+
+cohort_demo <- data.frame(
+  eid = 1:3,
+  study_start = as.Date("2010-01-01"),
+  baseline_date = as.Date("2011-01-01"),
+  study_end = as.Date("2016-06-30")
+)
+
+demo_result <- data.frame(
+  disease = "Migraine",
+  code_system = "Read2",
+  code = "F26.."
+) |>
+  parse_gp_query() |>
+  run_gp_workflow(
+    clinical_data = clinical_demo,
+    registration_data = registrations_demo,
+    participants = cohort_demo,
+    observation_end = as.Date("2016-06-30"),
+    window_start = "study_start",
+    window_end = "study_end",
+    index_date = "baseline_date",
+    min_lookback_days = 365,
+    min_followup_days = 365,
+    min_coverage_fraction = 0.80
+  )
+
+demo_result[, .(
+  eid,
+  gp_case,
+  first_gp_date,
+  coverage_fraction,
+  control_eligible,
+  gp_observability_reason,
+  gp_case_reason
+)]
+```
+
+Expected interpretation:
+
+- EID 1 is a case because `F26..` matched;
+- EID 2 is an eligible non-case because coverage is sufficient and no code matched;
+- EID 3 remains `NA` because its GP registration ended before the study window.
+
+## Lower-level workflow
+
+Use the lower-level functions when record-level inspection or custom
+integration is needed.
+
+### Clinical events
+
+```r
+gp_records <- migraine_query |>
+  rap_plan_gp_query(
+    database = database_name,
+    cohort_table = cohort_table,
+    collect = "records"
+  ) |>
+  rap_run_gp_query(
+    connection = sc,
+    output = "gp_migraine_records.csv"
+  )
+
+gp_diagnoses <- gp_records |>
+  parse_gp_clinical() |>
+  summarise_gp_diagnoses()
+```
+
+### Registration coverage
+
+```r
+gp_registrations <- parse_gp_registrations(gp_registrations_raw)
+
+gp_coverage <- summarise_gp_coverage(
+  gp_registrations,
+  clinical_records = gp_records,
+  participants = cohort,
+  observation_end = gp_observation_end
+)
+
+gp_observability <- assess_gp_observability(
+  gp_registrations,
+  participants = cohort,
+  window_start = "study_start",
+  window_end = "study_end",
+  index_date = "baseline_date",
+  observation_end = gp_observation_end,
+  min_lookback_days = 365,
+  min_followup_days = 365,
+  min_coverage_fraction = 0.80
+)
+```
+
+### Final integration
+
+```r
+gp_phenotype <- integrate_gp_results(
+  gp_diagnoses,
+  gp_coverage,
+  participants = cohort,
+  diseases = "Migraine",
+  gp_observability = gp_observability
+)
+```
+
+## Date and provider quality rules
+
+`parse_gp_clinical()` and `parse_gp_registrations()` flag UKB placeholder
+dates rather than treating them as valid event times:
+
+| Date | Package label |
+|:--|:--|
+| `1900-01-01` | `no_event_date` |
+| `1901-01-01` | `before_birth` |
+| `1902-02-02` | `birth_date_proxy` |
+| `1903-03-03` | `birth_year_proxy` |
+| `1909-09-09` | `future_placeholder` |
+| `2037-07-07` | `future_placeholder` |
+
+Such dates can identify a coded event but are not used as a reliable diagnosis
+time or coverage boundary. Use `special_date_action = "exclude"` only when the
+entire affected row should be removed.
+
+## Performance guidance
+
+For RAP-scale analysis:
+
+1. construct or persist a one-column Spark cohort table;
+2. always inspect `dry_run` SQL;
+3. use `cohort_table` instead of a very large vector in `parse_gp_query(eids=)`;
+4. use `collect = "summary"` for phenotype construction;
+5. request record-level output only for focused audits;
+6. set explicit row guards with `max_clinical_rows` and
+   `max_registration_rows`;
+7. keep participant-level exports in approved RAP storage.
+
+`clinical_output` contains a disease summary when `collect = "summary"` and
+record-level rows when `collect = "records"`. `registration_output` remains a
+filtered registration table because interval-level records are needed for
+exact coverage calculations.
+
+## Common mistakes
+
+### Treating every unmatched participant as a control
+
+Use strict window parameters. Without them, the workflow retains the earlier
+registration-based behavior for backward compatibility.
+
+### Using the hospital censoring date for GP data
+
+GP, hospital, cancer, and death data have different provider-specific update
+dates. Choose the GP cutoff independently.
+
+### Supplying only `cohort_table`
+
+The semi-join improves query efficiency but does not create final rows for
+cohort members absent from both GP result tables. Supply `participants` to
+retain them as `NA` where appropriate.
+
+### Assuming a prescription was issued for a same-day diagnosis
+
+The interim GP data do not provide a stable consultation identifier. Same-day
+events are temporally associated but not necessarily causally linked.
+
+### Exporting raw GP records unnecessarily
+
+Prefer Spark summaries. Raw and participant-level data must remain inside the
+approved RAP project.
+
+## Function reference
+
+| Function | Purpose |
+|:--|:--|
+| `parse_gp_query()` | validate disease labels and exact Read2/CTV3 codes |
+| `rap_plan_gp_query()` | build auditable clinical-event Spark SQL |
+| `rap_run_gp_query()` | execute a reviewed clinical plan with a row guard |
+| `parse_gp_clinical()` | standardize matched clinical rows |
+| `summarise_gp_diagnoses()` | reduce matched rows to participant-disease cases |
+| `parse_gp_registrations()` | standardize provider registration intervals |
+| `summarise_gp_coverage()` | summarize overall registration coverage |
+| `assess_gp_observability()` | evaluate a specified study window and control eligibility |
+| `integrate_gp_results()` | combine cases, coverage, and observability into `1/0/NA` |
+| `run_gp_workflow()` | run the end-to-end RAP or local workflow |
+
+## Reproducibility checklist
+
+Before using a GP phenotype in a manuscript, record:
+
+- UKB primary-care release and provider cutoff dates;
+- included providers;
+- complete Read2/CTV3 code list and version;
+- include/exclude logic for history, suspected, screening, and negative codes;
+- cohort-table construction;
+- study window, index date, lookback, follow-up, and coverage threshold;
+- counts of `1`, `0`, and `NA`;
+- GP-only, hospital-only, and overlapping cases when other sources are used;
+- generated SQL and package version;
+- sensitivity analyses for alternative coverage thresholds.
+
+Further official references:
+
+- [`gp_registrations` record table](https://biobank.ndph.ox.ac.uk/showcase/rectab.cgi?id=1061)
+- [UKB GP date coding 819](https://biobank.ndph.ox.ac.uk/showcase/coding.cgi?id=819)
+- [UKB data providers and availability dates](https://biobank.ndph.ox.ac.uk/ukb/exinfo.cgi?src=Data_providers_and_dates.html)

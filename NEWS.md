@@ -1,5 +1,20 @@
 # UKBAnalytica News
 
+## UKBAnalytica 1.1.0 (2026-08-01)
+
+### RAP phenotyping and genetic analysis
+
+- Added Spark-first primary-care GP querying, clinical and registration parsing, coverage assessment, and coverage-aware participant-level disease integration.
+- Added aligned GWAS/PheWAS phenotype preparation and auditable wrappers for REGENIE and PLINK2, including raw official argument-token escape hatches.
+- Added genotype conversion planning across BED, PGEN, BGEN, VCF, and BCF formats.
+- Added published UK Biobank PRS catalogue/loading interfaces and custom PLINK2 PRS calculation from normalized, build-checked, allele-harmonized weights.
+- Added multi-PRS wide scoring, chromosome-specific weight splitting, BGEN/PGEN/BED inputs, controlled parallel execution, and resumable chromosome runs.
+
+### Documentation
+
+- Added complete GWAS/PheWAS, primary-care GP, and PRS workflow chapters to the Quarto website.
+- Expanded README examples for RAP extraction, disease phenotyping, genetic analyses, and reproducible PRS calculation.
+
 ## UKBAnalytica 1.0.0 (2026-05-16)
 
 ### Official release
