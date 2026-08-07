@@ -31,7 +31,7 @@ load_ukb_metabolite_panel <- function(file = NULL,
     stop("Metabolite panel file not found: ", file)
   }
 
-  utils::read.delim(
+  read.delim(
     file,
     sep = "\t",
     fileEncoding = file_encoding,
@@ -147,7 +147,7 @@ metabolite_to_metaboanalyst_name <- function(metabolites,
     if (length(ambiguous)) {
       stop(
         "`mapping_table` contains one-to-many metabolite mappings for: ",
-        paste(utils::head(ambiguous, 10L), collapse = ", ")
+        paste(head(ambiguous, 10L), collapse = ", ")
       )
     }
     custom <- custom[!duplicated(custom_key), , drop = FALSE]
@@ -194,7 +194,7 @@ metabolite_to_metaboanalyst_name <- function(metabolites,
 #'   names. Default `"metabolite"`.
 #' @param min_metabolites Minimum mapped metabolites required for ORA.
 #'   Default `3`.
-#' @param p_adjust_method Multiple-testing method used by [stats::p.adjust()].
+#' @param p_adjust_method Multiple-testing method used by [p.adjust()].
 #'   Default `"BH"`.
 #' @param run_subprocess Logical. For `backend = "metaboanalyst"`, run
 #'   MetaboAnalystR in a clean subprocess to avoid global-state issues. Default
@@ -229,7 +229,7 @@ run_metabolite_ora <- function(metabolites,
   backend <- match.arg(backend)
   mapping <- .metab_prepare_mapping(metabolites, mapping_table = mapping_table)
 
-  matched <- unique(stats::na.omit(mapping$metaboanalyst_name[mapping$category == "small_molecule"]))
+  matched <- unique(na.omit(mapping$metaboanalyst_name[mapping$category == "small_molecule"]))
   unmatched <- mapping$metabolite[is.na(mapping$metaboanalyst_name) | mapping$category != "small_molecule"]
 
   if (length(matched) < min_metabolites) {
@@ -244,7 +244,7 @@ run_metabolite_ora <- function(metabolites,
     mapped_universe <- NULL
     if (!is.null(universe)) {
       universe_mapping <- .metab_prepare_mapping(universe, mapping_table = mapping_table)
-      mapped_universe <- unique(stats::na.omit(
+      mapped_universe <- unique(na.omit(
         universe_mapping$metaboanalyst_name[universe_mapping$category == "small_molecule"]
       ))
       missing_from_universe <- setdiff(
@@ -315,10 +315,6 @@ run_metabolite_ora <- function(metabolites,
 #'
 #' @return A ggplot object.
 #'
-#' @importFrom ggplot2 ggplot aes geom_point scale_color_gradientn
-#'   scale_size_continuous labs theme_classic theme element_blank element_line
-#'   element_text
-#' @importFrom rlang .data
 #' @export
 plot_metabolite_ora_dotplot <- function(x,
                                         top_n = 15,
@@ -350,9 +346,6 @@ plot_metabolite_ora_dotplot <- function(x,
 #'
 #' @return A ggplot object.
 #'
-#' @importFrom ggplot2 ggplot aes geom_col geom_hline coord_flip labs
-#'   theme_classic theme element_blank element_line element_text
-#' @importFrom rlang .data
 #' @export
 plot_metabolite_ora_barplot <- function(x,
                                         top_n = 15,
@@ -483,7 +476,7 @@ plot_metabolite_ora_barplot <- function(x,
       universe_size = M,
       expected = expected,
       fold_enrichment = ifelse(expected > 0, x / expected, NA_real_),
-      pvalue = stats::phyper(x - 1, K, M - K, N, lower.tail = FALSE),
+      pvalue = phyper(x - 1, K, M - K, N, lower.tail = FALSE),
       hit_names = paste(split_db[[pathway]]$metabolite[match(hit_key, split_db[[pathway]]$key)], collapse = ";"),
       stringsAsFactors = FALSE
     )
@@ -503,7 +496,7 @@ plot_metabolite_ora_barplot <- function(x,
       stringsAsFactors = FALSE
     )
   }
-  out$p_adjust <- stats::p.adjust(out$pvalue, method = p_adjust_method)
+  out$p_adjust <- p.adjust(out$pvalue, method = p_adjust_method)
   out$neg_log10_p <- -log10(pmax(out$pvalue, .Machine$double.xmin))
   out <- out[order(out$pvalue, -out$hits), , drop = FALSE]
   rownames(out) <- NULL
@@ -541,7 +534,7 @@ plot_metabolite_ora_barplot <- function(x,
 setwd(%s)
 .ukb_prepare_qs_file <- function(file, url) {
   if (!file.exists(file)) {
-    utils::download.file(url, file, method = "libcurl", quiet = TRUE)
+    download.file(url, file, method = "libcurl", quiet = TRUE)
   }
   ok <- tryCatch({
     getExportedValue("qs", "qread")(file)
@@ -592,7 +585,7 @@ if (!is.null(mSet$analSet$ora.mat)) {
   if (!file.exists(tmp_out)) {
     stop("MetaboAnalystR subprocess did not return an ORA table: ", paste(status, collapse = "\n"))
   }
-  out <- utils::read.csv(tmp_out, stringsAsFactors = FALSE, check.names = FALSE)
+  out <- read.csv(tmp_out, stringsAsFactors = FALSE, check.names = FALSE)
   .metab_standardize_metaboanalyst_result(out, p_adjust_method)
 }
 
@@ -630,7 +623,7 @@ if (!is.null(mSet$analSet$ora.mat)) {
 
 .metab_prepare_qs_file <- function(file, url) {
   if (!file.exists(file)) {
-    utils::download.file(url, file, method = "libcurl", quiet = TRUE)
+    download.file(url, file, method = "libcurl", quiet = TRUE)
   }
   ok <- tryCatch({
     getExportedValue("qs", "qread")(file)
@@ -671,7 +664,7 @@ if (!is.null(mSet$analSet$ora.mat)) {
   out$hits <- if (!is.na(hits_col)) as.numeric(out[[hits_col]]) else NA_real_
   out$expected <- if (!is.na(expected_col)) as.numeric(out[[expected_col]]) else NA_real_
   out$fold_enrichment <- ifelse(!is.na(out$expected) & out$expected > 0, out$hits / out$expected, NA_real_)
-  out$p_adjust <- stats::p.adjust(out$pvalue, method = p_adjust_method)
+  out$p_adjust <- p.adjust(out$pvalue, method = p_adjust_method)
   out$neg_log10_p <- -log10(pmax(out$pvalue, .Machine$double.xmin))
   out <- out[order(out$pvalue), , drop = FALSE]
   rownames(out) <- NULL
@@ -699,7 +692,7 @@ if (!is.null(mSet$analSet$ora.mat)) {
   plot_df$p_for_plot <- as.numeric(plot_df[[p_col]])
   plot_df <- plot_df[is.finite(plot_df$p_for_plot), , drop = FALSE]
   plot_df <- plot_df[order(plot_df$p_for_plot), , drop = FALSE]
-  plot_df <- utils::head(plot_df, top_n)
+  plot_df <- head(plot_df, top_n)
   plot_df$neg_log10_p <- -log10(pmax(plot_df$p_for_plot, .Machine$double.xmin))
   plot_df$pathway_label <- factor(plot_df[[pathway_col]], levels = rev(plot_df[[pathway_col]]))
   plot_df

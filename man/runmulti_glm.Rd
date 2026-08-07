@@ -24,15 +24,15 @@ runmulti_glm(
 \code{"poisson"}, \code{"Gamma"}, \code{"gaussian"},
 \code{"quasipoisson"}, \code{"quasibinomial"},
 \code{"inverse.gaussian"}.
-\item A family function, e.g. \code{stats::poisson}.
-\item A family object, e.g. \code{stats::poisson(link = "sqrt")}.
+\item A family function, e.g. \code{poisson}.
+\item A family object, e.g. \code{poisson(link = "sqrt")}.
 }}
 
 \item{outcome}{A character string specifying the outcome column.}
 
 \item{covariates}{A character vector of covariate names. Default \code{NULL}.}
 
-\item{...}{Additional arguments passed to \code{stats::glm()}.}
+\item{...}{Additional arguments passed to \code{glm()}.}
 }
 \value{
 A data.frame with columns: \code{variable}, \code{contrast},
@@ -49,5 +49,5 @@ Otherwise, multivariate models are fitted.
 Quasi-families (\code{quasipoisson}, \code{quasibinomial}) use Wald
 confidence intervals because profile-likelihood CIs are not available for
 quasi-likelihood models.  All other families use profile-likelihood CIs via
-\code{stats::confint}.
+\code{confint}.
 }

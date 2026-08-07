@@ -206,7 +206,7 @@ print.ukb_sensitivity_suite <- function(x, ...) {
                                      endpoint,
                                      conf_level) {
   rhs <- paste(unique(c(exposure, covariates)), collapse = " + ")
-  formula_obj <- stats::as.formula(paste0("Surv(", endpoint[[1]], ", ", endpoint[[2]], ") ~ ", rhs))
+  formula_obj <- as.formula(paste0("Surv(", endpoint[[1]], ", ", endpoint[[2]], ") ~ ", rhs))
   model <- coxph(formula_obj, data = data)
   sm <- summary(model, conf.int = conf_level)
   coefs <- sm$coefficients

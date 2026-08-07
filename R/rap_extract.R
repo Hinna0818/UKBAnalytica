@@ -515,7 +515,7 @@ rap_plan_extract <- function(field_id = NULL,
   class(plan) <- c("rap_extract_plan", class(plan))
 
   if (!is.null(manifest)) {
-    utils::write.csv(plan$matched, manifest, row.names = FALSE)
+    write.csv(plan$matched, manifest, row.names = FALSE)
   }
 
   plan
@@ -603,9 +603,9 @@ rap_extract_pheno <- function(field_id = NULL,
     return(normalizePath(output, mustWork = FALSE))
   }
 
-  dt <- data.table::fread(output, data.table = TRUE, integer64 = "double")
+  dt <- fread(output, data.table = TRUE, integer64 = "double")
   if (isTRUE(strip_entity_prefix)) {
-    data.table::setnames(dt, sub("^participant\\.", "", names(dt)))
+    setnames(dt, sub("^participant\\.", "", names(dt)))
   }
   attr(dt, "rap_extract_plan") <- plan
   dt

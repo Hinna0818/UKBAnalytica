@@ -48,7 +48,7 @@ names. Default \code{"metabolite"}.}
 \item{min_metabolites}{Minimum mapped metabolites required for ORA.
 Default \code{3}.}
 
-\item{p_adjust_method}{Multiple-testing method used by \code{\link[stats:p.adjust]{stats::p.adjust()}}.
+\item{p_adjust_method}{Multiple-testing method used by \code{\link[=p.adjust]{p.adjust()}}.
 Default \code{"BH"}.}
 
 \item{run_subprocess}{Logical. For \code{backend = "metaboanalyst"}, run

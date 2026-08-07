@@ -1,6 +1,6 @@
 #' @keywords internal
 .regression_term_coefficients <- function(model, variable) {
-  terms_obj <- stats::terms(model)
+  terms_obj <- terms(model)
   term_labels <- attr(terms_obj, "term.labels")
   term_index <- match(variable, term_labels)
   if (is.na(term_index)) {
@@ -9,10 +9,10 @@
       call. = FALSE
     )
   }
-  design <- stats::model.matrix(model)
+  design <- model.matrix(model)
   assignment <- attr(design, "assign")
   term_columns <- colnames(design)[assignment == term_index]
-  coefficient_names <- names(stats::coef(model))
+  coefficient_names <- names(coef(model))
   term_columns <- intersect(term_columns, coefficient_names)
   if (length(term_columns) == 0L) {
     stop(
@@ -36,8 +36,6 @@
 #' @param endpoint A character vector of length 2: \code{c("time", "status")}, indicating survival time and event columns.
 #' @param ... Additional arguments passed to \code{coxph()}.
 #'
-#' @importFrom stats as.formula confint
-#' @importFrom survival Surv coxph
 #' @return A data.frame with columns: \code{variable}, \code{contrast}, \code{coef},
 #'   \code{se}, \code{z}, \code{HR}, \code{lower95}, \code{upper95},
 #'   \code{pvalue}, \code{n}, and \code{n_event}.
@@ -60,7 +58,7 @@ runmulti_cox <- function(data,
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
     formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
-    formula_obj <- stats::as.formula(formula_str)
+    formula_obj <- as.formula(formula_str)
 
     # fit model
     model <- coxph(formula_obj, data = data, ...)
@@ -106,9 +104,8 @@ runmulti_cox <- function(data,
 #' @param main_var A character vector of main variable names to test.
 #' @param covariates A character vector of covariate names to adjust for. Default \code{NULL} (univariate).
 #' @param outcome A character string specifying the outcome (dependent) variable name.
-#' @param ... Additional arguments passed to \code{stats::lm()}.
+#' @param ... Additional arguments passed to \code{lm()}.
 #'
-#' @importFrom stats as.formula lm confint coef
 #' @return A data.frame with columns: \code{variable}, \code{contrast},
 #'   \code{beta}, \code{lower95}, \code{upper95}, and \code{pvalue}.
 #'   Multi-level categorical exposures return one row per non-reference
@@ -131,16 +128,16 @@ runmulti_lm <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
 
     # fit model
-    model <- stats::lm(formula_obj, data = data, ...)
+    model <- lm(formula_obj, data = data, ...)
 
     # extract results
     sum_model <- summary(model)
     coefs <- sum_model$coefficients
     contrast_names <- .regression_term_coefficients(model, var)
-    ci <- stats::confint(model, parm = contrast_names, level = 0.95)
+    ci <- confint(model, parm = contrast_names, level = 0.95)
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
     main_row <- coefs[contrast_names, , drop = FALSE]
 
@@ -172,9 +169,8 @@ runmulti_lm <- function(data,
 #' @param main_var A character vector of main variable names to test.
 #' @param covariates A character vector of covariate names to adjust for. Default \code{NULL} (univariate).
 #' @param outcome A character string specifying the binary outcome (dependent) variable name (0/1).
-#' @param ... Additional arguments passed to \code{stats::glm()}.
+#' @param ... Additional arguments passed to \code{glm()}.
 #'
-#' @importFrom stats as.formula glm binomial confint coef
 #' @return A data.frame with columns: \code{variable}, \code{contrast},
 #'   \code{OR}, \code{lower95}, \code{upper95}, and \code{pvalue}. Multi-level
 #'   categorical exposures return one row per non-reference contrast.
@@ -205,16 +201,16 @@ runmulti_logit <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
 
     # fit model
-    model <- stats::glm(formula_obj, data = data, family = stats::binomial(), ...)
+    model <- glm(formula_obj, data = data, family = binomial(), ...)
 
     # extract results
     sum_model <- summary(model)
     coefs <- sum_model$coefficients
     contrast_names <- .regression_term_coefficients(model, var)
-    ci <- suppressWarnings(stats::confint(
+    ci <- suppressWarnings(confint(
       model,
       parm = contrast_names,
       level = 0.95
@@ -250,7 +246,7 @@ runmulti_logit <- function(data,
 #' Quasi-families (\code{quasipoisson}, \code{quasibinomial}) use Wald
 #' confidence intervals because profile-likelihood CIs are not available for
 #' quasi-likelihood models.  All other families use profile-likelihood CIs via
-#' \code{stats::confint}.
+#' \code{confint}.
 #'
 #' @param data A data.frame or data.table containing all variables.
 #' @param main_var A character vector of main variable names to test.
@@ -260,14 +256,13 @@ runmulti_logit <- function(data,
 #'           \code{"poisson"}, \code{"Gamma"}, \code{"gaussian"},
 #'           \code{"quasipoisson"}, \code{"quasibinomial"},
 #'           \code{"inverse.gaussian"}.
-#'     \item A family function, e.g. \code{stats::poisson}.
-#'     \item A family object, e.g. \code{stats::poisson(link = "sqrt")}.
+#'     \item A family function, e.g. \code{poisson}.
+#'     \item A family object, e.g. \code{poisson(link = "sqrt")}.
 #'   }
 #' @param outcome A character string specifying the outcome column.
 #' @param covariates A character vector of covariate names. Default \code{NULL}.
-#' @param ... Additional arguments passed to \code{stats::glm()}.
+#' @param ... Additional arguments passed to \code{glm()}.
 #'
-#' @importFrom stats as.formula glm confint qnorm model.frame
 #' @return A data.frame with columns: \code{variable}, \code{contrast},
 #'   \code{family}, \code{link}, \code{beta}, \code{lower95}, \code{upper95},
 #'   \code{pvalue}, and \code{n}. Multi-level categorical exposures return one
@@ -294,9 +289,9 @@ runmulti_glm <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
 
-    model <- stats::glm(formula_obj, data = data, family = family_obj, ...)
+    model <- glm(formula_obj, data = data, family = family_obj, ...)
 
     sum_model <- summary(model)
     coefs     <- sum_model$coefficients
@@ -306,14 +301,14 @@ runmulti_glm <- function(data,
     if (is_quasi) {
       se_val <- main_row[, "Std. Error"]
       b_val  <- main_row[, "Estimate"]
-      z95    <- stats::qnorm(0.975)
+      z95    <- qnorm(0.975)
       ci <- cbind(
         "2.5 %" = b_val - z95 * se_val,
         "97.5 %" = b_val + z95 * se_val
       )
     } else {
       ci <- suppressWarnings(
-        stats::confint(model, parm = contrast_names, level = 0.95)
+        confint(model, parm = contrast_names, level = 0.95)
       )
       if (!is.matrix(ci)) ci <- t(as.matrix(ci))
     }
@@ -329,7 +324,7 @@ runmulti_glm <- function(data,
       lower95  = unname(ci[, 1]),
       upper95  = unname(ci[, 2]),
       pvalue   = unname(main_row[, pval_col]),
-      n        = nrow(stats::model.frame(model)),
+      n        = nrow(model.frame(model)),
       stringsAsFactors = FALSE
     )
   }
@@ -343,7 +338,7 @@ runmulti_glm <- function(data,
 #' Run multiple negative-binomial regression models
 #'
 #' @description
-#' Fit negative-binomial GLMs (\code{MASS::glm.nb}) for each main variable
+#' Fit negative-binomial GLMs (\code{glm.nb}) for each main variable
 #' separately.  This is the standard approach for overdispersed count outcomes
 #' where the Poisson variance assumption is violated.
 #'
@@ -354,9 +349,8 @@ runmulti_glm <- function(data,
 #' @param main_var A character vector of main variable names to test.
 #' @param outcome A character string specifying the count outcome column.
 #' @param covariates A character vector of covariate names. Default \code{NULL}.
-#' @param ... Additional arguments passed to \code{MASS::glm.nb()}.
+#' @param ... Additional arguments passed to \code{glm.nb()}.
 #'
-#' @importFrom stats as.formula confint model.frame
 #' @return A data.frame with columns: \code{variable}, \code{contrast},
 #'   \code{IRR}, \code{lower95}, \code{upper95}, \code{pvalue}, \code{theta},
 #'   and \code{n}. Multi-level categorical exposures return one row per
@@ -381,16 +375,16 @@ runmulti_negbin <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(var, covariates), collapse = " + ")
     }
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
 
-    model <- MASS::glm.nb(formula_obj, data = data, ...)
+    model <- glm.nb(formula_obj, data = data, ...)
 
     sum_model <- summary(model)
     coefs    <- sum_model$coefficients
     contrast_names <- .regression_term_coefficients(model, var)
     main_row <- coefs[contrast_names, , drop = FALSE]
 
-    ci <- suppressWarnings(stats::confint(model, parm = contrast_names, level = 0.95))
+    ci <- suppressWarnings(confint(model, parm = contrast_names, level = 0.95))
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
 
     results[[var]] <- data.frame(
@@ -401,7 +395,7 @@ runmulti_negbin <- function(data,
       upper95  = unname(exp(ci[, 2])),
       pvalue   = unname(main_row[, "Pr(>|z|)"]),
       theta    = unname(model$theta),
-      n        = nrow(stats::model.frame(model)),
+      n        = nrow(model.frame(model)),
       stringsAsFactors = FALSE
     )
   }
@@ -415,7 +409,7 @@ runmulti_negbin <- function(data,
 #' Run multiple generalised additive models
 #'
 #' @description
-#' Fit GAMs (\code{mgcv::gam}) for each main variable separately.  By default
+#' Fit GAMs (\code{gam}) for each main variable separately.  By default
 #' each main variable enters the model as a penalised thin-plate regression
 #' spline \code{s(var)}, allowing non-linear dose-response relationships to be
 #' detected.
@@ -440,9 +434,8 @@ runmulti_negbin <- function(data,
 #'   or family object.  Default \code{"gaussian"}.
 #' @param k Integer.  Basis dimension for each smooth term.  \code{-1} (default)
 #'   lets \code{mgcv} choose automatically.
-#' @param ... Additional arguments passed to \code{mgcv::gam()}.
+#' @param ... Additional arguments passed to \code{gam()}.
 #'
-#' @importFrom stats as.formula model.frame qnorm
 #' @return When \code{smooth = TRUE}: a data.frame with columns
 #'   \code{variable}, \code{edf}, \code{ref_df}, \code{F}, \code{pvalue},
 #'   \code{family}, \code{link}, \code{n}.
@@ -479,11 +472,11 @@ runmulti_gam <- function(data,
     if (!is.null(covariates)) {
       rhs <- paste(c(main_term, covariates), collapse = " + ")
     }
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
 
-    model     <- mgcv::gam(formula_obj, data = data, family = family_obj, ...)
+    model     <- gam(formula_obj, data = data, family = family_obj, ...)
     sum_model <- summary(model)
-    n         <- nrow(stats::model.frame(model))
+    n         <- nrow(model.frame(model))
 
     if (smooth) {
       smt     <- sum_model$s.table
@@ -513,7 +506,7 @@ runmulti_gam <- function(data,
       main_row <- pt[rownames(pt) == var, , drop = FALSE]
       b        <- main_row[, "Estimate"]
       se       <- main_row[, "Std. Error"]
-      z95      <- stats::qnorm(0.975)
+      z95      <- qnorm(0.975)
       pval_col <- if ("Pr(>|t|)" %in% colnames(pt)) "Pr(>|t|)" else "Pr(>|z|)"
 
       results[[var]] <- data.frame(
@@ -698,7 +691,7 @@ run_regression <- function(data,
     fn <- tryCatch(
       get(family, envir = asNamespace("stats"), inherits = FALSE),
       error = function(e) {
-        stop(sprintf("Unknown GLM family: '%s'. Must be a name in stats::",
+        stop(sprintf("Unknown GLM family: '%s'. Must be a name in ",
                      family))
       }
     )

@@ -25,8 +25,8 @@
 #'
 #' @export
 parse_opcs4_procedures <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   code_cols <- grep("^p41272_a[0-9]+$", names(dt), value = TRUE)
@@ -37,7 +37,7 @@ parse_opcs4_procedures <- function(dt) {
 
     if (length(valid_rows) == 0) {
       message("[parse_opcs4_procedures] No valid OPCS4 data found")
-      return(data.table::data.table(
+      return(data.table(
         eid = integer(0), opcs4_code = character(0),
         diag_date = as.Date(character(0)), source = character(0)
       ))
@@ -46,7 +46,7 @@ parse_opcs4_procedures <- function(dt) {
     codes_long <- dt[valid_rows, ][
       ,
       {
-        codes <- stringi::stri_extract_all_regex(as.character(p41272), "[A-Z][0-9]{3}")[[1]]
+        codes <- stri_extract_all_regex(as.character(p41272), "[A-Z][0-9]{3}")[[1]]
         if (length(codes) == 0 || all(is.na(codes))) {
           list(idx = integer(0), opcs4_code = character(0))
         } else {
@@ -59,19 +59,19 @@ parse_opcs4_procedures <- function(dt) {
     dt_sub <- dt[, c("eid", code_cols), with = FALSE]
     dt_sub[, (code_cols) := lapply(.SD, as.character), .SDcols = code_cols]
 
-    codes_long <- data.table::melt(
+    codes_long <- melt(
       dt_sub, id.vars = "eid", measure.vars = code_cols,
       variable.name = "code_col", value.name = "opcs4_code", na.rm = TRUE
     )
     codes_long <- codes_long[!is.na(opcs4_code) & nzchar(opcs4_code) & opcs4_code != "NA"]
     code_idx <- as.integer(sub("^p41272_a", "", codes_long[["code_col"]]))
     codes_long[, idx := code_idx]
-    data.table::set(codes_long, j = "code_col", value = NULL)
-    codes_long[, opcs4_code := stringi::stri_extract_first_regex(opcs4_code, "[A-Z][0-9]{3}")]
+    set(codes_long, j = "code_col", value = NULL)
+    codes_long[, opcs4_code := stri_extract_first_regex(opcs4_code, "[A-Z][0-9]{3}")]
     codes_long <- codes_long[!is.na(opcs4_code)]
   } else {
     message("[parse_opcs4_procedures] No p41272 or p41272_a* columns found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), opcs4_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -79,7 +79,7 @@ parse_opcs4_procedures <- function(dt) {
 
   if (nrow(codes_long) == 0) {
     message("[parse_opcs4_procedures] No OPCS4 codes found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), opcs4_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -96,21 +96,21 @@ parse_opcs4_procedures <- function(dt) {
   dt_sub <- dt[eid %in% eids_with_codes, c("eid", date_cols), with = FALSE]
   dt_sub[, (date_cols) := lapply(.SD, as.character), .SDcols = date_cols]
 
-  dates_long <- data.table::melt(
+  dates_long <- melt(
     dt_sub, id.vars = "eid", measure.vars = date_cols,
     variable.name = "date_col", value.name = "diag_date", na.rm = TRUE
   )
   date_idx <- as.integer(sub("^p41282_a", "", dates_long[["date_col"]]))
   dates_long[, idx := date_idx]
-  data.table::set(dates_long, j = "date_col", value = NULL)
+  set(dates_long, j = "date_col", value = NULL)
   dates_long[, diag_date := .safe_as_date(diag_date, col_name = "OPCS4_diag_date")]
 
-  result <- data.table::merge.data.table(
+  result <- merge.data.table(
     codes_long, dates_long, by = c("eid", "idx"), all.x = TRUE
   )
   result[, idx := NULL]
   result[, source := "OPCS4"]
-  data.table::setorder(result, eid, diag_date, na.last = TRUE)
+  setorder(result, eid, diag_date, na.last = TRUE)
 
   result[, .(eid, opcs4_code, diag_date, source)]
 }
@@ -129,8 +129,8 @@ parse_opcs4_procedures <- function(dt) {
 #'
 #' @keywords internal
 filter_opcs4_codes <- function(opcs4_long, pattern, disease_label) {
-  if (!data.table::is.data.table(opcs4_long)) {
-    opcs4_long <- data.table::as.data.table(opcs4_long)
+  if (!is.data.table(opcs4_long)) {
+    opcs4_long <- as.data.table(opcs4_long)
   }
   result <- opcs4_long[grepl(pattern, opcs4_code, perl = TRUE)]
   result[, disease := disease_label]
@@ -150,8 +150,8 @@ filter_opcs4_codes <- function(opcs4_long, pattern, disease_label) {
 #'
 #' @keywords internal
 aggregate_opcs4_earliest <- function(opcs4_filtered) {
-  if (!data.table::is.data.table(opcs4_filtered)) {
-    opcs4_filtered <- data.table::as.data.table(opcs4_filtered)
+  if (!is.data.table(opcs4_filtered)) {
+    opcs4_filtered <- as.data.table(opcs4_filtered)
   }
   result <- opcs4_filtered[
     !is.na(diag_date),

@@ -156,7 +156,7 @@ load_ukb_medication_coding <- function(path = NULL) {
     stop("Medication coding file was not found: ", path, call. = FALSE)
   }
 
-  out <- utils::read.delim(
+  out <- read.delim(
     path,
     stringsAsFactors = FALSE,
     check.names = FALSE
@@ -233,7 +233,7 @@ extract_self_report_medications <- function(data,
     medication_definitions <- medication_definitions[medications]
   }
 
-  dt <- data.table::as.data.table(data.table::copy(data))
+  dt <- as.data.table(copy(data))
   code_cols <- grep("^p20003_i[0-9]+_a[0-9]+$", names(dt), value = TRUE)
   if (!is.null(instance)) {
     if (!is.numeric(instance) || length(instance) != 1 || is.na(instance) || instance < 0) {
@@ -268,7 +268,7 @@ extract_self_report_medications <- function(data,
     out_col <- paste(prefix, .ukb_med_snake(nm), sep = "_")
     dt[, (out_col) := value]
 
-    long_rows[[nm]] <- data.table::data.table(
+    long_rows[[nm]] <- data.table(
       eid = dt[[id_col]],
       medication = nm,
       medication_name = def$name,
@@ -280,7 +280,7 @@ extract_self_report_medications <- function(data,
   }
 
   if (isTRUE(return_long)) {
-    return(data.table::rbindlist(long_rows, use.names = TRUE, fill = TRUE))
+    return(rbindlist(long_rows, use.names = TRUE, fill = TRUE))
   }
   dt[]
 }

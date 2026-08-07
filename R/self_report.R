@@ -29,10 +29,9 @@
 #'   \item Special values (-1, -3) indicate "don't know" or "prefer not to answer"
 #' }
 #'
-#' @import data.table
 #' @export
 parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
-  dt <- data.table::as.data.table(data.table::copy(dt))
+  dt <- as.data.table(copy(dt))
   if (!"eid" %in% names(dt)) {
     stop("Column 'eid' was not found in 'dt'.", call. = FALSE)
   }
@@ -44,7 +43,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
   code_cols <- grep("^p20002_i[0-9]+_a[0-9]+$", names(dt), value = TRUE)
   if (length(code_cols) == 0) {
     message("[parse_self_reported_illnesses] No p20002_i*_a* columns found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), sr_code = integer(0),
       diag_date = as.Date(character(0)), source = character(0),
       instance = integer(0), array_idx = integer(0),
@@ -54,7 +53,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
 
   dt[, (code_cols) := lapply(.SD, as.integer), .SDcols = code_cols]
 
-  codes_long <- data.table::melt(
+  codes_long <- melt(
     dt[, c("eid", code_cols), with = FALSE],
     id.vars = "eid", measure.vars = code_cols,
     variable.name = "col_name", value.name = "sr_code", na.rm = FALSE
@@ -75,7 +74,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
 
   if (nrow(codes_long) == 0) {
     message("[parse_self_reported_illnesses] No valid self-report codes found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), sr_code = integer(0),
       diag_date = as.Date(character(0)), source = character(0),
       instance = integer(0), array_idx = integer(0),
@@ -87,14 +86,14 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
   year_cols <- grep("^p20008_i[0-9]+_a[0-9]+$", names(dt), value = TRUE)
   if (length(year_cols) == 0) {
     warning("[parse_self_reported_illnesses] No p20008_i*_a* year columns found")
-    result <- data.table::copy(codes_long)
+    result <- copy(codes_long)
     result[, diag_year := NA_real_]
   } else {
     eids_with_codes <- unique(codes_long$eid)
     dt_sub <- dt[eid %in% eids_with_codes, c("eid", year_cols), with = FALSE]
     dt_sub[, (year_cols) := lapply(.SD, as.numeric), .SDcols = year_cols]
 
-    years_long <- data.table::melt(
+    years_long <- melt(
       dt_sub, id.vars = "eid", measure.vars = year_cols,
       variable.name = "col_name", value.name = "diag_year", na.rm = FALSE
     )
@@ -108,7 +107,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     }]
     years_long[, col_name := NULL]
 
-    result <- data.table::merge.data.table(
+    result <- merge.data.table(
       codes_long, years_long,
       by = c("eid", "instance", "array_idx"), all.x = TRUE
     )
@@ -136,7 +135,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
   }]
 
   result[, diag_year := NULL]
-  baseline_dt <- data.table::data.table(
+  baseline_dt <- data.table(
     eid = dt[["eid"]],
     baseline_date = if (baseline_col %in% names(dt)) {
       .safe_as_date(dt[[baseline_col]], col_name = baseline_col)
@@ -144,7 +143,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
       as.Date(NA)
     }
   )
-  result <- data.table::merge.data.table(
+  result <- merge.data.table(
     result,
     baseline_dt,
     by = "eid",
@@ -152,7 +151,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     sort = FALSE
   )
   result[, "baseline_report" := get("instance") == 0L]
-  result[, "diagnosis_date_quality" := data.table::fcase(
+  result[, "diagnosis_date_quality" := fcase(
     get("baseline_report") & is.na(get("diag_date")) &
       !is.na(get("baseline_date")),
     "baseline_date_imputed",
@@ -171,7 +170,7 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
     "diag_date" := get("baseline_date")
   ]
   result[, `:=`(baseline_date = NULL, source = "Self-report")]
-  data.table::setorder(result, eid, diag_date, na.last = TRUE)
+  setorder(result, eid, diag_date, na.last = TRUE)
 
   output_columns <- c(
     "eid", "sr_code", "diag_date", "source", "instance", "array_idx",
@@ -205,8 +204,8 @@ parse_self_reported_illnesses <- function(dt, baseline_col = "p53_i0") {
 #'
 #' @keywords internal
 filter_self_report_codes <- function(sr_long, codes, disease_label) {
-  if (!data.table::is.data.table(sr_long)) {
-    sr_long <- data.table::as.data.table(sr_long)
+  if (!is.data.table(sr_long)) {
+    sr_long <- as.data.table(sr_long)
   }
   result <- sr_long[sr_code %in% codes]
   result[, disease := disease_label]
@@ -226,11 +225,11 @@ filter_self_report_codes <- function(sr_long, codes, disease_label) {
 #'
 #' @keywords internal
 aggregate_self_report_earliest <- function(sr_filtered) {
-  if (!data.table::is.data.table(sr_filtered)) {
-    sr_filtered <- data.table::as.data.table(sr_filtered)
+  if (!is.data.table(sr_filtered)) {
+    sr_filtered <- as.data.table(sr_filtered)
   }
   if (!"diagnosis_date_quality" %in% names(sr_filtered)) {
-    sr_filtered[, "diagnosis_date_quality" := data.table::fifelse(
+    sr_filtered[, "diagnosis_date_quality" := fifelse(
       is.na(get("diag_date")),
       "unknown",
       "estimated"

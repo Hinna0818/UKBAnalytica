@@ -1,13 +1,3 @@
-#' @importFrom stats AIC as.formula coef vcov quantile model.matrix predict
-#'   delete.response terms anova qnorm model.frame
-#' @importFrom ggplot2 ggplot aes geom_ribbon geom_line geom_hline geom_vline
-#'   geom_point geom_rect geom_rug annotate labs theme_classic theme element_text
-#'   element_line scale_x_continuous scale_y_continuous sec_axis expansion
-#'   element_blank
-#' @importFrom grid unit
-#' @importFrom rlang .data
-#' @importFrom survival Surv coxph
-#' @importFrom splines ns
 NULL
 
 # Internal helpers
@@ -64,10 +54,10 @@ NULL
   keep_cols <- unique(keep_cols)
 
   df <- as.data.frame(data)[, keep_cols, drop = FALSE]
-  df <- df[stats::complete.cases(df), ]
+  df <- df[complete.cases(df), ]
 
   if (!is.null(trim_quantiles) && length(trim_quantiles) == 2) {
-    qs <- stats::quantile(df[[exposure]], probs = trim_quantiles, na.rm = TRUE)
+    qs <- quantile(df[[exposure]], probs = trim_quantiles, na.rm = TRUE)
     df <- df[df[[exposure]] >= qs[1] & df[[exposure]] <= qs[2], ]
   }
   df
@@ -80,11 +70,11 @@ NULL
     rhs <- paste(c(spline_term, covariates), collapse = " + ")
   }
   lhs <- if (model_type == "cox") {
-    sprintf("survival::Surv(%s, %s)", endpoint[1], endpoint[2])
+    sprintf("Surv(%s, %s)", endpoint[1], endpoint[2])
   } else {
     outcome
   }
-  stats::as.formula(paste(lhs, "~", rhs))
+  as.formula(paste(lhs, "~", rhs))
 }
 
 # rms backend 
@@ -159,7 +149,7 @@ NULL
 
   # Extract P values from anova
   aov_mat <- tryCatch({
-    aov <- stats::anova(model)
+    aov <- anova(model)
     as.matrix(aov)
   }, error = function(e) NULL)
 
@@ -183,7 +173,7 @@ NULL
          fun     = if (use_exp) exp else NULL,
          ref.zero = TRUE,
          np      = grid_size),
-    stats::setNames(list(NA), exposure)
+    setNames(list(NA), exposure)
   )
   pred_obj <- do.call(rms::Predict, pred_args)
   pred_df  <- as.data.frame(pred_obj)
@@ -242,12 +232,12 @@ NULL
 .ukb_rcs_predict_ns <- function(model, model_data, exposure, covariates,
                                   model_type, ref_idx, conf_level) {
   alpha <- 1 - conf_level
-  z_crit <- stats::qnorm(1 - alpha / 2)
+  z_crit <- qnorm(1 - alpha / 2)
 
   # Build model matrix for prediction data
-  trms <- stats::delete.response(stats::terms(model))
+  trms <- delete.response(terms(model))
   mm <- tryCatch(
-    stats::model.matrix(trms, data = model_data),
+    model.matrix(trms, data = model_data),
     error = function(e) NULL
   )
   if (is.null(mm)) return(NULL)
@@ -258,8 +248,8 @@ NULL
     if (length(int_col) > 0) mm <- mm[, -int_col, drop = FALSE]
   }
 
-  beta <- stats::coef(model)
-  V    <- stats::vcov(model)
+  beta <- coef(model)
+  V    <- vcov(model)
 
   # Keep only matched columns (in case of NA coefs from rank deficiency)
   valid <- intersect(names(beta), colnames(mm))
@@ -296,15 +286,15 @@ NULL
   # AIC-based knot selection via df (knots = df + 1 for ns)
   fit_ns_model <- function(k, pred_data = model_data) {
     df_ns <- k - 1L
-    spline_term <- sprintf("splines::ns(%s, df = %d)", exposure, df_ns)
+    spline_term <- sprintf("ns(%s, df = %d)", exposure, df_ns)
     f <- .ukb_rcs_build_formula(exposure, covariates, model_type, endpoint,
                                   outcome, spline_term)
     if (model_type == "cox") {
-      survival::coxph(f, data = pred_data)
+      coxph(f, data = pred_data)
     } else if (model_type == "logistic") {
-      stats::glm(f, data = pred_data, family = stats::binomial())
+      glm(f, data = pred_data, family = binomial())
     } else {
-      stats::lm(f, data = pred_data)
+      lm(f, data = pred_data)
     }
   }
 
@@ -327,9 +317,9 @@ NULL
   f_lin    <- .ukb_rcs_build_formula(exposure, covariates, model_type, endpoint,
                                       outcome, lin_term)
   linear_model <- tryCatch(
-    if (model_type == "cox") survival::coxph(f_lin, data = model_data)
-    else if (model_type == "logistic") stats::glm(f_lin, data = model_data, family = stats::binomial())
-    else stats::lm(f_lin, data = model_data),
+    if (model_type == "cox") coxph(f_lin, data = model_data)
+    else if (model_type == "logistic") glm(f_lin, data = model_data, family = binomial())
+    else lm(f_lin, data = model_data),
     error = function(e) NULL
   )
 
@@ -340,15 +330,15 @@ NULL
     "1"
   }
   lhs <- if (model_type == "cox") {
-    sprintf("survival::Surv(%s, %s)", endpoint[1], endpoint[2])
+    sprintf("Surv(%s, %s)", endpoint[1], endpoint[2])
   } else {
     outcome
   }
-  f_null <- stats::as.formula(paste(lhs, "~", cov_rhs))
+  f_null <- as.formula(paste(lhs, "~", cov_rhs))
   null_model <- tryCatch(
-    if (model_type == "cox") survival::coxph(f_null, data = model_data)
-    else if (model_type == "logistic") stats::glm(f_null, data = model_data, family = stats::binomial())
-    else stats::lm(f_null, data = model_data),
+    if (model_type == "cox") coxph(f_null, data = model_data)
+    else if (model_type == "logistic") glm(f_null, data = model_data, family = binomial())
+    else lm(f_null, data = model_data),
     error = function(e) NULL
   )
 
@@ -369,7 +359,7 @@ NULL
     for (cov in covariates) {
       cv <- model_data[[cov]]
       pred_df[[cov]] <- if (is.numeric(cv)) {
-        stats::median(cv, na.rm = TRUE)
+        median(cv, na.rm = TRUE)
       } else if (is.factor(cv)) {
         mode_value <- names(which.max(table(cv)))
         factor(mode_value, levels = levels(cv), ordered = is.ordered(cv))
@@ -379,7 +369,7 @@ NULL
     }
   }
   if (model_type == "cox") {
-    pred_df[[endpoint[1]]] <- stats::median(model_data[[endpoint[1]]], na.rm = TRUE)
+    pred_df[[endpoint[1]]] <- median(model_data[[endpoint[1]]], na.rm = TRUE)
     pred_df[[endpoint[2]]] <- 0L
   }
 
@@ -472,7 +462,6 @@ NULL
 #'   \item{aic_table}{data.frame with columns \code{knots} and \code{AIC}.}
 #' }
 #'
-#' @importFrom stats quantile complete.cases
 #' @export
 run_rcs <- function(data,
                     exposure,
@@ -504,7 +493,7 @@ run_rcs <- function(data,
   ref_value <- if (!is.null(ref)) {
     as.numeric(ref)
   } else {
-    as.numeric(stats::quantile(model_data[[exposure]], probs = ref_quantile,
+    as.numeric(quantile(model_data[[exposure]], probs = ref_quantile,
                                 na.rm = TRUE))
   }
 
@@ -569,11 +558,6 @@ run_rcs <- function(data,
 #'
 #' @return A ggplot2 object.
 #'
-#' @importFrom ggplot2 ggplot aes geom_ribbon geom_line geom_hline geom_point
-#'   geom_rect geom_rug annotate labs theme_classic theme element_text
-#'   element_line element_blank scale_y_continuous sec_axis expansion
-#' @importFrom grid unit
-#' @importFrom rlang .data
 #' @export
 plot_rcs <- function(x, ...) {
   UseMethod("plot_rcs")
@@ -732,7 +716,7 @@ plot_rcs.ukb_rcs <- function(x,
   y_span <- y_max - y_min
 
   if (distribution == "histogram") {
-    h <- graphics::hist(dist_vals, breaks = 30, plot = FALSE)
+    h <- hist(dist_vals, breaks = 30, plot = FALSE)
     bar_df <- data.frame(
       xmid  = h$mids,
       count = h$counts,
@@ -767,7 +751,7 @@ plot_rcs.ukb_rcs <- function(x,
       )
 
   } else if (distribution == "density") {
-    dens   <- stats::density(dist_vals, n = 256)
+    dens   <- density(dist_vals, n = 256)
     den_df <- data.frame(x = dens$x, dens = dens$y, stringsAsFactors = FALSE)
     # clip to the observed range
     den_df <- den_df[den_df$x >= min(pred$x) & den_df$x <= max(pred$x), ]

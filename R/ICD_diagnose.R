@@ -20,17 +20,15 @@
 #' ICD-9 codes in UKB follow the format: 3-5 digits, optionally prefixed with V or E.
 #' The function handles logical NA columns that may occur when all values are missing.
 #'
-#' @import data.table
-#' @importFrom stringi stri_extract_all_regex
 #' @export
 parse_icd9_diagnoses <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (!"p41271" %in% names(dt)) {
     message("[parse_icd9_diagnoses] Column p41271 not found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), icd9_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -42,7 +40,7 @@ parse_icd9_diagnoses <- function(dt) {
 
   if (length(valid_rows) == 0) {
     message("[parse_icd9_diagnoses] No valid ICD-9 data found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), icd9_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -52,7 +50,7 @@ parse_icd9_diagnoses <- function(dt) {
   codes_long <- dt[valid_rows, ][
     ,
     {
-      codes <- stringi::stri_extract_all_regex(as.character(p41271), "[VE]?[0-9]{3,5}")[[1]]
+      codes <- stri_extract_all_regex(as.character(p41271), "[VE]?[0-9]{3,5}")[[1]]
       if (length(codes) == 0 || all(is.na(codes))) {
         list(idx = integer(0), icd9_code = character(0))
       } else {
@@ -64,7 +62,7 @@ parse_icd9_diagnoses <- function(dt) {
 
   if (nrow(codes_long) == 0) {
     message("[parse_icd9_diagnoses] No ICD-9 codes found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), icd9_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -82,7 +80,7 @@ parse_icd9_diagnoses <- function(dt) {
   dt_sub <- dt[eid %in% eids_with_codes, c("eid", date_cols), with = FALSE]
   dt_sub[, (date_cols) := lapply(.SD, as.character), .SDcols = date_cols]
 
-  dates_long <- data.table::melt(
+  dates_long <- melt(
     dt_sub, id.vars = "eid", measure.vars = date_cols,
     variable.name = "date_col", value.name = "diag_date", na.rm = TRUE
   )
@@ -91,12 +89,12 @@ parse_icd9_diagnoses <- function(dt) {
   dates_long[, diag_date := .safe_as_date(diag_date, col_name = "ICD9_diag_date")]
 
   # Step 3: Join by eid and index
-  result <- data.table::merge.data.table(
+  result <- merge.data.table(
     codes_long, dates_long, by = c("eid", "idx"), all.x = TRUE
   )
   result[, idx := NULL]
   result[, source := "ICD9"]
-  data.table::setorder(result, eid, diag_date, na.last = TRUE)
+  setorder(result, eid, diag_date, na.last = TRUE)
 
   return(result[, .(eid, icd9_code, diag_date, source)])
 }
@@ -115,8 +113,8 @@ parse_icd9_diagnoses <- function(dt) {
 #'
 #' @keywords internal
 filter_icd9_codes <- function(icd9_long, pattern, disease_label) {
-  if (!data.table::is.data.table(icd9_long)) {
-    icd9_long <- data.table::as.data.table(icd9_long)
+  if (!is.data.table(icd9_long)) {
+    icd9_long <- as.data.table(icd9_long)
   }
   result <- icd9_long[grepl(pattern, icd9_code, perl = TRUE)]
   result[, disease := disease_label]
@@ -136,8 +134,8 @@ filter_icd9_codes <- function(icd9_long, pattern, disease_label) {
 #'
 #' @keywords internal
 aggregate_icd9_earliest <- function(icd9_filtered) {
-  if (!data.table::is.data.table(icd9_filtered)) {
-    icd9_filtered <- data.table::as.data.table(icd9_filtered)
+  if (!is.data.table(icd9_filtered)) {
+    icd9_filtered <- as.data.table(icd9_filtered)
   }
   result <- icd9_filtered[
     !is.na(diag_date),
@@ -178,19 +176,17 @@ aggregate_icd9_earliest <- function(icd9_filtered) {
 #'   \item Join codes and dates by eid and positional index
 #' }
 #'
-#' @import data.table
-#' @importFrom stringi stri_extract_all_regex
 #' @export
 parse_icd10_diagnoses <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   # Step 1: Parse p41270 string list to long format
   codes_long <- dt[
     !is.na(p41270) & p41270 != "",
     {
-      codes <- stringi::stri_extract_all_regex(p41270, "[A-Z][0-9]{2,3}")[[1]]
+      codes <- stri_extract_all_regex(p41270, "[A-Z][0-9]{2,3}")[[1]]
       if (length(codes) == 0 || all(is.na(codes))) {
         list(idx = integer(0), icd10_code = character(0))
       } else {
@@ -202,7 +198,7 @@ parse_icd10_diagnoses <- function(dt) {
 
   if (nrow(codes_long) == 0) {
     message("[parse_icd10_diagnoses] No ICD-10 codes found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), icd10_code = character(0),
       diag_date = as.Date(character(0)), source = character(0)
     ))
@@ -220,7 +216,7 @@ parse_icd10_diagnoses <- function(dt) {
   dt_sub <- dt[eid %in% eids_with_codes, c("eid", date_cols), with = FALSE]
   dt_sub[, (date_cols) := lapply(.SD, as.character), .SDcols = date_cols]
 
-  dates_long <- data.table::melt(
+  dates_long <- melt(
     dt_sub, id.vars = "eid", measure.vars = date_cols,
     variable.name = "date_col", value.name = "diag_date", na.rm = TRUE
   )
@@ -229,12 +225,12 @@ parse_icd10_diagnoses <- function(dt) {
   dates_long[, diag_date := .safe_as_date(diag_date, col_name = "ICD10_diag_date")]
 
   # Step 3: Join by eid and index
-  result <- data.table::merge.data.table(
+  result <- merge.data.table(
     codes_long, dates_long, by = c("eid", "idx"), all.x = TRUE
   )
   result[, idx := NULL]
   result[, source := "ICD10"]
-  data.table::setorder(result, eid, diag_date, na.last = TRUE)
+  setorder(result, eid, diag_date, na.last = TRUE)
 
   return(result[, .(eid, icd10_code, diag_date, source)])
 }
@@ -253,8 +249,8 @@ parse_icd10_diagnoses <- function(dt) {
 #'
 #' @keywords internal
 filter_icd10_codes <- function(icd10_long, pattern, disease_label) {
-  if (!data.table::is.data.table(icd10_long)) {
-    icd10_long <- data.table::as.data.table(icd10_long)
+  if (!is.data.table(icd10_long)) {
+    icd10_long <- as.data.table(icd10_long)
   }
   result <- icd10_long[grepl(pattern, icd10_code, perl = TRUE)]
   result[, disease := disease_label]
@@ -275,8 +271,8 @@ filter_icd10_codes <- function(icd10_long, pattern, disease_label) {
 #'
 #' @keywords internal
 aggregate_icd10_earliest <- function(icd10_filtered) {
-  if (!data.table::is.data.table(icd10_filtered)) {
-    icd10_filtered <- data.table::as.data.table(icd10_filtered)
+  if (!is.data.table(icd10_filtered)) {
+    icd10_filtered <- as.data.table(icd10_filtered)
   }
   result <- icd10_filtered[
     !is.na(diag_date),

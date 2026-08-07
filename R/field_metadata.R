@@ -26,7 +26,6 @@
 #'   columns. When RAP field metadata is available, the result also includes the
 #'   matching RAP column names and the number of approved RAP columns per field.
 #'
-#' @importFrom xml2 read_html xml_find_all xml_text
 #' @export
 get_field_metadata <- function(field_id = NULL,
                                query = NULL,
@@ -187,7 +186,7 @@ get_field_info <- function(field_id,
     stop("`ukb_data_dict` does not exist: ", path, call. = FALSE)
   }
 
-  raw <- data.table::fread(path, data.table = FALSE, encoding = "UTF-8")
+  raw <- fread(path, data.table = FALSE, encoding = "UTF-8")
   if (!is.data.frame(raw) || nrow(raw) == 0) {
     stop("`ukb_data_dict` could not be parsed into a non-empty table.", call. = FALSE)
   }

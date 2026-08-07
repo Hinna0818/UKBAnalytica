@@ -43,13 +43,19 @@
 #' @name UKBAnalytica
 #' @aliases UKBAnalytica-package
 #'
-#' @import data.table
+#' @importFrom data.table := .I .N .SD CJ as.data.table copy data.table dcast fcase fifelse fread fwrite getDTthreads is.data.table melt merge.data.table rbindlist set setcolorder setDF setDTthreads setnames setorder setorderv uniqueN
 #' @importFrom ggplot2 aes annotate coord_cartesian coord_equal coord_fixed coord_flip element_blank element_line element_text expansion facet_wrap geom_abline geom_boxplot geom_col geom_density geom_errorbar geom_errorbarh geom_histogram geom_hline geom_jitter geom_line geom_point geom_rect geom_ribbon geom_rug geom_segment geom_smooth geom_step geom_text geom_tile geom_violin geom_vline ggplot guide_colorbar guide_legend guides labs margin position_jitter position_stack scale_color_gradientn scale_color_manual scale_color_viridis_c scale_colour_manual scale_fill_gradient scale_fill_gradient2 scale_fill_manual scale_linetype_manual scale_size_continuous scale_x_continuous scale_x_log10 scale_y_continuous scale_y_discrete sec_axis theme theme_classic theme_minimal theme_void vars
 #' @importFrom rlang .data
-#' @importFrom stringi stri_extract_all_regex stri_trim_both
-#' @importFrom stats ave cor.test p.adjust quantile relevel sd terms model.matrix predict approx
-#' @importFrom utils head modifyList
-#' @importFrom grid unit
+#' @importFrom stringi stri_extract_all_regex stri_extract_first_regex stri_trim_both
+#' @importFrom stats .getXlevels AIC anova approx as.formula ave binom.test binomial chisq.test coef complete.cases confint cor cor.test delete.response density formula glm lm median model.frame model.matrix na.omit na.pass p.adjust pchisq phyper pnorm poisson predict pt qnorm qt quantile relevel reshape rnorm sd setNames terms var vcov weighted.mean
+#' @importFrom utils adist data download.file globalVariables head install.packages modifyList object.size packageVersion read.csv read.delim write.csv
+#' @importFrom graphics hist
+#' @importFrom grid arrow unit
+#' @importFrom mgcv gam
+#' @importFrom parallel detectCores mclapply
+#' @importFrom scales hue_pal percent
+#' @importFrom splines ns
+#' @importFrom tools file_ext file_path_sans_ext R_user_dir
 #' @importFrom survival Surv coxph survfit survdiff basehaz concordance finegray cox.zph
 #' @importFrom pROC roc auc ci.auc
 #' @importFrom tableone CreateTableOne
@@ -58,6 +64,7 @@
 #' @importFrom sandwich vcovHC
 #' @importFrom lmtest coeftest
 #' @importFrom MASS glm.nb
+#' @importFrom withr with_seed
 #' @importFrom xml2 read_html xml_find_all xml_text
 #' @importFrom igraph simplify as_undirected components induced_subgraph vcount ecount cluster_fast_greedy cut_at vertex_attr set_vertex_attr
 #'
@@ -65,7 +72,7 @@
 
 # Global variables declaration (centralized)
 # All NSE variables used in data.table and ggplot2 expressions
-utils::globalVariables(c(
+globalVariables(c(
   # Core parsing module
   ".", "eid", "idx", "icd10_code", "icd9_code", "opcs4_code", "sr_code", "death_code",
   "diag_date", "diag_year", "death_date", "source", "disease",

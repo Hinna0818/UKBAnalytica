@@ -105,8 +105,8 @@ parse_gp_query <- function(codes,
     )
   }
 
-  code_dt <- data.table::as.data.table(codes)[, required, with = FALSE]
-  code_dt <- data.table::copy(code_dt)
+  code_dt <- as.data.table(codes)[, required, with = FALSE]
+  code_dt <- copy(code_dt)
   code_dt[, disease := trimws(as.character(disease))]
   code_dt[, code_system := .gp_normalize_code_system(code_system)]
   code_dt[, code := trimws(as.character(code))]
@@ -155,7 +155,7 @@ parse_gp_query <- function(codes,
 #' @export
 print.ukb_gp_query <- function(x, ...) {
   cat("<ukb_gp_query>\n")
-  cat("  Diseases:", data.table::uniqueN(x$codes$disease), "\n")
+  cat("  Diseases:", uniqueN(x$codes$disease), "\n")
   cat("  Exact codes:", nrow(x$codes), "\n")
   cat(
     "  Date range:",
@@ -394,56 +394,20 @@ rap_run_gp_query <- function(plan,
       call. = FALSE
     )
   }
-  if (!requireNamespace("DBI", quietly = TRUE)) {
-    stop("Package 'DBI' is required to execute GP Spark SQL.", call. = FALSE)
-  }
-  if (length(max_rows) != 1L || is.na(max_rows) ||
-      max_rows < 1 || max_rows != as.integer(max_rows)) {
-    stop("'max_rows' must be one positive integer.", call. = FALSE)
-  }
-  max_rows <- as.integer(max_rows)
-
-  guarded_sql <- paste0(
-    "SELECT * FROM (\n",
-    sub(";[[:space:]]*$", "", plan$sql),
-    "\n) AS `ukba_gp_filtered`\nLIMIT ",
-    max_rows + 1L
+  result <- .gp_collect_sql(
+    connection = connection,
+    sql = plan$sql,
+    max_rows = max_rows,
+    label = "GP",
+    output = output
   )
-  result <- DBI::dbGetQuery(connection, guarded_sql)
-  if (nrow(result) > max_rows) {
-    stop(
-      sprintf(
-        paste0(
-          "GP query matched more than %s rows. Refine the codes/date range or ",
-          "increase 'max_rows' explicitly."
-        ),
-        format(max_rows, big.mark = ",", scientific = FALSE)
-      ),
-      call. = FALSE
-    )
-  }
-
-  result <- data.table::as.data.table(result)
   attr(result, "gp_query") <- plan$query
   attr(result, "gp_query_plan") <- plan
-
-  if (!is.null(output)) {
-    if (!is.character(output) || length(output) != 1L || is.na(output)) {
-      stop("'output' must be one CSV or TSV path.", call. = FALSE)
-    }
-    ext <- tolower(tools::file_ext(output))
-    if (!ext %in% c("csv", "tsv")) {
-      stop("'output' must end in .csv or .tsv.", call. = FALSE)
-    }
-    data.table::fwrite(result, output, sep = if (ext == "tsv") "\t" else ",")
-    attr(result, "gp_output") <- normalizePath(output, mustWork = FALSE)
-  }
-
   result
 }
 
 .gp_empty_parsed <- function(with_disease = FALSE) {
-  out <- data.table::data.table(
+  out <- data.table(
     gp_record_id = integer(0),
     eid = integer(0),
     event_date = as.Date(character(0)),
@@ -460,7 +424,7 @@ rap_run_gp_query <- function(plan,
   )
   if (isTRUE(with_disease)) {
     out[, disease := character(0)]
-    data.table::setcolorder(out, c("gp_record_id", "eid", "disease", setdiff(names(out), c("gp_record_id", "eid", "disease"))))
+    setcolorder(out, c("gp_record_id", "eid", "disease", setdiff(names(out), c("gp_record_id", "eid", "disease"))))
   }
   out
 }
@@ -509,7 +473,7 @@ parse_gp_clinical <- function(data,
     )
   }
 
-  dt <- data.table::copy(data.table::as.data.table(data))
+  dt <- copy(as.data.table(data))
   for (col in c("value1", "value2", "value3")) {
     if (!col %in% names(dt)) {
       dt[, (col) := NA_character_]
@@ -524,7 +488,7 @@ parse_gp_clinical <- function(data,
   dt[, read_2 := as.character(read_2)]
   dt[, read_3 := as.character(read_3)]
 
-  long <- data.table::melt(
+  long <- melt(
     dt,
     id.vars = c(
       "gp_record_id", "eid", "data_provider", "event_date",
@@ -580,8 +544,8 @@ parse_gp_clinical <- function(data,
     "value1", "value2", "value3", "date_quality", "usable_for_timing",
     "source"
   )
-  data.table::setcolorder(long, preferred)
-  data.table::setorder(long, eid, event_date, na.last = TRUE)
+  setcolorder(long, preferred)
+  setorder(long, eid, event_date, na.last = TRUE)
   long
 }
 
@@ -615,9 +579,9 @@ summarise_gp_diagnoses <- function(gp_records) {
     )
   }
 
-  dt <- data.table::copy(data.table::as.data.table(gp_records))
+  dt <- copy(as.data.table(gp_records))
   if (nrow(dt) == 0L) {
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0),
       disease = character(0),
       gp_case = integer(0),
@@ -636,15 +600,15 @@ summarise_gp_diagnoses <- function(gp_records) {
       list(
         gp_case = 1L,
         first_gp_date = if (length(valid_dates) > 0L) min(valid_dates) else as.Date(NA),
-        n_gp_records = data.table::uniqueN(gp_record_id),
-        n_gp_codes = data.table::uniqueN(paste(code_system, code, sep = ":")),
+        n_gp_records = uniqueN(gp_record_id),
+        n_gp_codes = uniqueN(paste(code_system, code, sep = ":")),
         n_usable_dates = length(valid_dates),
         source = "GP"
       )
     },
     by = .(eid, disease)
   ]
-  data.table::setorder(out, eid, disease)
+  setorder(out, eid, disease)
   out
 }
 
@@ -660,7 +624,7 @@ summarise_gp_diagnoses <- function(gp_records) {
 }
 
 .gp_empty_registrations <- function() {
-  out <- data.table::data.table(
+  out <- data.table(
     gp_registration_id = integer(0),
     eid = integer(0),
     data_provider = integer(0),
@@ -711,7 +675,7 @@ parse_gp_registrations <- function(data,
     )
   }
 
-  dt <- data.table::copy(data.table::as.data.table(data))
+  dt <- copy(as.data.table(data))
   if (nrow(dt) == 0L) {
     return(.gp_empty_registrations())
   }
@@ -762,8 +726,8 @@ parse_gp_registrations <- function(data,
     "open_ended", "reversed_interval", "interval_quality",
     "usable_for_coverage", "source"
   )
-  data.table::setcolorder(dt, preferred)
-  data.table::setorder(dt, eid, reg_date, na.last = TRUE)
+  setcolorder(dt, preferred)
+  setorder(dt, eid, reg_date, na.last = TRUE)
   class(dt) <- unique(c("ukb_gp_registrations", class(dt)))
   dt
 }
@@ -822,7 +786,7 @@ parse_gp_registrations <- function(data,
 }
 
 .gp_empty_coverage <- function(eid_template = integer(0)) {
-  data.table::data.table(
+  data.table(
     eid = eid_template,
     coverage_start = as.Date(rep(NA_character_, length(eid_template))),
     coverage_end = as.Date(rep(NA_character_, length(eid_template))),
@@ -889,7 +853,7 @@ summarise_gp_coverage <- function(registrations,
     )
   }
 
-  dt <- data.table::copy(data.table::as.data.table(registrations))
+  dt <- copy(as.data.table(registrations))
   if (nrow(dt) == 0L) {
     all_eids <- unique(c(participant_eids, clinical_eids))
     out <- .gp_empty_coverage(all_eids)
@@ -990,10 +954,10 @@ summarise_gp_coverage <- function(registrations,
       has_gp_clinical_record = TRUE,
       coverage_status = "clinical_only"
     )]
-    out <- data.table::rbindlist(list(out, extra), use.names = TRUE, fill = TRUE)
+    out <- rbindlist(list(out, extra), use.names = TRUE, fill = TRUE)
   }
 
-  data.table::setorder(out, eid)
+  setorder(out, eid)
   out
 }
 
@@ -1049,7 +1013,7 @@ summarise_gp_coverage <- function(registrations,
   start_i <- as.integer(start[keep])
   end_i <- as.integer(end[keep])
   if (length(start_i) == 0L) {
-    return(data.table::data.table(
+    return(data.table(
       interval_start = as.Date(character(0)),
       interval_end = as.Date(character(0))
     ))
@@ -1078,7 +1042,7 @@ summarise_gp_coverage <- function(registrations,
   merged_start <- c(merged_start, current_start)
   merged_end <- c(merged_end, current_end)
 
-  data.table::data.table(
+  data.table(
     interval_start = as.Date(merged_start, origin = "1970-01-01"),
     interval_end = as.Date(merged_end, origin = "1970-01-01")
   )
@@ -1161,16 +1125,16 @@ assess_gp_observability <- function(registrations,
   observation_end <- .gp_scalar_date(observation_end, "observation_end")
 
   if (is.null(participants)) {
-    participant_dt <- data.table::data.table(
+    participant_dt <- data.table(
       eid = unique(registrations[["eid"]])
     )
   } else if (is.data.frame(participants)) {
     if (!"eid" %in% names(participants)) {
       stop("'participants' data.frame must contain an 'eid' column.", call. = FALSE)
     }
-    participant_dt <- data.table::copy(data.table::as.data.table(participants))
+    participant_dt <- copy(as.data.table(participants))
   } else {
-    participant_dt <- data.table::data.table(eid = participants)
+    participant_dt <- data.table(eid = participants)
   }
   if (nrow(participant_dt) == 0L || anyNA(participant_dt$eid)) {
     stop("'participants' must contain non-missing participant identifiers.", call. = FALSE)
@@ -1179,7 +1143,7 @@ assess_gp_observability <- function(registrations,
     stop("'participants' must contain one row per participant.", call. = FALSE)
   }
 
-  windows <- data.table::data.table(eid = participant_dt$eid)
+  windows <- data.table(eid = participant_dt$eid)
   windows[, window_start := .gp_resolve_participant_date(
     participant_dt,
     window_start,
@@ -1200,7 +1164,7 @@ assess_gp_observability <- function(registrations,
   windows[, index_in_window := is.na(index_date) |
     (index_date >= window_start & index_date <= window_end)]
 
-  registration_dt <- data.table::copy(data.table::as.data.table(registrations))
+  registration_dt <- copy(as.data.table(registrations))
   registration_dt <- registration_dt[eid %in% windows$eid]
   registration_dt[, interval_start := as.Date(NA)]
   registration_dt[usable_for_coverage == TRUE, interval_start := reg_date]
@@ -1230,7 +1194,7 @@ assess_gp_observability <- function(registrations,
       by = eid
     ]
   } else {
-    intervals <- data.table::data.table(
+    intervals <- data.table(
       eid = windows$eid[0],
       interval_start = as.Date(character(0)),
       interval_end = as.Date(character(0))
@@ -1248,7 +1212,7 @@ assess_gp_observability <- function(registrations,
     as.integer(interval_end),
     na.rm = FALSE
   )]
-  joined[, overlap_days := data.table::fifelse(
+  joined[, overlap_days := fifelse(
     !is.na(overlap_start_i) & !is.na(overlap_end_i) &
       overlap_end_i >= overlap_start_i,
     overlap_end_i - overlap_start_i + 1L,
@@ -1257,12 +1221,12 @@ assess_gp_observability <- function(registrations,
   joined[, contains_index := !is.na(index_date) &
     !is.na(interval_start) &
     index_date >= interval_start & index_date <= interval_end]
-  joined[, continuous_lookback_i := data.table::fifelse(
+  joined[, continuous_lookback_i := fifelse(
     contains_index,
     as.integer(index_date - pmax(interval_start, window_start)),
     NA_integer_
   )]
-  joined[, continuous_followup_i := data.table::fifelse(
+  joined[, continuous_followup_i := fifelse(
     contains_index,
     as.integer(pmin(interval_end, window_end) - index_date),
     NA_integer_
@@ -1296,7 +1260,7 @@ assess_gp_observability <- function(registrations,
     ),
     by = eid
   ]
-  out[, coverage_fraction := data.table::fifelse(
+  out[, coverage_fraction := fifelse(
     valid_window & target_window_days > 0L,
     covered_window_days / target_window_days,
     NA_real_
@@ -1314,7 +1278,7 @@ assess_gp_observability <- function(registrations,
       continuous_followup_days >= min_followup_days
     ]
   }
-  out[, gp_observability_reason := data.table::fcase(
+  out[, gp_observability_reason := fcase(
     !valid_window, "invalid_window",
     !index_in_window, "index_outside_window",
     covered_window_days == 0L, "no_coverage_in_window",
@@ -1331,7 +1295,7 @@ assess_gp_observability <- function(registrations,
     control_eligible == TRUE, "eligible",
     default = "ineligible"
   )]
-  data.table::setorder(out, eid)
+  setorder(out, eid)
   out
 }
 
@@ -1376,8 +1340,8 @@ integrate_gp_results <- function(gp_diagnoses,
     )
   }
 
-  diagnoses <- data.table::copy(data.table::as.data.table(gp_diagnoses))
-  coverage <- data.table::copy(data.table::as.data.table(gp_coverage))
+  diagnoses <- copy(as.data.table(gp_diagnoses))
+  coverage <- copy(as.data.table(gp_coverage))
   participant_eids <- .gp_extract_eids(participants, "participants")
   if (is.null(participant_eids)) {
     participant_eids <- unique(c(diagnoses$eid, coverage$eid))
@@ -1391,14 +1355,14 @@ integrate_gp_results <- function(gp_diagnoses,
     stop("At least one participant and disease are required.", call. = FALSE)
   }
 
-  grid <- data.table::CJ(
+  grid <- CJ(
     eid = participant_eids,
     disease = diseases,
     unique = TRUE,
     sorted = FALSE
   )
   if ("source" %in% names(diagnoses)) {
-    data.table::setnames(diagnoses, "source", "diagnosis_source")
+    setnames(diagnoses, "source", "diagnosis_source")
   }
   out <- merge(
     grid,
@@ -1410,7 +1374,7 @@ integrate_gp_results <- function(gp_diagnoses,
   out <- merge(out, coverage, by = "eid", all.x = TRUE, sort = FALSE)
   out[is.na(coverage_status), coverage_status := "unknown"]
   if (!is.null(gp_observability)) {
-    observability <- data.table::copy(data.table::as.data.table(gp_observability))
+    observability <- copy(as.data.table(gp_observability))
     if (anyDuplicated(observability$eid)) {
       stop("'gp_observability' must contain one row per participant.", call. = FALSE)
     }
@@ -1445,9 +1409,9 @@ integrate_gp_results <- function(gp_diagnoses,
     names(out)
   )
   for (col in count_cols) {
-    data.table::set(out, which(is.na(out[[col]])), col, 0L)
+    set(out, which(is.na(out[[col]])), col, 0L)
   }
-  data.table::setorder(out, eid, disease)
+  setorder(out, eid, disease)
   out
 }
 
@@ -1548,16 +1512,17 @@ integrate_gp_results <- function(gp_diagnoses,
     )
   }
 
-  result <- data.table::as.data.table(result)
+  result <- as.data.table(result)
   if (!is.null(output)) {
     if (!is.character(output) || length(output) != 1L || is.na(output)) {
       stop("'output' must be one CSV or TSV path.", call. = FALSE)
     }
-    ext <- tolower(tools::file_ext(output))
+    ext <- tolower(file_ext(output))
     if (!ext %in% c("csv", "tsv")) {
       stop("'output' must end in .csv or .tsv.", call. = FALSE)
     }
-    data.table::fwrite(result, output, sep = if (ext == "tsv") "\t" else ",")
+    fwrite(result, output, sep = if (ext == "tsv") "\t" else ",")
+    attr(result, "gp_output") <- normalizePath(output, mustWork = FALSE)
   }
   result
 }
@@ -1573,7 +1538,7 @@ integrate_gp_results <- function(gp_diagnoses,
   if (!.gp_is_diagnosis_summary(x)) {
     stop("GP diagnosis summary columns are incomplete.", call. = FALSE)
   }
-  out <- data.table::copy(data.table::as.data.table(x))
+  out <- copy(as.data.table(x))
   out[, disease := as.character(disease)]
   out[, gp_case := as.integer(gp_case)]
   out[, first_gp_date := .safe_as_date(
@@ -1581,12 +1546,12 @@ integrate_gp_results <- function(gp_diagnoses,
     col_name = "first_gp_date"
   )]
   for (col in c("n_gp_records", "n_gp_codes", "n_usable_dates")) {
-    data.table::set(out, j = col, value = as.integer(out[[col]]))
+    set(out, j = col, value = as.integer(out[[col]]))
   }
   if (!"source" %in% names(out)) {
     out[, source := "GP"]
   }
-  data.table::setorder(out, eid, disease)
+  setorder(out, eid, disease)
   out
 }
 

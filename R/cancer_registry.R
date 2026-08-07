@@ -1,5 +1,5 @@
 .cancer_registry_empty <- function() {
-  data.table::data.table(
+  data.table(
     eid = integer(0),
     cancer_icd10_code = character(0),
     diag_date = as.Date(character(0)),
@@ -54,8 +54,8 @@
 #'
 #' @export
 parse_cancer_registry <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (!"eid" %in% names(dt)) {
@@ -96,7 +96,7 @@ parse_cancer_registry <- function(dt) {
     hist_vec <- if (!is.na(hist_col)) .extract_integer_code(dt[[hist_col]]) else rep(NA_integer_, nrow(dt))
     beh_vec <- if (!is.na(beh_col)) .extract_integer_code(dt[[beh_col]]) else rep(NA_integer_, nrow(dt))
 
-    one <- data.table::data.table(
+    one <- data.table(
       eid = dt[["eid"]],
       cancer_icd10_code = code_vec,
       diag_date = date_vec,
@@ -116,7 +116,7 @@ parse_cancer_registry <- function(dt) {
     return(.cancer_registry_empty())
   }
 
-  data.table::rbindlist(results, use.names = TRUE, fill = TRUE)
+  rbindlist(results, use.names = TRUE, fill = TRUE)
 }
 
 #' @title Filter Cancer Registry Records by ICD-10 and Tumour Metadata
@@ -140,8 +140,8 @@ filter_cancer_registry <- function(cancer_long,
                                    disease_label,
                                    histology = NULL,
                                    behaviour = NULL) {
-  if (!data.table::is.data.table(cancer_long)) {
-    cancer_long <- data.table::as.data.table(cancer_long)
+  if (!is.data.table(cancer_long)) {
+    cancer_long <- as.data.table(cancer_long)
   }
 
   result <- cancer_long[grepl(pattern, cancer_long[["cancer_icd10_code"]], perl = TRUE)]
@@ -156,7 +156,7 @@ filter_cancer_registry <- function(cancer_long,
     result <- result[result[["cancer_behaviour"]] %in% behaviour]
   }
 
-  data.table::set(result, j = "disease", value = disease_label)
+  set(result, j = "disease", value = disease_label)
   result
 }
 
@@ -174,8 +174,8 @@ filter_cancer_registry <- function(cancer_long,
 #'
 #' @keywords internal
 aggregate_cancer_registry_earliest <- function(cancer_filtered) {
-  if (!data.table::is.data.table(cancer_filtered)) {
-    cancer_filtered <- data.table::as.data.table(cancer_filtered)
+  if (!is.data.table(cancer_filtered)) {
+    cancer_filtered <- as.data.table(cancer_filtered)
   }
 
   cancer_filtered <- cancer_filtered[!is.na(cancer_filtered[["diag_date"]])]

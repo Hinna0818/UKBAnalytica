@@ -133,7 +133,7 @@ load_pomegranate_portal_coding <- function(path = NULL) {
     file(path, open = "rt")
   }
   on.exit(close(con), add = TRUE)
-  utils::read.csv(con, check.names = FALSE, stringsAsFactors = FALSE)
+  read.csv(con, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 #' Get the Pomegranate source manifest

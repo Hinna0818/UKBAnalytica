@@ -170,7 +170,7 @@ harmonize_prs_weights <- function(
       stop("Output already exists; use `overwrite = TRUE`.", call. = FALSE)
     }
     dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
-    data.table::fwrite(output_data, output, sep = "\t", quote = FALSE, na = "NA")
+    fwrite(output_data, output, sep = "\t", quote = FALSE, na = "NA")
     attr(output_data, "path") <- normalizePath(output, mustWork = FALSE)
   }
   attr(output_data, "source_columns") <- c(ID = "ID", A1 = "A1", WEIGHT = "WEIGHT")
@@ -200,7 +200,7 @@ print.ukb_prs_harmonized <- function(x, ...) {
     if (!file.exists(x)) {
       stop(sprintf("`%s` file does not exist: %s", name, x), call. = FALSE)
     }
-    return(data.table::fread(x, data.table = FALSE, check.names = FALSE))
+    return(fread(x, data.table = FALSE, check.names = FALSE))
   }
   if (!is.data.frame(x)) {
     stop(sprintf("`%s` must be a data.frame or one existing file path.", name), call. = FALSE)

@@ -7,7 +7,6 @@
 #'
 #' @name regression_extensions
 #' @keywords internal
-#' @importFrom survival Surv coxph finegray cox.zph
 NULL
 
 .coxext_require_survival <- function(caller) {
@@ -54,7 +53,7 @@ NULL
     ), call. = FALSE)
   }
 
-  formula_obj <- stats::as.formula(
+  formula_obj <- as.formula(
     paste0(
       "Surv(",
       time_col,
@@ -66,7 +65,7 @@ NULL
   )
 
   needed_cols <- unique(c(time_col, status_col, exposure, covariates))
-  model_data <- data[stats::complete.cases(data[, needed_cols, drop = FALSE]), needed_cols, drop = FALSE]
+  model_data <- data[complete.cases(data[, needed_cols, drop = FALSE]), needed_cols, drop = FALSE]
 
   if (nrow(model_data) == 0) {
     stop(sprintf("No complete-case rows available for exposure '%s'.", exposure), call. = FALSE)
@@ -131,12 +130,12 @@ NULL
     }
   }
 
-  formula_obj <- stats::as.formula(
+  formula_obj <- as.formula(
     paste(outcome, "~", .coxext_make_rhs(exposure, covariates))
   )
 
   needed_cols <- unique(c(outcome, exposure, covariates))
-  model_data <- data[stats::complete.cases(data[, needed_cols, drop = FALSE]), needed_cols, drop = FALSE]
+  model_data <- data[complete.cases(data[, needed_cols, drop = FALSE]), needed_cols, drop = FALSE]
 
   if (nrow(model_data) == 0) {
     stop(sprintf("No complete-case rows available for exposure '%s'.", exposure), call. = FALSE)
@@ -144,13 +143,13 @@ NULL
 
   fit <- switch(
     model_type,
-    logistic = stats::glm(
+    logistic = glm(
       formula_obj,
       data = model_data,
-      family = stats::binomial(),
+      family = binomial(),
       ...
     ),
-    linear = stats::lm(
+    linear = lm(
       formula_obj,
       data = model_data,
       ...
@@ -171,11 +170,11 @@ NULL
 }
 
 .coxext_get_term_coefficient_names <- function(model, term_name) {
-  terms_obj <- stats::terms(model)
+  terms_obj <- terms(model)
   mm <- if (!is.null(model$x)) {
     model$x
   } else {
-    stats::model.matrix(model)
+    model.matrix(model)
   }
   assign_vec <- attr(mm, "assign")
   term_labels <- attr(terms_obj, "term.labels")
@@ -212,7 +211,7 @@ NULL
   } else if (model_type == "logistic") {
     sum_model <- summary(fit_info$model)
     coef_mat <- sum_model$coefficients
-    ci <- suppressWarnings(stats::confint(fit_info$model, parm = term_names, level = 0.95))
+    ci <- suppressWarnings(confint(fit_info$model, parm = term_names, level = 0.95))
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
     effect_col <- "OR"
     effect_values <- exp(coef_mat[term_names, "Estimate"])
@@ -222,7 +221,7 @@ NULL
   } else {
     sum_model <- summary(fit_info$model)
     coef_mat <- sum_model$coefficients
-    ci <- stats::confint(fit_info$model, parm = term_names, level = 0.95)
+    ci <- confint(fit_info$model, parm = term_names, level = 0.95)
     if (!is.matrix(ci)) ci <- t(as.matrix(ci))
     effect_col <- "beta"
     effect_values <- coef_mat[term_names, "Estimate"]
@@ -296,7 +295,7 @@ NULL
   }
 
   if (score_method == "integer") {
-    score_map <- stats::setNames(seq_along(lvls), lvls)
+    score_map <- setNames(seq_along(lvls), lvls)
   } else {
     if (is.null(custom_scores) || is.null(variable) || !variable %in% names(custom_scores)) {
       stop(sprintf(
@@ -333,7 +332,7 @@ NULL
                                        ...) {
   .coxext_require_survival("runmulti_competing")
 
-  formula_fg <- stats::as.formula(
+  formula_fg <- as.formula(
     paste0(
       "Surv(",
       time_col,
@@ -350,7 +349,7 @@ NULL
     etype = "event"
   )
 
-  fit_formula <- stats::as.formula(
+  fit_formula <- as.formula(
     paste0(
       "Surv(fgstart, fgstop, fgstatus) ~ ",
       .coxext_make_rhs(exposure, covariates)
@@ -677,8 +676,8 @@ runmulti_trend <- function(data,
 
   for (i in seq_along(main_var)) {
     var <- main_var[[i]]
-    work_dt <- if (data.table::is.data.table(data)) {
-      data.table::copy(data)
+    work_dt <- if (is.data.table(data)) {
+      copy(data)
     } else {
       data
     }
@@ -708,7 +707,7 @@ runmulti_trend <- function(data,
         ), call. = FALSE)
         next
       }
-      exposure_factor <- stats::relevel(exposure_factor, ref = ref_level)
+      exposure_factor <- relevel(exposure_factor, ref = ref_level)
     }
 
     work_dt$.coxext_group_factor <- exposure_factor
@@ -918,13 +917,13 @@ runmulti_competing <- function(data,
   for (i in seq_along(main_var)) {
     var <- main_var[[i]]
     subset_cols <- unique(c(var, covariates, time_col))
-    work_dt <- if (data.table::is.data.table(data)) {
-      data.table::copy(data)
+    work_dt <- if (is.data.table(data)) {
+      copy(data)
     } else {
       data
     }
     work_dt$.coxext_fg_status <- status_factor
-    model_dt <- work_dt[stats::complete.cases(work_dt[, c(subset_cols, ".coxext_fg_status"), drop = FALSE]), , drop = FALSE]
+    model_dt <- work_dt[complete.cases(work_dt[, c(subset_cols, ".coxext_fg_status"), drop = FALSE]), , drop = FALSE]
 
     if (nrow(model_dt) == 0) {
       warning(sprintf("[runmulti_competing] Skipping '%s': no complete-case rows available.", var), call. = FALSE)

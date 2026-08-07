@@ -7,9 +7,6 @@
 #'
 #' @name mi_pool
 #' @keywords internal
-#' @importFrom mitools MIcombine MIextract imputationList
-#' @importFrom survival coxph
-#' @importFrom MASS glm.nb
 NULL
 
 
@@ -92,7 +89,7 @@ if (is.null(models) && is.null(datasets)) {
   # Extract formula if not provided
   if (is.null(formula)) {
     formula <- tryCatch(
-      stats::formula(models[[1]]),
+      formula(models[[1]]),
       error = function(e) NULL
     )
   }
@@ -102,8 +99,8 @@ if (is.null(models) && is.null(datasets)) {
     MIcombine(models, df.complete = df.complete)
   }, error = function(e) {
     # Fallback: extract coefficients and variances manually
-    betas <- MIextract(models, fun = stats::coef)
-    vars <- MIextract(models, fun = stats::vcov)
+    betas <- MIextract(models, fun = coef)
+    vars <- MIextract(models, fun = vcov)
     MIcombine(betas, vars, df.complete = df.complete)
   })
 
@@ -174,14 +171,14 @@ fit_mi_models <- function(datasets,
 
   # Determine fitting function
   fit_fn <- switch(model_type,
-    "lm" = function(d) stats::lm(formula, data = d, ...),
+    "lm" = function(d) lm(formula, data = d, ...),
     "logistic" = function(d) {
-      fam <- if (is.null(family)) stats::binomial() else family
-      stats::glm(formula, data = d, family = fam, ...)
+      fam <- if (is.null(family)) binomial() else family
+      glm(formula, data = d, family = fam, ...)
     },
     "poisson" = function(d) {
-      fam <- if (is.null(family)) stats::poisson() else family
-      stats::glm(formula, data = d, family = fam, ...)
+      fam <- if (is.null(family)) poisson() else family
+      glm(formula, data = d, family = fam, ...)
     },
     "cox" = function(d) coxph(formula, data = d, ...),
     "negbin" = function(d) glm.nb(formula, data = d, ...)
@@ -356,11 +353,11 @@ pool_custom_estimates <- function(estimates,
 
   # Use t-distribution if df is finite
   if (any(is.finite(df))) {
-    p.value <- 2 * stats::pt(-abs(z), df = df)
-    t_crit <- stats::qt(1 - alpha / 2, df = df)
+    p.value <- 2 * pt(-abs(z), df = df)
+    t_crit <- qt(1 - alpha / 2, df = df)
   } else {
-    p.value <- 2 * stats::pnorm(-abs(z))
-    t_crit <- stats::qnorm(1 - alpha / 2)
+    p.value <- 2 * pnorm(-abs(z))
+    t_crit <- qnorm(1 - alpha / 2)
   }
 
   # Confidence intervals
@@ -521,9 +518,9 @@ confint.mi_pooled_result <- function(object, parm = NULL, level = 0.95, ...) {
     alpha <- 1 - level
 
     if (any(is.finite(df))) {
-      t_crit <- stats::qt(1 - alpha / 2, df = df)
+      t_crit <- qt(1 - alpha / 2, df = df)
     } else {
-      t_crit <- stats::qnorm(1 - alpha / 2)
+      t_crit <- qnorm(1 - alpha / 2)
     }
 
     ci <- cbind(
@@ -607,9 +604,9 @@ tidy.mi_pooled_result <- function(x,
     alpha <- 1 - conf.level
 
     if (any(is.finite(df))) {
-      t_crit <- stats::qt(1 - alpha / 2, df = df)
+      t_crit <- qt(1 - alpha / 2, df = df)
     } else {
-      t_crit <- stats::qnorm(1 - alpha / 2)
+      t_crit <- qnorm(1 - alpha / 2)
     }
 
     out$conf.low <- estimates_raw - t_crit * se

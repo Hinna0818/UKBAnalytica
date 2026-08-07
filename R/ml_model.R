@@ -7,7 +7,6 @@
 #'
 #' @name ml_model
 #' @keywords internal
-#' @importFrom pROC roc auc
 NULL
 
 # Helper Functions
@@ -22,7 +21,7 @@ NULL
         "Package '%s' is required and not installed. Installing because option UKBAnalytica.auto_install_ml = TRUE.",
         pkg
       ))
-      utils::install.packages(pkg)
+      install.packages(pkg)
     }
   }
 
@@ -283,7 +282,7 @@ ukb_ml_model <- function(formula,
   }
   dots <- list(...)
   if (length(dots) > 0L) {
-    params <- utils::modifyList(params, dots)
+    params <- modifyList(params, dots)
   }
   
   # Sample data if requested
@@ -592,7 +591,7 @@ ukb_ml_predict.ukb_ml <- function(object, newdata = NULL, type = c("response", "
     prediction_data <- if (is.null(newdata)) object$test_data else newdata
     if (type == "link") {
       if (object$modern_model$model == "logistic") {
-        return(stats::predict(
+        return(predict(
           object$modern_model$fitted_model,
           newdata = as.data.frame(prediction_data),
           type = "link"

@@ -14,11 +14,6 @@
 #'     \item{ps}{Propensity score (probability of treatment)}
 #'   }
 #'
-#' @import data.table
-#' @importFrom stats glm binomial predict as.formula
-#' @importFrom survival Surv coxph
-#' @importFrom sandwich vcovHC
-#' @importFrom lmtest coeftest
 #' @export
 estimate_propensity_score <- function(data,
                                        treatment,
@@ -60,10 +55,10 @@ estimate_propensity_score <- function(data,
   }
 
   # Convert to data.table
-  if (!data.table::is.data.table(data)) {
-    dt <- data.table::as.data.table(data)
+  if (!is.data.table(data)) {
+    dt <- as.data.table(data)
   } else {
-    dt <- data.table::copy(data)
+    dt <- copy(data)
   }
 
   message("[estimate_propensity_score] Estimating propensity scores...")
@@ -73,7 +68,7 @@ estimate_propensity_score <- function(data,
 
   # Build formula if not provided
   if (is.null(formula)) {
-    formula <- stats::as.formula(paste(treatment, "~", paste(covariates, collapse = " + ")))
+    formula <- as.formula(paste(treatment, "~", paste(covariates, collapse = " + ")))
   }
   model_vars <- unique(all.vars(formula))
   missing_formula_vars <- setdiff(model_vars, names(dt))
@@ -84,7 +79,7 @@ estimate_propensity_score <- function(data,
       call. = FALSE
     )
   }
-  complete_idx <- stats::complete.cases(dt[, model_vars, with = FALSE])
+  complete_idx <- complete.cases(dt[, model_vars, with = FALSE])
   fit_rows <- which(complete_idx)
   if (length(fit_rows) == 0L) {
     stop("No complete rows are available for propensity-score estimation.", call. = FALSE)
@@ -99,8 +94,8 @@ estimate_propensity_score <- function(data,
 
   if (method == "logistic") {
     # Logistic regression
-    model <- stats::glm(formula, data = fit_data, family = stats::binomial())
-    fitted_ps <- stats::predict(model, newdata = fit_data, type = "response")
+    model <- glm(formula, data = fit_data, family = binomial())
+    fitted_ps <- predict(model, newdata = fit_data, type = "response")
 
   } else if (method == "gbm") {
     # Gradient boosting
@@ -166,7 +161,6 @@ estimate_propensity_score <- function(data,
 #'     \item{match_distance}{Distance between matched pairs}
 #'   }
 #'
-#' @import data.table
 #' @export
 match_propensity <- function(data,
                               ps_col = "ps",
@@ -184,8 +178,8 @@ match_propensity <- function(data,
   }
 
   # Validate inputs
-  if (!data.table::is.data.table(data)) {
-    data <- data.table::as.data.table(data)
+  if (!is.data.table(data)) {
+    data <- as.data.table(data)
   }
 
   if (!ps_col %in% names(data)) {
@@ -219,7 +213,7 @@ match_propensity <- function(data,
 
   # Run matching
   match_obj <- MatchIt::matchit(
-    formula = stats::as.formula(formula_str),
+    formula = as.formula(formula_str),
     data = as.data.frame(data),
     method = matchit_method,
     distance = data[[ps_col]],
@@ -232,14 +226,14 @@ match_propensity <- function(data,
 
   # Extract matched data
   matched_df <- MatchIt::match.data(match_obj)
-  matched_dt <- data.table::as.data.table(matched_df)
+  matched_dt <- as.data.table(matched_df)
 
   # Rename MatchIt columns
   if ("subclass" %in% names(matched_dt)) {
-    data.table::setnames(matched_dt, "subclass", "match_id")
+    setnames(matched_dt, "subclass", "match_id")
   }
   if ("distance" %in% names(matched_dt)) {
-    data.table::setnames(matched_dt, "distance", "match_distance")
+    setnames(matched_dt, "distance", "match_distance")
   }
   attr(matched_dt, "matching_caliper") <- list(
     value = caliper,
@@ -284,7 +278,6 @@ match_propensity <- function(data,
 #'
 #' Stabilized weights multiply by the marginal probability of treatment.
 #'
-#' @import data.table
 #' @export
 calculate_weights <- function(data,
                                ps_col = "ps",
@@ -296,10 +289,10 @@ calculate_weights <- function(data,
   weight_type <- match.arg(weight_type)
 
   # Validate inputs
-  if (!data.table::is.data.table(data)) {
-    data <- data.table::as.data.table(data)
+  if (!is.data.table(data)) {
+    data <- as.data.table(data)
   } else {
-    data <- data.table::copy(data)
+    data <- copy(data)
   }
 
   if (!ps_col %in% names(data)) {
@@ -341,8 +334,8 @@ calculate_weights <- function(data,
 
   # Truncate extreme weights
   if (!is.null(truncate) && length(truncate) == 2) {
-    lower <- stats::quantile(w, truncate[1], na.rm = TRUE)
-    upper <- stats::quantile(w, truncate[2], na.rm = TRUE)
+    lower <- quantile(w, truncate[1], na.rm = TRUE)
+    upper <- quantile(w, truncate[2], na.rm = TRUE)
     w[w < lower] <- lower
     w[w > upper] <- upper
     message(sprintf("  Weights truncated to [%.2f, %.2f]", lower, upper))
@@ -382,7 +375,6 @@ calculate_weights <- function(data,
 #'     \item{balanced}{Whether SMD < threshold}
 #'   }
 #'
-#' @importFrom stats weighted.mean var
 #' @export
 assess_balance <- function(data,
                             treatment,
@@ -417,7 +409,7 @@ assess_balance <- function(data,
 
   analysis_data <- as.data.frame(data)
   treat_values <- analysis_data[[treatment]]
-  if (!all(stats::na.omit(unique(treat_values)) %in% c(0, 1))) {
+  if (!all(na.omit(unique(treat_values)) %in% c(0, 1))) {
     stop("`treatment` must be coded as 0/1.", call. = FALSE)
   }
 
@@ -429,16 +421,16 @@ assess_balance <- function(data,
     if (method == "weighted") {
       w_t <- treated[[weight_col]]
       w_c <- control[[weight_col]]
-      mean_t <- stats::weighted.mean(x_t, w_t, na.rm = TRUE)
-      mean_c <- stats::weighted.mean(x_c, w_c, na.rm = TRUE)
+      mean_t <- weighted.mean(x_t, w_t, na.rm = TRUE)
+      mean_c <- weighted.mean(x_c, w_c, na.rm = TRUE)
       # Weighted variance
       var_t <- sum(w_t * (x_t - mean_t)^2, na.rm = TRUE) / sum(w_t, na.rm = TRUE)
       var_c <- sum(w_c * (x_c - mean_c)^2, na.rm = TRUE) / sum(w_c, na.rm = TRUE)
     } else {
       mean_t <- mean(x_t, na.rm = TRUE)
       mean_c <- mean(x_c, na.rm = TRUE)
-      var_t <- stats::var(x_t, na.rm = TRUE)
-      var_c <- stats::var(x_c, na.rm = TRUE)
+      var_t <- var(x_t, na.rm = TRUE)
+      var_c <- var(x_c, na.rm = TRUE)
     }
 
     pooled_sd <- sqrt((var_t + var_c) / 2)
@@ -510,7 +502,6 @@ assess_balance <- function(data,
 #'
 #' @return A data.frame with effect estimates and confidence intervals.
 #'
-#' @importFrom stats as.formula glm binomial lm coef confint vcov qnorm
 #' @export
 run_weighted_analysis <- function(data,
                                    exposure,
@@ -562,7 +553,7 @@ run_weighted_analysis <- function(data,
 
   if (model_type == "cox") {
     formula_str <- paste0("Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs)
-    formula_obj <- stats::as.formula(formula_str)
+    formula_obj <- as.formula(formula_str)
     model <- coxph(formula_obj, data = data, weights = weights)
 
     # Extract results
@@ -581,7 +572,7 @@ run_weighted_analysis <- function(data,
       robust_se_val <- sqrt(diag(robust_vcov))[exp_row]
       coef_val <- coefs[exp_row, "coef"]
       z_val <- coef_val / robust_se_val
-      p_val <- 2 * stats::pnorm(-abs(z_val))
+      p_val <- 2 * pnorm(-abs(z_val))
       hr <- exp(coef_val)
       lower95 <- exp(coef_val - 1.96 * robust_se_val)
       upper95 <- exp(coef_val + 1.96 * robust_se_val)
@@ -602,11 +593,11 @@ run_weighted_analysis <- function(data,
     )
 
   } else if (model_type == "logistic") {
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
-    model <- stats::glm(formula_obj, data = data, family = stats::binomial(), weights = weights)
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
+    model <- glm(formula_obj, data = data, family = binomial(), weights = weights)
 
-    exp_row <- grep(paste0("^", exposure), names(stats::coef(model)))[1]
-    coef_val <- stats::coef(model)[exp_row]
+    exp_row <- grep(paste0("^", exposure), names(coef(model)))[1]
+    coef_val <- coef(model)[exp_row]
 
     if (robust_se) {
       robust_vcov <- vcovHC(model, type = "HC0")
@@ -633,11 +624,11 @@ run_weighted_analysis <- function(data,
 
   } else {
     # Linear model
-    formula_obj <- stats::as.formula(paste(outcome, "~", rhs))
-    model <- stats::lm(formula_obj, data = data, weights = weights)
+    formula_obj <- as.formula(paste(outcome, "~", rhs))
+    model <- lm(formula_obj, data = data, weights = weights)
 
-    exp_row <- grep(paste0("^", exposure), names(stats::coef(model)))[1]
-    coef_val <- stats::coef(model)[exp_row]
+    exp_row <- grep(paste0("^", exposure), names(coef(model)))[1]
+    coef_val <- coef(model)[exp_row]
 
     if (robust_se) {
       robust_vcov <- vcovHC(model, type = "HC0")

@@ -82,7 +82,7 @@
     if (any(introduced_na)) {
       label <- if (!is.null(col_name) && nzchar(col_name)) col_name else "date input"
       bad_values <- unique(as.character(orig_x[introduced_na]))
-      bad_preview <- paste(utils::head(bad_values, 3L), collapse = ", ")
+      bad_preview <- paste(head(bad_values, 3L), collapse = ", ")
       warning(
         sprintf(
           "[.safe_as_date] %d non-standard value(s) in '%s' were set to NA. Example(s): %s",

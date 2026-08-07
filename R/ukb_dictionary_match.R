@@ -200,7 +200,7 @@ print.ukb_dictionary_query <- function(x, ...) {
   cat("  official matches: ", nrow(x$official_matches), "\n", sep = "")
   cat("  Chinese matches: ", nrow(x$chinese_matches), "\n", sep = "")
   if (nrow(x$official_matches) > 0L) {
-    print(utils::head(x$official_matches, 10), row.names = FALSE)
+    print(head(x$official_matches, 10), row.names = FALSE)
   }
   invisible(x)
 }
@@ -251,7 +251,7 @@ ukb_validate_columns <- function(data,
     if (present[[i]]) {
       return(NA_character_)
     }
-    hits <- utils::adist(requested_cmp[[i]], available_cmp)
+    hits <- adist(requested_cmp[[i]], available_cmp)
     if (length(hits) == 0L) {
       return(NA_character_)
     }
@@ -278,7 +278,7 @@ ukb_validate_columns <- function(data,
 .ukb_read_zh_dictionary <- function(path = NULL) {
   if (is.null(path)) {
     data_env <- new.env(parent = emptyenv())
-    utils::data("ukb_dictionary_zh", package = "UKBAnalytica", envir = data_env)
+    data("ukb_dictionary_zh", package = "UKBAnalytica", envir = data_env)
     if (!exists("ukb_dictionary_zh", envir = data_env, inherits = FALSE)) {
       if (exists("ukb_dictionary_zh", envir = parent.frame(), inherits = TRUE)) {
         x <- get("ukb_dictionary_zh", envir = parent.frame(), inherits = TRUE)
@@ -292,7 +292,7 @@ ukb_validate_columns <- function(data,
     if (!file.exists(path)) {
       stop("Chinese dictionary file does not exist: ", path, call. = FALSE)
     }
-    x <- utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
+    x <- read.csv(path, check.names = FALSE, stringsAsFactors = FALSE, fileEncoding = "UTF-8")
   }
   expected <- paste0("\u7c7b\u522b", 1:6)
   missing <- setdiff(expected, names(x))
@@ -313,7 +313,7 @@ ukb_validate_columns <- function(data,
   if (!file.exists(path)) {
     stop("Official dictionary file does not exist: ", path, call. = FALSE)
   }
-  raw <- data.table::fread(path, data.table = FALSE, encoding = "UTF-8")
+  raw <- fread(path, data.table = FALSE, encoding = "UTF-8")
   id_col <- .field_metadata_pick_col(raw, c("ID", "FieldID", "Field ID", "field_id", "name"))
   title_col <- .field_metadata_pick_col(raw, c("title", "Title", "Field", "field"))
   name_col <- .field_metadata_pick_col(raw, c("name", "Name", "field_name", "Field"))
@@ -419,7 +419,7 @@ ukb_validate_columns <- function(data,
     stringsAsFactors = FALSE
   )
   out <- out[order(-out$zh_score, out$zh_path), , drop = FALSE]
-  utils::head(out, max_results)
+  head(out, max_results)
 }
 
 .ukb_dictionary_translation_map <- function(translation_map = NULL) {
@@ -496,7 +496,7 @@ ukb_validate_columns <- function(data,
     if (!all(c("zh", "en") %in% names(translation_map))) {
       stop("'translation_map' data.frame must contain columns 'zh' and 'en'.", call. = FALSE)
     }
-    stats::setNames(as.character(translation_map$en), as.character(translation_map$zh))
+    setNames(as.character(translation_map$en), as.character(translation_map$zh))
   } else if (is.character(translation_map) && !is.null(names(translation_map))) {
     translation_map
   } else {
@@ -557,7 +557,7 @@ ukb_validate_columns <- function(data,
   out$match_method <- if (query_language == "zh") "zh_dictionary_rule_translation" else query_language
   out$review_status <- ifelse(out$match_score >= 0.8, "high_confidence", "needs_review")
   out <- out[order(-out$match_score, out$FieldID, out$UKBColumn), , drop = FALSE]
-  out <- utils::head(out, max_results)
+  out <- head(out, max_results)
   out[, c("query", "english_candidate", "FieldID", "UKBColumn", "Field", "Title",
           "Category", "ValueType", "Units", "Coding", "Instance", "Array", "Link",
           "match_method", "match_score", "review_status")]
@@ -607,7 +607,7 @@ ukb_validate_columns <- function(data,
   candidate <- substr(text_lower, 1, pmin(nchar(text_lower), max(nchar(q), 1L) + 20L))
   ok <- nzchar(q) & nzchar(candidate)
   if (isTRUE(ok)) {
-    dist <- utils::adist(q, candidate)
+    dist <- adist(q, candidate)
     approx_score <- pmax(0, 1 - as.numeric(dist) / pmax(nchar(q), nchar(candidate), 1L))
   }
 

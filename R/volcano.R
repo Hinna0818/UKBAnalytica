@@ -36,9 +36,6 @@
 #'
 #' @return A `ggplot2` object with attributes `plot_data` and `label_data`.
 #'
-#' @importFrom ggplot2 ggplot aes geom_vline geom_point scale_color_manual
-#'   scale_x_continuous scale_y_continuous expansion labs theme_classic theme
-#'   element_line element_blank geom_hline geom_text
 #'
 #' @export
 plot_regression_volcano <- function(data,

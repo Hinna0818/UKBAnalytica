@@ -75,8 +75,8 @@ select_incident_by_years <- function(df,
   )
 
   dt <- df
-  if (isTRUE(copy) && data.table::is.data.table(df)) {
-    dt <- data.table::copy(df)
+  if (isTRUE(copy) && is.data.table(df)) {
+    dt <- copy(df)
   }
 
   has_time_col <- time_col %in% names(dt)
@@ -132,7 +132,7 @@ select_incident_by_years <- function(df,
       incident_time > 0
   }
 
-  if (data.table::is.data.table(dt)) {
+  if (is.data.table(dt)) {
     result <- dt[keep_idx]
   } else {
     result <- dt[keep_idx, , drop = FALSE]
@@ -148,7 +148,7 @@ select_incident_by_years <- function(df,
   after_count <- sum(!within_idx, na.rm = TRUE)
 
   if (identical(output, "split")) {
-    if (data.table::is.data.table(result)) {
+    if (is.data.table(result)) {
       result <- list(
         within_n_years = result[within_idx],
         after_n_years = result[!within_idx]

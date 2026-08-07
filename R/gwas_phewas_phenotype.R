@@ -155,7 +155,7 @@ build_gwas_phewas_phenotype <- function(
     stop("`vocabulary_id` must be one non-empty string.", call. = FALSE)
   }
 
-  participant <- data.table::as.data.table(data.table::copy(data))
+  participant <- as.data.table(copy(data))
   required <- unique(c(
     id_col, family_id_col, phenotype_cols, covariates, sex_col,
     .gpp_qc_columns(sample_qc)
@@ -196,21 +196,21 @@ build_gwas_phewas_phenotype <- function(
     stop("Family IDs cannot be missing.", call. = FALSE)
   }
 
-  gwas <- data.table::data.table(FID = fid, IID = iid)
+  gwas <- data.table(FID = fid, IID = iid)
   gwas <- cbind(
     gwas,
     participant[, c(phenotype_cols, covariates), with = FALSE]
   )
-  data.table::setDF(gwas)
+  setDF(gwas)
 
-  covariate_table <- data.table::data.table(FID = fid, IID = iid)
+  covariate_table <- data.table(FID = fid, IID = iid)
   if (length(covariates) > 0L) {
     covariate_table <- cbind(
       covariate_table,
       participant[, covariates, with = FALSE]
     )
   }
-  data.table::setDF(covariate_table)
+  setDF(covariate_table)
 
   sample_ids <- data.frame(FID = fid, IID = iid, stringsAsFactors = FALSE)
   sex <- .gpp_prepare_sex(participant, id_col, sex_col, sex_map)
@@ -341,26 +341,26 @@ ukb_write_gwas_phewas_phenotype <- function(x,
     )
   }
 
-  data.table::fwrite(x$gwas, paths[["gwas"]], sep = "\t", na = "NA", quote = FALSE)
-  data.table::fwrite(x$covariates, paths[["covariates"]], sep = "\t", na = "NA", quote = FALSE)
-  data.table::fwrite(x$phewas_long, paths[["phewas_long"]], sep = ",", na = "NA", quote = TRUE)
-  data.table::fwrite(
+  fwrite(x$gwas, paths[["gwas"]], sep = "\t", na = "NA", quote = FALSE)
+  fwrite(x$covariates, paths[["covariates"]], sep = "\t", na = "NA", quote = FALSE)
+  fwrite(x$phewas_long, paths[["phewas_long"]], sep = ",", na = "NA", quote = TRUE)
+  fwrite(
     x$sample_ids,
     paths[["sample_keep"]],
     sep = "\t",
     col.names = FALSE,
     quote = FALSE
   )
-  data.table::fwrite(x$trait_summary, paths[["trait_summary"]], sep = "\t", na = "NA")
-  data.table::fwrite(x$qc_flow, paths[["qc_flow"]], sep = "\t", na = "NA")
-  data.table::fwrite(
+  fwrite(x$trait_summary, paths[["trait_summary"]], sep = "\t", na = "NA")
+  fwrite(x$qc_flow, paths[["qc_flow"]], sep = "\t", na = "NA")
+  fwrite(
     x$covariate_missing,
     paths[["covariate_missing"]],
     sep = "\t",
     na = "NA"
   )
   if (!is.null(x$sex)) {
-    data.table::fwrite(x$sex, paths[["sex"]], sep = "\t", na = "NA")
+    fwrite(x$sex, paths[["sex"]], sep = "\t", na = "NA")
   }
 
   component_rows <- c(
@@ -394,7 +394,7 @@ ukb_write_gwas_phewas_phenotype <- function(x,
     created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
     stringsAsFactors = FALSE
   )
-  data.table::fwrite(manifest, paths[["manifest"]], sep = "\t", quote = FALSE)
+  fwrite(manifest, paths[["manifest"]], sep = "\t", quote = FALSE)
 
   out <- list(paths = paths, manifest = manifest, settings = x$settings)
   class(out) <- c("ukb_gwas_phewas_files", "list")
@@ -477,8 +477,8 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
     sample_qc <- ukb_gwas_qc_profile("none")
   }
   .gpp_qc_columns(sample_qc)
-  out <- data.table::copy(data)
-  flow <- data.table::data.table(
+  out <- copy(data)
+  flow <- data.table(
     step = "input",
     n_before = nrow(out),
     n_after = nrow(out),
@@ -489,9 +489,9 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
     before <- nrow(out)
     keep[is.na(keep)] <- FALSE
     out <<- out[keep]
-    flow <<- data.table::rbindlist(list(
+    flow <<- rbindlist(list(
       flow,
-      data.table::data.table(
+      data.table(
         step = label,
         n_before = before,
         n_after = nrow(out),
@@ -548,7 +548,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
 }
 
 .gpp_handle_covariate_missing <- function(data, covariates, method) {
-  out <- data.table::copy(data)
+  out <- copy(data)
   if (length(covariates) == 0L) {
     return(list(
       data = out,
@@ -570,7 +570,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
     stringsAsFactors = FALSE
   )
   if (identical(method, "complete_case")) {
-    out <- out[stats::complete.cases(out[, covariates, with = FALSE])]
+    out <- out[complete.cases(out[, covariates, with = FALSE])]
   } else if (identical(method, "mean_mode")) {
     for (i in seq_along(covariates)) {
       column <- covariates[[i]]
@@ -598,7 +598,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
       } else {
         replacement <- if (is.numeric(values)) as.numeric(values) else values
         replacement[missing] <- fill
-        data.table::set(out, j = column, value = replacement)
+        set(out, j = column, value = replacement)
       }
       summary$fill_value[[i]] <- as.character(fill)
     }
@@ -653,7 +653,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
 }
 
 .gpp_normalize_traits <- function(data, phenotype_cols, trait_types) {
-  out <- data.table::copy(data)
+  out <- copy(data)
   for (column in phenotype_cols) {
     values <- out[[column]]
     if (identical(unname(trait_types[[column]]), "binary")) {
@@ -662,7 +662,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
           !all(as.numeric(observed) %in% c(0, 1))) {
         stop(sprintf("Binary phenotype `%s` must use 0/1/NA coding.", column), call. = FALSE)
       }
-      data.table::set(out, j = column, value = as.integer(values))
+      set(out, j = column, value = as.integer(values))
     } else if (!is.numeric(values)) {
       stop(sprintf("Quantitative phenotype `%s` must be numeric.", column), call. = FALSE)
     }
@@ -685,7 +685,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
       n_control = if (binary) sum(observed == 0) else NA_integer_,
       prevalence = if (binary && length(observed) > 0L) mean(observed == 1) else NA_real_,
       mean = if (!binary && length(observed) > 0L) mean(observed) else NA_real_,
-      sd = if (!binary && length(observed) > 1L) stats::sd(observed) else NA_real_,
+      sd = if (!binary && length(observed) > 1L) sd(observed) else NA_real_,
       stringsAsFactors = FALSE
     )
   })
@@ -713,7 +713,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
                                      diagnosis_count_col,
                                      vocabulary_id,
                                      min_code_count) {
-  diagnosis <- data.table::as.data.table(data.table::copy(diagnoses))
+  diagnosis <- as.data.table(copy(diagnoses))
   required <- c(diagnosis_id_col, diagnosis_code_col)
   if (!is.null(diagnosis_date_col)) {
     required <- c(required, diagnosis_date_col)
@@ -762,7 +762,7 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
       .(count = {
         values <- get(diagnosis_date_col)
         nonmissing <- values[!is.na(values)]
-        if (length(nonmissing) == 0L) .N else data.table::uniqueN(nonmissing)
+        if (length(nonmissing) == 0L) .N else uniqueN(nonmissing)
       }),
       by = c(diagnosis_id_col, ".gpp_code")
     ]
@@ -775,10 +775,10 @@ print.ukb_gwas_phewas_files <- function(x, ...) {
   }
 
   long <- long[get("count") >= min_code_count]
-  data.table::setnames(long, c(diagnosis_id_col, ".gpp_code"), c("id", "code"))
+  setnames(long, c(diagnosis_id_col, ".gpp_code"), c("id", "code"))
   vocab_value <- vocabulary_id
   long[, "vocabulary_id" := vocab_value]
-  data.table::setcolorder(long, c("id", "vocabulary_id", "code", "count"))
-  data.table::setorderv(long, c("id", "code"))
+  setcolorder(long, c("id", "vocabulary_id", "code", "count"))
+  setorderv(long, c("id", "code"))
   as.data.frame(long)
 }

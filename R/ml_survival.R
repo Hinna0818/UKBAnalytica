@@ -6,7 +6,6 @@
 #'
 #' @name ml_survival
 #' @keywords internal
-#' @importFrom survival Surv coxph basehaz concordance
 NULL
 
 # Main Survival ML Function
@@ -387,7 +386,7 @@ ukb_ml_survival_predict <- function(object,
     stop("Survival response column(s) not found: ", paste(missing_response, collapse = ", "), call. = FALSE)
   }
 
-  terms_obj <- stats::terms(formula, data = data)
+  terms_obj <- terms(formula, data = data)
   predictors <- attr(terms_obj, "term.labels")
   if (length(predictors) == 1L && predictors == ".") {
     predictors <- setdiff(names(data), c(time_var, event_var))
@@ -396,7 +395,7 @@ ukb_ml_survival_predict <- function(object,
     stop("Formula must include at least one predictor.", call. = FALSE)
   }
 
-  missing_predictors <- setdiff(all.vars(stats::delete.response(terms_obj)), names(data))
+  missing_predictors <- setdiff(all.vars(delete.response(terms_obj)), names(data))
   if (length(missing_predictors) > 0L) {
     stop("Predictor column(s) not found: ", paste(missing_predictors, collapse = ", "), call. = FALSE)
   }
@@ -414,7 +413,7 @@ ukb_ml_survival_predict <- function(object,
   if (length(features) == 0L) {
     stop("No features available for survival model fitting.", call. = FALSE)
   }
-  stats::as.formula(paste0(
+  as.formula(paste0(
     "Surv(", time_var, ", ", event_var, ") ~ ",
     paste(features, collapse = " + ")
   ))
@@ -424,8 +423,8 @@ ukb_ml_survival_predict <- function(object,
 .sml_model_frame <- function(formula, data) {
   data <- as.data.frame(data)
   parsed <- .sml_parse_formula(formula, data)
-  vars <- unique(c(parsed$time_var, parsed$event_var, all.vars(stats::delete.response(parsed$terms))))
-  complete_idx <- stats::complete.cases(data[, vars, drop = FALSE])
+  vars <- unique(c(parsed$time_var, parsed$event_var, all.vars(delete.response(parsed$terms))))
+  complete_idx <- complete.cases(data[, vars, drop = FALSE])
   mf <- data[complete_idx, vars, drop = FALSE]
 
   if (nrow(mf) == 0L) {
@@ -454,8 +453,8 @@ ukb_ml_survival_predict <- function(object,
 #' @keywords internal
 .sml_model_matrix <- function(formula, data) {
   mf <- .sml_model_frame(formula, data)
-  x_terms <- stats::delete.response(stats::terms(formula, data = mf$data))
-  X <- stats::model.matrix(x_terms, data = mf$data)
+  x_terms <- delete.response(terms(formula, data = mf$data))
+  X <- model.matrix(x_terms, data = mf$data)
   contrasts <- attr(X, "contrasts")
   assign <- attr(X, "assign")
   if ("(Intercept)" %in% colnames(X)) {
@@ -484,7 +483,7 @@ ukb_ml_survival_predict <- function(object,
     complete_idx = mf$complete_idx,
     x_terms = x_terms,
     contrasts = contrasts,
-    xlevels = stats::.getXlevels(x_terms, mf$data),
+    xlevels = .getXlevels(x_terms, mf$data),
     feature_map = feature_map
   )
 }
@@ -561,7 +560,7 @@ ukb_ml_survival_predict <- function(object,
     model,
     cox = {
       default_params <- list(x = TRUE, model = TRUE)
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       do.call(coxph, c(list(formula = formula, data = mf), fit_params))
     },
     rsf = .fit_rsf(formula, mf, params, verbose),
@@ -569,7 +568,7 @@ ukb_ml_survival_predict <- function(object,
     coxnet = {
       .check_ml_package("glmnet")
       default_params <- list(family = "cox", alpha = 1)
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       do.call(glmnet::cv.glmnet, c(list(x = prep$X, y = prep$y), fit_params))
     }
   )
@@ -622,14 +621,14 @@ ukb_ml_survival_predict <- function(object,
     }
     newdata[[variable]] <- factor(values, levels = object$xlevels[[variable]])
   }
-  if (any(!stats::complete.cases(newdata[, required, drop = FALSE]))) {
+  if (any(!complete.cases(newdata[, required, drop = FALSE]))) {
     stop(
       "Survival prediction data contain missing predictor values; provide complete predictors.",
       call. = FALSE
     )
   }
 
-  X <- stats::model.matrix(
+  X <- model.matrix(
     object$x_terms,
     data = newdata,
     contrasts.arg = object$contrasts,
@@ -654,7 +653,7 @@ ukb_ml_survival_predict <- function(object,
   surv_obj <- Surv(time, event)
   fit <- coxph(surv_obj ~ offset(risk))
   basehaz_fit <- basehaz(fit, centered = FALSE)
-  H0 <- stats::approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
+  H0 <- approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
   H0
 }
 
@@ -671,7 +670,7 @@ ukb_ml_survival_predict <- function(object,
 
   risk <- switch(
     object$model,
-    cox = as.numeric(stats::predict(object$fitted_model, newdata = newdata, type = "lp", reference = "zero")),
+    cox = as.numeric(predict(object$fitted_model, newdata = newdata, type = "lp", reference = "zero")),
     rsf = {
       pred <- predict(object$fitted_model, newdata = newdata)
       if (type == "risk") return(as.numeric(pred$predicted))
@@ -680,11 +679,11 @@ ukb_ml_survival_predict <- function(object,
       colnames(out) <- paste0("t", times)
       return(out)
     },
-    gbm_surv = as.numeric(stats::predict(object$fitted_model, newdata = newdata, n.trees = object$fitted_model$n.trees, type = "link")),
+    gbm_surv = as.numeric(predict(object$fitted_model, newdata = newdata, n.trees = object$fitted_model$n.trees, type = "link")),
     coxnet = {
       .check_ml_package("glmnet")
       X <- .sml_predict_matrix(object, newdata)
-      as.numeric(stats::predict(object$fitted_model, newx = X, s = "lambda.min", type = "link"))
+      as.numeric(predict(object$fitted_model, newx = X, s = "lambda.min", type = "link"))
     }
   )
 
@@ -692,7 +691,7 @@ ukb_ml_survival_predict <- function(object,
 
   if (object$model == "cox") {
     basehaz_fit <- basehaz(object$fitted_model, centered = FALSE)
-    H0 <- stats::approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
+    H0 <- approx(basehaz_fit$time, basehaz_fit$hazard, times, rule = 2)$y
     chf <- outer(exp(risk), H0, "*")
     colnames(chf) <- paste0("t", times)
     if (type == "chf") return(chf)
@@ -701,11 +700,11 @@ ukb_ml_survival_predict <- function(object,
 
   train_risk <- switch(
     object$model,
-    gbm_surv = as.numeric(stats::predict(object$fitted_model, newdata = object$train_data, n.trees = object$fitted_model$n.trees, type = "link")),
+    gbm_surv = as.numeric(predict(object$fitted_model, newdata = object$train_data, n.trees = object$fitted_model$n.trees, type = "link")),
     coxnet = {
       .check_ml_package("glmnet")
       train_X <- .sml_predict_matrix(object, object$train_data)
-      as.numeric(stats::predict(object$fitted_model, newx = train_X, s = "lambda.min", type = "link"))
+      as.numeric(predict(object$fitted_model, newx = train_X, s = "lambda.min", type = "link"))
     }
   )
   H0 <- .sml_baseline_survival(
@@ -723,7 +722,7 @@ ukb_ml_survival_predict <- function(object,
 #' @keywords internal
 .sml_c_index <- function(time, event, risk) {
   .check_ml_package("survival")
-  keep <- stats::complete.cases(time, event, risk)
+  keep <- complete.cases(time, event, risk)
   if (sum(keep) < 2L || sum(event[keep] == 1L) == 0L) return(NA_real_)
   conc <- concordance(
     Surv(time[keep], event[keep]) ~ risk[keep],
@@ -778,12 +777,12 @@ ukb_ml_survival_predict <- function(object,
       call. = FALSE
     )
   }
-  keep <- stats::complete.cases(time, event) & time > 0 & event %in% c(0L, 1L)
+  keep <- complete.cases(time, event) & time > 0 & event %in% c(0L, 1L)
   time <- time[keep]
   event <- event[keep]
   survival_prob <- survival_prob[keep, , drop = FALSE]
   if (length(time) == 0L) {
-    return(stats::setNames(rep(NA_real_, length(times)), paste0("brier_t", times)))
+    return(setNames(rep(NA_real_, length(times)), paste0("brier_t", times)))
   }
   if (any(!is.na(survival_prob) &
     (!is.finite(survival_prob) | survival_prob < 0 | survival_prob > 1))) {
@@ -1009,7 +1008,7 @@ ukb_ml_survival_feature_select <- function(split,
   } else if (method == "glmnet") {
     .check_ml_package("glmnet")
     fit <- .sml_fit_core(formula, split$train, model = "coxnet", seed = seed, verbose = FALSE)
-    coefs <- as.matrix(stats::coef(fit$fitted_model, s = "lambda.min"))
+    coefs <- as.matrix(coef(fit$fitted_model, s = "lambda.min"))
     nonzero <- rownames(coefs)[coefs[, 1] != 0]
     selected <- unique(fit$feature_map$feature[fit$feature_map$matrix_column %in% nonzero])
     selected <- intersect(features, selected)
@@ -1406,7 +1405,7 @@ ukb_ml_survival_importance <- function(object, ...) {
   
   importance <- switch(model_type,
     cox = {
-      coefs <- stats::coef(model)
+      coefs <- coef(model)
       data.frame(
         variable = names(coefs),
         importance = abs(as.numeric(coefs)),

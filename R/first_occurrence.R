@@ -19,7 +19,7 @@
 }
 
 .first_occurrence_empty <- function() {
-  data.table::data.table(
+  data.table(
     eid = integer(0),
     fo_field = integer(0),
     fo_source_field = integer(0),
@@ -55,8 +55,8 @@
 }
 
 .parse_first_occurrence_records <- function(dt, fields, source_fields = NULL) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   fields <- .normalize_first_occurrence_fields(fields)
@@ -122,16 +122,16 @@
     return(.first_occurrence_empty())
   }
 
-  data.table::rbindlist(results, use.names = TRUE, fill = TRUE)
+  rbindlist(results, use.names = TRUE, fill = TRUE)
 }
 
 .aggregate_first_occurrence_earliest <- function(fo_long, disease_label) {
-  if (!data.table::is.data.table(fo_long)) {
-    fo_long <- data.table::as.data.table(fo_long)
+  if (!is.data.table(fo_long)) {
+    fo_long <- as.data.table(fo_long)
   }
 
   if (nrow(fo_long) == 0) {
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0),
       disease = character(0),
       earliest_date = as.Date(character(0)),

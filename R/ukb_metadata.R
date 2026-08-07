@@ -20,7 +20,7 @@
 #' @param entity RAP dataset entity. Defaults to `"participant"`.
 #' @param cache Logical. If `TRUE`, save the metadata object as an RDS file.
 #' @param cache_dir Optional cache directory. Defaults to
-#'   `tools::R_user_dir("UKBAnalytica", "cache")`.
+#'   `R_user_dir("UKBAnalytica", "cache")`.
 #' @param refresh Logical. Passed to `rap_list_fields()` when RAP discovery is
 #'   used.
 #' @param quiet Logical. If `FALSE`, print short messages about unavailable
@@ -45,7 +45,7 @@ ukb_metadata_setup <- function(source = c("auto", "files", "rap"),
   .ukb_check_scalar_logical(quiet, "quiet")
 
   if (is.null(cache_dir)) {
-    cache_dir <- tools::R_user_dir("UKBAnalytica", which = "cache")
+    cache_dir <- R_user_dir("UKBAnalytica", which = "cache")
   }
 
   rap_error <- NULL
@@ -218,7 +218,7 @@ ukb_field_info <- function(x,
   }
 
   rap_fields <- metadata$rap_fields[metadata$rap_fields$field_id %in% resolved$field_id, , drop = FALSE]
-  coding_ids <- unique(stats::na.omit(as.character(field$coding_id)))
+  coding_ids <- unique(na.omit(as.character(field$coding_id)))
   coding_ids <- coding_ids[nzchar(coding_ids)]
   codings <- metadata$codings[metadata$codings$coding_id %in% coding_ids, , drop = FALSE]
 
@@ -343,7 +343,7 @@ ukb_decode_values <- function(data,
     return(data)
   }
 
-  out <- if (data.table::is.data.table(data)) data.table::copy(data) else data
+  out <- if (is.data.table(data)) copy(data) else data
   parsed <- .ukb_parse_columns(names(out))
 
   for (i in seq_len(nrow(parsed))) {
@@ -355,7 +355,7 @@ ukb_decode_values <- function(data,
     if (nrow(field) == 0 || !"coding_id" %in% names(field)) {
       next
     }
-    coding_id <- unique(stats::na.omit(as.character(field$coding_id)))
+    coding_id <- unique(na.omit(as.character(field$coding_id)))
     coding_id <- coding_id[nzchar(coding_id)]
     if (length(coding_id) == 0) {
       next
@@ -443,7 +443,7 @@ ukb_decode_column_names <- function(data,
   }
 
   new_names <- make.unique(new_names, sep = "_")
-  out <- if (data.table::is.data.table(data)) data.table::copy(data) else data
+  out <- if (is.data.table(data)) copy(data) else data
   names(out) <- new_names
   out
 }
@@ -582,7 +582,7 @@ print.ukb_field_info <- function(x, ...) {
   if (!file.exists(path)) {
     stop("`codings` does not exist: ", path, call. = FALSE)
   }
-  raw <- data.table::fread(path, data.table = FALSE, encoding = "UTF-8")
+  raw <- fread(path, data.table = FALSE, encoding = "UTF-8")
   if (!is.data.frame(raw) || nrow(raw) == 0) {
     stop("`codings` could not be parsed into a non-empty table.", call. = FALSE)
   }

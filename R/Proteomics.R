@@ -1,5 +1,3 @@
-#' @importFrom igraph simplify as_undirected components induced_subgraph vcount
-#'   ecount cluster_fast_greedy cut_at set_vertex_attr
 NULL
 
 #' Convert protein identifiers to gene symbols
@@ -962,7 +960,7 @@ plot_enrichment_lollipop <- function(x, ...) {
     if (any(invalid)) {
       stop(
         "`input_format = \"symbol\"` received invalid identifier(s): ",
-        paste(utils::head(x[invalid], 5L), collapse = ", "),
+        paste(head(x[invalid], 5L), collapse = ", "),
         call. = FALSE
       )
     }
@@ -1099,7 +1097,7 @@ plot_enrichment_lollipop <- function(x, ...) {
     if (length(missing_from_universe)) {
       stop(
         "All mapped query proteins must be present in `universe`; missing gene symbols: ",
-        paste(utils::head(missing_from_universe, 10L), collapse = ", ")
+        paste(head(missing_from_universe, 10L), collapse = ", ")
       )
     }
   }

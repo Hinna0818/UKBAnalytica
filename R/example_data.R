@@ -12,7 +12,6 @@
 #'
 #' @return A data.frame of synthetic cohort variables with missing values
 #'   retained.
-#' @importFrom withr with_seed
 #' @export
 #'
 #' @examples
@@ -38,9 +37,9 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
   generate_demo <- function() {
     cols <- .ukb_demo_colnames()
     baseline <- as.Date("2010-01-01") + sample.int(365 * 3, n, replace = TRUE)
-    age <- round(stats::rnorm(n, mean = 58, sd = 8), 1)
+    age <- round(rnorm(n, mean = 58, sd = 8), 1)
     sex <- sample(c(0L, 1L), n, replace = TRUE)
-    bmi <- round(stats::rnorm(n, mean = 27, sd = 4.5), 1)
+    bmi <- round(rnorm(n, mean = 27, sd = 4.5), 1)
     ethnicity <- sample(c(1L, 1001L, 2001L, 3001L, 4001L), n,
       replace = TRUE,
       prob = c(0.82, 0.06, 0.05, 0.04, 0.03)
@@ -57,12 +56,12 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
       replace = TRUE,
       prob = c(0.10, 0.62, 0.26, 0.02)
     )
-    tdi <- round(stats::rnorm(n, mean = 0, sd = 3), 2)
+    tdi <- round(rnorm(n, mean = 0, sd = 3), 2)
 
-    no2_base <- stats::rnorm(n, mean = 25, sd = 6)
-    nox_base <- stats::rnorm(n, mean = 42, sd = 12)
-    pm25_base <- stats::rnorm(n, mean = 10, sd = 2)
-    pm10_base <- stats::rnorm(n, mean = 18, sd = 4)
+    no2_base <- rnorm(n, mean = 25, sd = 6)
+    nox_base <- rnorm(n, mean = 42, sd = 12)
+    pm25_base <- rnorm(n, mean = 10, sd = 2)
+    pm10_base <- rnorm(n, mean = 18, sd = 4)
 
     out <- as.data.frame(
       setNames(replicate(length(cols), rep(NA_real_, n), simplify = FALSE), cols),
@@ -77,7 +76,7 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
       instance <- as.integer(sub("^p53_i", "", col))
       out[[col]] <- baseline + round(instance * 365.25 * 2)
     }
-    for (col in grep("^p21001_i[0-9]+$", cols, value = TRUE)) out[[col]] <- bmi + stats::rnorm(n, 0, 0.8)
+    for (col in grep("^p21001_i[0-9]+$", cols, value = TRUE)) out[[col]] <- bmi + rnorm(n, 0, 0.8)
     for (col in grep("^p21000_i[0-9]+$", cols, value = TRUE)) out[[col]] <- ethnicity
     for (col in grep("^p20116_i[0-9]+$", cols, value = TRUE)) out[[col]] <- smoking
     for (col in grep("^p20117_i[0-9]+$", cols, value = TRUE)) out[[col]] <- drinking
@@ -87,22 +86,22 @@ ukb_demo <- function(n = NULL, seed = 20260618L) {
     }
     if ("p189" %in% cols) out$p189 <- tdi
 
-    if ("p24016" %in% cols) out[["p24016"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
-    if ("p24018" %in% cols) out[["p24018"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
-    if ("p24017" %in% cols) out[["p24017"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.2), 1), 2)
-    if ("p24003" %in% cols) out[["p24003"]] <- round(pmax(no2_base + stats::rnorm(n, 0, 1.8), 1), 2)
+    if ("p24016" %in% cols) out[["p24016"]] <- round(pmax(no2_base + rnorm(n, 0, 1.2), 1), 2)
+    if ("p24018" %in% cols) out[["p24018"]] <- round(pmax(no2_base + rnorm(n, 0, 1.2), 1), 2)
+    if ("p24017" %in% cols) out[["p24017"]] <- round(pmax(no2_base + rnorm(n, 0, 1.2), 1), 2)
+    if ("p24003" %in% cols) out[["p24003"]] <- round(pmax(no2_base + rnorm(n, 0, 1.8), 1), 2)
     if ("p24004" %in% cols) out[["p24004"]] <- round(pmax(nox_base, 1), 2)
     if ("p24006" %in% cols) out[["p24006"]] <- round(pmax(pm25_base, 1), 2)
-    if ("p24019" %in% cols) out[["p24019"]] <- round(pmax(pm10_base + stats::rnorm(n, 0, 1.0), 1), 2)
-    if ("p24005" %in% cols) out[["p24005"]] <- round(pmax(pm10_base + stats::rnorm(n, 0, 1.4), 1), 2)
+    if ("p24019" %in% cols) out[["p24019"]] <- round(pmax(pm10_base + rnorm(n, 0, 1.0), 1), 2)
+    if ("p24005" %in% cols) out[["p24005"]] <- round(pmax(pm10_base + rnorm(n, 0, 1.4), 1), 2)
 
     for (col in grep("^p22009_a[0-9]+$", cols, value = TRUE)) {
       pc <- as.integer(sub("^p22009_a", "", col))
-      out[[col]] <- stats::rnorm(n, mean = 0, sd = 1 / sqrt(pc + 1))
+      out[[col]] <- rnorm(n, mean = 0, sd = 1 / sqrt(pc + 1))
     }
-    for (col in grep("^p3062_", cols, value = TRUE)) out[[col]] <- round(stats::rnorm(n, 2.7, 0.7), 2)
-    for (col in grep("^p3063_", cols, value = TRUE)) out[[col]] <- round(stats::rnorm(n, 3.6, 0.8), 2)
-    for (col in grep("^p3064_", cols, value = TRUE)) out[[col]] <- round(stats::rnorm(n, 78, 14), 1)
+    for (col in grep("^p3062_", cols, value = TRUE)) out[[col]] <- round(rnorm(n, 2.7, 0.7), 2)
+    for (col in grep("^p3063_", cols, value = TRUE)) out[[col]] <- round(rnorm(n, 3.6, 0.8), 2)
+    for (col in grep("^p3064_", cols, value = TRUE)) out[[col]] <- round(rnorm(n, 78, 14), 1)
 
     icd10_codes <- rep("", n)
     icd10_dates <- as.Date(rep(NA, n), origin = "1970-01-01")

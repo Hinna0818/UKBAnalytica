@@ -54,7 +54,7 @@ single key preserves the legacy \code{outcome_status} and
 \item{exclude_prevalent}{Logical; if TRUE, excludes prevalent cases from output.}
 
 \item{dt_threads}{Optional integer. If provided, temporarily sets
-\code{data.table} thread count via \code{data.table::setDTthreads()} for this
+\code{data.table} thread count via \code{setDTthreads()} for this
 function call, and restores the previous thread setting on exit.}
 }
 \value{

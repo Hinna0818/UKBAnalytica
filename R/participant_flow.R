@@ -229,7 +229,7 @@ plot_participant_flow <- function(flow,
         call. = FALSE
       )
     }
-    out <- stats::complete.cases(current_data[, rule, drop = FALSE])
+    out <- complete.cases(current_data[, rule, drop = FALSE])
   } else {
     stop("Unsupported flow rule type.", call. = FALSE)
   }

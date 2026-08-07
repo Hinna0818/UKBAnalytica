@@ -22,9 +22,6 @@
 #' @param base_size Base font size.
 #'
 #' @return A ggplot object.
-#' @importFrom ggplot2 ggplot aes geom_tile geom_text scale_fill_gradient2 labs
-#'   theme element_blank element_text theme_classic element_line margin
-#' @importFrom rlang .data
 #' @export
 plot_heatmap <- function(data,
                          x,
@@ -92,11 +89,6 @@ plot_heatmap <- function(data,
 #' @param base_size Base font size.
 #'
 #' @return A ggplot object.
-#' @importFrom ggplot2 ggplot aes geom_col scale_y_continuous scale_fill_manual
-#'   labs theme expansion theme_classic element_line element_text element_blank
-#'   margin
-#' @importFrom rlang .data
-#' @importFrom stats ave
 #' @export
 plot_stacked_bar <- function(data,
                              x,
@@ -168,10 +160,6 @@ plot_stacked_bar <- function(data,
 #' @param base_size Base font size.
 #'
 #' @return A ggplot object.
-#' @importFrom ggplot2 ggplot aes geom_violin geom_boxplot geom_jitter
-#'   scale_fill_manual labs theme theme_classic element_line element_text
-#'   element_blank margin
-#' @importFrom rlang .data
 #' @export
 plot_violin <- function(data,
                         x,
@@ -230,10 +218,6 @@ plot_violin <- function(data,
 #' @param base_size Base font size.
 #'
 #' @return A ggplot object.
-#' @importFrom ggplot2 ggplot aes geom_point geom_abline geom_smooth
-#'   scale_color_manual labs theme_classic theme element_line element_text
-#'   element_blank margin
-#' @importFrom rlang .data
 #' @export
 plot_scatter <- function(data,
                          x,

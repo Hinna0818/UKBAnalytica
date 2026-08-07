@@ -37,7 +37,6 @@
 #'
 #' ukb_time_skeleton(demo, admin_censor_date = as.Date("2020-12-31"))
 #'
-#' @import data.table
 #' @export
 ukb_time_skeleton <- function(data,
                               id_col = "eid",
@@ -73,9 +72,9 @@ ukb_time_skeleton <- function(data,
     stop("'admin_censor_date' must be coercible to a single non-missing Date.", call. = FALSE)
   }
 
-  dt <- data.table::as.data.table(data.table::copy(data))
+  dt <- as.data.table(copy(data))
   .ukb_time_validate_ids(dt[[resolved_id_col]], resolved_id_col)
-  out <- data.table::data.table(
+  out <- data.table(
     eid = dt[[resolved_id_col]],
     baseline_date = .safe_as_date(dt[[resolved_baseline_col]], col_name = resolved_baseline_col)
   )
@@ -109,27 +108,27 @@ ukb_time_skeleton <- function(data,
   )]
 
   death_dates <- .ukb_time_extract_death_dates(dt, id_col = resolved_id_col, death_date_cols = death_date_cols)
-  out <- data.table::merge.data.table(out, death_dates, by = "eid", all.x = TRUE)
+  out <- merge.data.table(out, death_dates, by = "eid", all.x = TRUE)
 
   lost_col <- .ukb_time_resolve_single_col(dt, lost_to_followup_col)
   if (!is.na(lost_col)) {
-    lost_dt <- data.table::data.table(
+    lost_dt <- data.table(
       eid = dt[[resolved_id_col]],
       lost_to_followup_date = .safe_as_date(dt[[lost_col]], col_name = lost_col)
     )
   } else {
-    lost_dt <- data.table::data.table(
+    lost_dt <- data.table(
       eid = dt[[resolved_id_col]],
       lost_to_followup_date = as.Date(NA)
     )
   }
-  out <- data.table::merge.data.table(out, lost_dt, by = "eid", all.x = TRUE, sort = FALSE)
+  out <- merge.data.table(out, lost_dt, by = "eid", all.x = TRUE, sort = FALSE)
 
   out[, admin_censor_date := admin_censor_date]
   out[, followup_end_date := pmin(death_date, lost_to_followup_date, admin_censor_date, na.rm = TRUE)]
   out[is.na(followup_end_date), followup_end_date := admin_censor_date]
 
-  out[, followup_end_reason := data.table::fcase(
+  out[, followup_end_reason := fcase(
     !is.na(death_date) & followup_end_date == death_date, "death",
     !is.na(lost_to_followup_date) & followup_end_date == lost_to_followup_date, "lost_to_followup",
     followup_end_date == admin_censor_date, "administrative_censoring",
@@ -149,7 +148,7 @@ ukb_time_skeleton <- function(data,
     out[, c("death_date", "lost_to_followup_date", "admin_censor_date") := NULL]
   }
 
-  data.table::setorder(out, eid)
+  setorder(out, eid)
   attr(out, "time_skeleton_summary") <- .ukb_time_skeleton_summary(out)
   class(out) <- c("ukb_time_skeleton", class(out))
   out[]
@@ -161,7 +160,7 @@ ukb_time_skeleton <- function(data,
 .ukb_followup_window <- function(dt,
                                  baseline_col = "p53_i0",
                                  censor_date = as.Date("2023-10-31")) {
-  dt <- data.table::as.data.table(dt)
+  dt <- as.data.table(dt)
   if (!"eid" %in% names(dt)) {
     stop("Column 'eid' was not found in the input data.", call. = FALSE)
   }
@@ -174,7 +173,7 @@ ukb_time_skeleton <- function(data,
     stop("`censor_date` must be a single non-missing Date.", call. = FALSE)
   }
 
-  baseline_dt <- data.table::data.table(
+  baseline_dt <- data.table(
     eid = dt[["eid"]],
     baseline_date = .safe_as_date(dt[[baseline_col]], col_name = baseline_col)
   )
@@ -185,25 +184,25 @@ ukb_time_skeleton <- function(data,
   )
   lost_col <- intersect(lost_candidates, names(dt))
   if (length(lost_col) > 0L) {
-    lost_dt <- data.table::data.table(
+    lost_dt <- data.table(
       eid = dt[["eid"]],
       lost_to_followup_date = .safe_as_date(dt[[lost_col[[1]]]], col_name = lost_col[[1]])
     )
   } else {
-    lost_dt <- data.table::data.table(
+    lost_dt <- data.table(
       eid = dt[["eid"]],
       lost_to_followup_date = as.Date(NA)
     )
   }
 
-  out <- data.table::merge.data.table(
+  out <- merge.data.table(
     baseline_dt,
     death_dates,
     by = "eid",
     all.x = TRUE,
     sort = FALSE
   )
-  out <- data.table::merge.data.table(
+  out <- merge.data.table(
     out,
     lost_dt,
     by = "eid",
@@ -220,14 +219,14 @@ ukb_time_skeleton <- function(data,
     stop("Multiple internal follow-up end columns were found.", call. = FALSE)
   }
   if (length(skeleton_cols) == 1L) {
-    skeleton_dt <- data.table::data.table(
+    skeleton_dt <- data.table(
       eid = dt[["eid"]],
       skeleton_followup_end_date = .safe_as_date(
         dt[[skeleton_cols[[1]]]],
         col_name = skeleton_cols[[1]]
       )
     )
-    out <- data.table::merge.data.table(
+    out <- merge.data.table(
       out,
       skeleton_dt,
       by = "eid",
@@ -235,16 +234,16 @@ ukb_time_skeleton <- function(data,
       sort = FALSE
     )
   } else {
-    data.table::set(out, j = "skeleton_followup_end_date", value = as.Date(NA))
+    set(out, j = "skeleton_followup_end_date", value = as.Date(NA))
   }
 
-  data.table::set(out, j = "calculated_followup_end_date", value = pmin(
+  set(out, j = "calculated_followup_end_date", value = pmin(
     out[["death_date"]],
     out[["lost_to_followup_date"]],
     censor_date,
     na.rm = TRUE
   ))
-  data.table::set(out, j = "followup_end_date", value = data.table::fifelse(
+  set(out, j = "followup_end_date", value = fifelse(
     !is.na(out[["skeleton_followup_end_date"]]),
     out[["skeleton_followup_end_date"]],
     out[["calculated_followup_end_date"]]
@@ -319,12 +318,12 @@ ukb_time_skeleton <- function(data,
 .ukb_time_extract_death_dates <- function(dt, id_col, death_date_cols) {
   cols <- .ukb_time_resolve_date_cols(dt, death_date_cols)
   if (length(cols) == 0L) {
-    return(data.table::data.table(eid = dt[[id_col]], death_date = as.Date(NA)))
+    return(data.table(eid = dt[[id_col]], death_date = as.Date(NA)))
   }
 
   death_dt <- dt[, c(id_col, cols), with = FALSE]
-  data.table::setnames(death_dt, id_col, "eid")
-  death_long <- data.table::melt(
+  setnames(death_dt, id_col, "eid")
+  death_long <- melt(
     death_dt,
     id.vars = "eid",
     measure.vars = cols,
@@ -334,7 +333,7 @@ ukb_time_skeleton <- function(data,
   )
   death_long[, death_date := .safe_as_date(death_date, col_name = "death_date")]
   if (nrow(death_long) == 0L || all(is.na(death_long[["death_date"]]))) {
-    return(data.table::data.table(
+    return(data.table(
       eid = dt[[id_col]],
       death_date = as.Date(NA)
     ))
@@ -344,13 +343,13 @@ ukb_time_skeleton <- function(data,
     .(death_date = min(death_date)),
     by = eid
   ]
-  out <- data.table::data.table(eid = dt[[id_col]])
-  out <- data.table::merge.data.table(out, death_agg, by = "eid", all.x = TRUE)
+  out <- data.table(eid = dt[[id_col]])
+  out <- merge.data.table(out, death_agg, by = "eid", all.x = TRUE)
   out
 }
 
 .ukb_time_skeleton_summary <- function(x) {
-  data.table::data.table(
+  data.table(
     metric = c(
       "n",
       "valid_followup",

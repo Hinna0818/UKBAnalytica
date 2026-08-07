@@ -15,7 +15,7 @@ runmulti_logit(data, main_var, covariates = NULL, outcome, ...)
 
 \item{outcome}{A character string specifying the binary outcome (dependent) variable name (0/1).}
 
-\item{...}{Additional arguments passed to \code{stats::glm()}.}
+\item{...}{Additional arguments passed to \code{glm()}.}
 }
 \value{
 A data.frame with columns: \code{variable}, \code{contrast},

@@ -198,10 +198,10 @@ load_ukb_prs <- function(data = NULL,
     stop("`dry_run` is only used when `data = NULL`.", call. = FALSE)
   }
 
-  data <- data.table::as.data.table(data.table::copy(data))
+  data <- as.data.table(copy(data))
   id_name <- .prs_find_id(names(data), id_col)
   out <- data[, id_name, with = FALSE]
-  data.table::setnames(out, id_name, id_col)
+  setnames(out, id_name, id_col)
   score_columns <- character()
   enhanced_columns <- character()
   for (i in seq_len(nrow(selected))) {
@@ -232,7 +232,7 @@ load_ukb_prs <- function(data = NULL,
       )
       if (identical(eligibility, "set_na")) {
         for (column in enhanced_columns) {
-          data.table::set(out, which(!eligible), column, NA_real_)
+          set(out, which(!eligible), column, NA_real_)
         }
       } else if (identical(eligibility, "require")) {
         out <- out[eligible]
@@ -291,7 +291,7 @@ prepare_prs_weights <- function(weights,
     if (!file.exists(weights)) {
       stop("PRS weight file does not exist: ", weights, call. = FALSE)
     }
-    data.table::fread(weights, data.table = FALSE, check.names = FALSE)
+    fread(weights, data.table = FALSE, check.names = FALSE)
   } else if (is.data.frame(weights)) {
     weights
   } else {
@@ -358,7 +358,7 @@ prepare_prs_weights <- function(weights,
       stop("Output already exists; use `overwrite = TRUE`.", call. = FALSE)
     }
     dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
-    data.table::fwrite(out, output, sep = "\t", quote = FALSE, na = "NA")
+    fwrite(out, output, sep = "\t", quote = FALSE, na = "NA")
     attr(out, "path") <- normalizePath(output, mustWork = FALSE)
   }
   attr(out, "source_columns") <- c(
@@ -557,9 +557,9 @@ ukb_plan_prs <- function(weights,
   out <- list(
     tool = "PLINK2",
     commands = commands,
-    expected_sscore = stats::setNames(paste0(outputs, ".sscore"), labels),
+    expected_sscore = setNames(paste0(outputs, ".sscore"), labels),
     expected_variants = if (isTRUE(list_variants)) {
-      stats::setNames(paste0(outputs, ".sscore.vars"), labels)
+      setNames(paste0(outputs, ".sscore.vars"), labels)
     } else {
       character()
     },
@@ -606,7 +606,7 @@ read_prs_scores <- function(files,
   }
   input_score_columns <- NULL
   parts <- lapply(seq_along(files), function(i) {
-    x <- data.table::fread(files[[i]], data.table = TRUE, check.names = FALSE)
+    x <- fread(files[[i]], data.table = TRUE, check.names = FALSE)
     iid <- intersect(c("IID", "#IID"), names(x))
     if (length(iid) != 1L) {
       stop("Each .sscore file must contain one IID column.", call. = FALSE)
@@ -621,7 +621,7 @@ read_prs_scores <- function(files,
       stop("All .sscore files must contain the same score-sum columns in the same order.", call. = FALSE)
     }
     fid <- intersect(c("FID", "#FID"), names(x))
-    out <- data.table::data.table(
+    out <- data.table(
       FID = if (length(fid) == 1L) as.character(x[[fid]]) else as.character(x[[iid]]),
       IID = as.character(x[[iid]]),
       allele_ct = if ("ALLELE_CT" %in% names(x)) as.numeric(x$ALLELE_CT) else NA_real_,
@@ -647,19 +647,19 @@ read_prs_scores <- function(files,
   }
   score_names <- .prs_score_names(score_names, length(input_score_columns))
   internal <- paste0("score_", seq_along(input_score_columns))
-  long <- data.table::rbindlist(parts, use.names = TRUE)
+  long <- rbindlist(parts, use.names = TRUE)
   score_values <- long[, lapply(.SD, .prs_sum_or_na),
                        by = .(FID, IID), .SDcols = internal]
   metrics <- long[, .(
     ALLELE_CT = .prs_sum_or_na(allele_ct),
     DENOM = .prs_sum_or_na(denom),
-    N_FILES = data.table::uniqueN(source_file)
+    N_FILES = uniqueN(source_file)
   ), by = .(FID, IID)]
   out <- merge(score_values, metrics, by = c("FID", "IID"), sort = FALSE)
   if (any(out$N_FILES != length(files))) {
     warning("Some participants are absent from one or more .sscore files.", call. = FALSE)
   }
-  data.table::setnames(out, internal, score_names)
+  setnames(out, internal, score_names)
   if (length(score_names) == 1L) {
     out$PRS_AVG <- out[[score_names]] / out$DENOM
   }
@@ -723,7 +723,7 @@ ukb_run_prs <- function(plan,
     stop("PRS input file(s) do not exist: ", paste(missing, collapse = ", "), call. = FALSE)
   }
   labels <- names(plan$commands)
-  expected_by_command <- stats::setNames(lapply(labels, function(label) {
+  expected_by_command <- setNames(lapply(labels, function(label) {
     variants <- if (label %in% names(plan$expected_variants)) {
       plan$expected_variants[[label]]
     } else {
@@ -784,7 +784,7 @@ ukb_run_prs <- function(plan,
     )
   }
   if (length(pending) > 0L && workers > 1L && .Platform$OS.type != "windows") {
-    executed <- parallel::mclapply(
+    executed <- mclapply(
       pending, run_one, mc.cores = min(as.integer(workers), length(pending)),
       mc.preschedule = FALSE
     )
@@ -796,7 +796,7 @@ ukb_run_prs <- function(plan,
   }
   names(executed) <- pending
   skipped <- labels[isTRUE(resume) & complete]
-  skipped_results <- stats::setNames(lapply(skipped, function(label) {
+  skipped_results <- setNames(lapply(skipped, function(label) {
     command <- plan$commands[[label]]
     list(
       label = label, status = 0L, success = TRUE, skipped = TRUE,
@@ -930,7 +930,7 @@ print.ukb_prs_run <- function(x, ...) {
 
 .prs_zscore <- function(x) {
   x <- suppressWarnings(as.numeric(x))
-  s <- stats::sd(x, na.rm = TRUE)
+  s <- sd(x, na.rm = TRUE)
   if (!is.finite(s) || s == 0) {
     return(rep(NA_real_, length(x)))
   }

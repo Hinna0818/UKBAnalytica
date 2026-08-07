@@ -77,7 +77,7 @@
     stop("Formula must include at least one predictor.", call. = FALSE)
   }
 
-  missing_predictors <- setdiff(all.vars(stats::delete.response(terms_obj)), names(data))
+  missing_predictors <- setdiff(all.vars(delete.response(terms_obj)), names(data))
   if (length(missing_predictors) > 0L) {
     stop("Predictor column(s) not found: ", paste(missing_predictors, collapse = ", "), call. = FALSE)
   }
@@ -90,15 +90,15 @@
   if (length(features) == 0L) {
     stop("No features available for model fitting.", call. = FALSE)
   }
-  stats::as.formula(paste(outcome, "~", paste(features, collapse = " + ")))
+  as.formula(paste(outcome, "~", paste(features, collapse = " + ")))
 }
 
 #' @keywords internal
 .mlw_model_frame <- function(formula, data, outcome_type, classes = NULL) {
   data <- as.data.frame(data)
   parsed <- .mlw_parse_formula(formula, data)
-  vars <- unique(c(parsed$response, all.vars(stats::delete.response(parsed$terms))))
-  complete_idx <- stats::complete.cases(data[, vars, drop = FALSE])
+  vars <- unique(c(parsed$response, all.vars(delete.response(parsed$terms))))
+  complete_idx <- complete.cases(data[, vars, drop = FALSE])
   mf <- data[complete_idx, vars, drop = FALSE]
 
   if (nrow(mf) == 0L) {
@@ -131,8 +131,8 @@
 #' @keywords internal
 .mlw_model_matrix <- function(formula, data, outcome_type, classes = NULL) {
   mf <- .mlw_model_frame(formula, data, outcome_type, classes = classes)
-  x_terms <- stats::delete.response(stats::terms(formula, data = mf$data))
-  X <- stats::model.matrix(x_terms, data = mf$data)
+  x_terms <- delete.response(terms(formula, data = mf$data))
+  X <- model.matrix(x_terms, data = mf$data)
   contrasts <- attr(X, "contrasts")
   assign <- attr(X, "assign")
   if ("(Intercept)" %in% colnames(X)) {
@@ -160,7 +160,7 @@
     complete_idx = mf$complete_idx,
     x_terms = x_terms,
     contrasts = contrasts,
-    xlevels = stats::.getXlevels(x_terms, mf$data),
+    xlevels = .getXlevels(x_terms, mf$data),
     feature_map = feature_map,
     classes = mf$classes
   )
@@ -195,7 +195,7 @@
     newdata[[variable]] <- factor(values, levels = object$xlevels[[variable]])
   }
 
-  complete <- stats::complete.cases(newdata[, required, drop = FALSE])
+  complete <- complete.cases(newdata[, required, drop = FALSE])
   list(
     data = newdata[complete, , drop = FALSE],
     rows = which(complete),
@@ -205,7 +205,7 @@
 
 #' @keywords internal
 .mlw_prediction_matrix <- function(object, newdata) {
-  X <- stats::model.matrix(
+  X <- model.matrix(
     object$x_terms,
     data = newdata,
     contrasts.arg = object$contrasts,
@@ -400,7 +400,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     stop("Multiclass probabilities must have class column names.", call. = FALSE)
   }
   prob <- prob[, classes, drop = FALSE]
-  keep <- !is.na(truth) & stats::complete.cases(prob)
+  keep <- !is.na(truth) & complete.cases(prob)
   truth <- droplevels(truth[keep])
   prob <- prob[keep, , drop = FALSE]
   if (length(truth) == 0L) {
@@ -438,7 +438,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     accuracy = accuracy,
     balanced_accuracy = mean(per_class[, "recall"], na.rm = TRUE),
     macro_f1 = mean(per_class[, "f1"], na.rm = TRUE),
-    weighted_f1 = stats::weighted.mean(per_class[, "f1"], per_class[, "support"], na.rm = TRUE),
+    weighted_f1 = weighted.mean(per_class[, "f1"], per_class[, "support"], na.rm = TRUE),
     macro_precision = mean(per_class[, "precision"], na.rm = TRUE),
     macro_recall = mean(per_class[, "recall"], na.rm = TRUE),
     logloss = -mean(log(p_true), na.rm = TRUE)
@@ -495,10 +495,10 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
   fitted <- switch(
     model,
     logistic = {
-      stats::glm(formula, data = mf, family = stats::binomial())
+      glm(formula, data = mf, family = binomial())
     },
     linear = {
-      stats::lm(formula, data = mf)
+      lm(formula, data = mf)
     },
     rf = {
       .check_ml_package("ranger")
@@ -508,7 +508,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
         min.node.size = if (outcome_type == "continuous") 5 else 1,
         importance = "permutation"
       )
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       if (outcome_type != "continuous") {
         fit_params$probability <- TRUE
       }
@@ -524,7 +524,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
         colsample_bytree = 1,
         verbosity = 0
       )
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       nrounds <- fit_params$nrounds
       fit_params$nrounds <- NULL
       if (outcome_type == "binary") {
@@ -555,13 +555,13 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
           continuous = "gaussian"
         )
       )
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       do.call(glmnet::cv.glmnet, c(list(x = prep$X, y = y), fit_params))
     },
     svm = {
       .check_ml_package("e1071")
       default_params <- list(kernel = "radial", scale = TRUE)
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       if (outcome_type != "continuous") {
         fit_params$probability <- TRUE
       }
@@ -570,7 +570,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     rpart = {
       .check_ml_package("rpart")
       default_params <- list(cp = 0.01, minsplit = 20, maxdepth = 30)
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       control_args <- fit_params[names(fit_params) %in% c("cp", "minsplit", "maxdepth")]
       fit_params[names(control_args)] <- NULL
       fit_params$control <- fit_params$control %||% do.call(rpart::rpart.control, control_args)
@@ -580,18 +580,18 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     naive_bayes = {
       .check_ml_package("e1071")
       default_params <- list(laplace = 0)
-      fit_params <- utils::modifyList(default_params, params)
+      fit_params <- modifyList(default_params, params)
       do.call(e1071::naiveBayes, c(list(formula = formula, data = mf), fit_params))
     },
     nnet = {
       .check_ml_package("nnet")
       if (outcome_type %in% c("binary", "multiclass")) {
         default_params <- list(trace = FALSE, maxit = 200)
-        fit_params <- utils::modifyList(default_params, params)
+        fit_params <- modifyList(default_params, params)
         do.call(nnet::multinom, c(list(formula = formula, data = mf), fit_params))
       } else {
         default_params <- list(size = 5, decay = 0.01, maxit = 200, trace = FALSE, linout = TRUE)
-        fit_params <- utils::modifyList(default_params, params)
+        fit_params <- modifyList(default_params, params)
         do.call(nnet::nnet, c(list(formula = formula, data = mf), fit_params))
       }
     }
@@ -636,7 +636,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
   if (outcome_type == "continuous") {
     pred <- switch(
       model,
-      linear = stats::predict(object$fitted_model, newdata = newdata),
+      linear = predict(object$fitted_model, newdata = newdata),
       rf = predict(object$fitted_model, data = newdata)$predictions,
       xgboost = {
         X <- .mlw_prediction_matrix(object, newdata)
@@ -644,11 +644,11 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
       },
       glmnet = {
         X <- .mlw_prediction_matrix(object, newdata)
-        as.numeric(stats::predict(object$fitted_model, newx = X, s = "lambda.min"))
+        as.numeric(predict(object$fitted_model, newx = X, s = "lambda.min"))
       },
-      svm = as.numeric(stats::predict(object$fitted_model, newdata = newdata)),
-      rpart = as.numeric(stats::predict(object$fitted_model, newdata = newdata)),
-      nnet = as.numeric(stats::predict(object$fitted_model, newdata = newdata))
+      svm = as.numeric(predict(object$fitted_model, newdata = newdata)),
+      rpart = as.numeric(predict(object$fitted_model, newdata = newdata)),
+      nnet = as.numeric(predict(object$fitted_model, newdata = newdata))
     )
     return(.mlw_restore_predictions(
       pred,
@@ -661,7 +661,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
   prob <- switch(
     model,
     logistic = {
-      p <- as.numeric(stats::predict(object$fitted_model, newdata = newdata, type = "response"))
+      p <- as.numeric(predict(object$fitted_model, newdata = newdata, type = "response"))
       out <- cbind(1 - p, p)
       colnames(out) <- classes
       out
@@ -686,7 +686,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     },
     glmnet = {
       X <- .mlw_prediction_matrix(object, newdata)
-      raw <- stats::predict(object$fitted_model, newx = X, s = "lambda.min", type = "response")
+      raw <- predict(object$fitted_model, newx = X, s = "lambda.min", type = "response")
       if (outcome_type == "binary") {
         p <- as.numeric(raw)
         out <- cbind(1 - p, p)
@@ -698,20 +698,20 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
       }
     },
     svm = {
-      raw <- stats::predict(object$fitted_model, newdata = newdata, probability = TRUE)
+      raw <- predict(object$fitted_model, newdata = newdata, probability = TRUE)
       probs <- attr(raw, "probabilities")
       probs[, classes, drop = FALSE]
     },
     rpart = {
-      probs <- stats::predict(object$fitted_model, newdata = newdata, type = "prob")
+      probs <- predict(object$fitted_model, newdata = newdata, type = "prob")
       probs[, classes, drop = FALSE]
     },
     naive_bayes = {
-      probs <- stats::predict(object$fitted_model, newdata = newdata, type = "raw")
+      probs <- predict(object$fitted_model, newdata = newdata, type = "raw")
       probs[, classes, drop = FALSE]
     },
     nnet = {
-      probs <- stats::predict(object$fitted_model, newdata = newdata, type = "probs")
+      probs <- predict(object$fitted_model, newdata = newdata, type = "probs")
       if (is.null(dim(probs))) {
         out <- cbind(1 - probs, probs)
         colnames(out) <- classes
@@ -735,7 +735,7 @@ ukb_ml_supported_models <- function(outcome_type = c("all", "binary", "multiclas
     return(prob)
   }
   class_prediction <- rep(NA_character_, nrow(prob))
-  valid <- stats::complete.cases(prob)
+  valid <- complete.cases(prob)
   class_prediction[valid] <- classes[
     max.col(prob[valid, , drop = FALSE], ties.method = "first")
   ]
@@ -778,9 +778,9 @@ ukb_ml_as_split <- function(train_data,
     stop("'validation_data' must be NULL or a non-empty data.frame/data.table.", call. = FALSE)
   }
 
-  train_data <- data.table::as.data.table(data.table::copy(train_data))
-  test_data <- data.table::as.data.table(data.table::copy(test_data))
-  validation_data <- if (!is.null(validation_data)) data.table::as.data.table(data.table::copy(validation_data)) else NULL
+  train_data <- as.data.table(copy(train_data))
+  test_data <- as.data.table(copy(test_data))
+  validation_data <- if (!is.null(validation_data)) as.data.table(copy(validation_data)) else NULL
 
   if (!is.null(outcome)) {
     for (nm in c("train_data", "test_data", if (!is.null(validation_data)) "validation_data")) {
@@ -885,7 +885,7 @@ ukb_ml_as_split <- function(train_data,
     }
     if (outcome_type == "continuous") {
       probs <- seq(0, 1, length.out = regression_bins + 1L)
-      qs <- unique(stats::quantile(df[[outcome]], probs = probs, na.rm = TRUE, type = 7))
+      qs <- unique(quantile(df[[outcome]], probs = probs, na.rm = TRUE, type = 7))
       if (length(qs) < 3L) {
         strata <- rep("all", nrow(df))
       } else {
@@ -965,7 +965,7 @@ ukb_ml_split_data <- function(df,
   }
 
   if (!is.null(seed)) set.seed(seed)
-  df <- data.table::as.data.table(data.table::copy(df))
+  df <- as.data.table(copy(df))
 
   if (!is.null(outcome)) {
     if (!outcome %in% names(df)) {
@@ -1031,7 +1031,7 @@ ukb_ml_split_data <- function(df,
     validation = validation_idx,
     test = test_idx
   )
-  split_obj$split_info <- utils::modifyList(split_obj$split_info, list(
+  split_obj$split_info <- modifyList(split_obj$split_info, list(
     split = split,
     train_ratio = train_ratio,
     validation_ratio = if (split == "train_valid_test") validation_ratio else 0,
@@ -1123,13 +1123,13 @@ ukb_ml_feature_select <- function(split,
       x <- mf[[v]]
       if (is.numeric(x) || is.integer(x)) {
         if (outcome_type == "continuous") {
-          abs(stats::cor(x, y, use = "complete.obs"))
+          abs(cor(x, y, use = "complete.obs"))
         } else {
-          abs(stats::cor(x, as.numeric(as.factor(y)), use = "complete.obs"))
+          abs(cor(x, as.numeric(as.factor(y)), use = "complete.obs"))
         }
       } else {
         tbl <- table(x, y)
-        suppressWarnings(as.numeric(stats::chisq.test(tbl)$statistic))
+        suppressWarnings(as.numeric(chisq.test(tbl)$statistic))
       }
     }, numeric(1))
     scores[!is.finite(scores)] <- 0
@@ -1139,7 +1139,7 @@ ukb_ml_feature_select <- function(split,
   } else if (method == "glmnet") {
     .check_ml_package("glmnet")
     fit <- .ukb_ml_fit_core(formula, split$train, model = "glmnet", outcome_type = outcome_type, seed = seed)
-    coef_obj <- stats::coef(fit$fitted_model, s = "lambda.min")
+    coef_obj <- coef(fit$fitted_model, s = "lambda.min")
     coef_list <- if (is.list(coef_obj)) coef_obj else list(coef_obj)
     nonzero <- unique(unlist(lapply(coef_list, function(z) {
       z <- as.matrix(z)
@@ -2005,7 +2005,7 @@ ukb_ml_fit_final <- function(split,
   refit_data <- split$train
   refit_label <- "train"
   if (!is.null(split$validation) && isTRUE(use_validation_in_refit)) {
-    refit_data <- data.table::rbindlist(list(split$train, split$validation), use.names = TRUE, fill = TRUE)
+    refit_data <- rbindlist(list(split$train, split$validation), use.names = TRUE, fill = TRUE)
     refit_label <- "train_plus_validation"
   }
 
@@ -2088,7 +2088,7 @@ ukb_ml_evaluate_test <- function(object,
     pred_out$pred_class <- factor(ifelse(pred >= th, positive_class, setdiff(object$classes, positive_class)[1]), levels = object$classes)
   } else if (outcome_type == "multiclass") {
     pred_class <- rep(NA_character_, nrow(pred))
-    valid_prediction <- stats::complete.cases(pred)
+    valid_prediction <- complete.cases(pred)
     pred_class[valid_prediction] <- colnames(pred)[
       max.col(pred[valid_prediction, , drop = FALSE], ties.method = "first")
     ]
@@ -2105,7 +2105,7 @@ ukb_ml_evaluate_test <- function(object,
     evaluated_at = Sys.time(),
     test_rows = nrow(split$test),
     evaluated_rows = if (is.matrix(pred)) {
-      sum(!is.na(truth) & stats::complete.cases(pred))
+      sum(!is.na(truth) & complete.cases(pred))
     } else {
       sum(!is.na(truth) & !is.na(pred))
     },
@@ -2124,7 +2124,7 @@ ukb_ml_evaluate_test <- function(object,
 
 .mlw_default_xgboost_grid <- function(y,
                                       positive_class = NULL,
-                                      nthread = max(1L, min(4L, parallel::detectCores(logical = FALSE)))) {
+                                      nthread = max(1L, min(4L, detectCores(logical = FALSE)))) {
   classes <- .mlw_outcome_classes(y)
   if (length(classes) != 2L) {
     stop("Default XGBoost grid with scale_pos_weight requires a binary outcome.", call. = FALSE)
@@ -2273,7 +2273,7 @@ ukb_ml_flow <- function(formula = NULL,
         outcome_type = outcome_type_arg
       )
     } else if (!is.null(data)) {
-      split_call <- utils::modifyList(
+      split_call <- modifyList(
         list(
           df = data,
           outcome = outcome,
@@ -2326,7 +2326,7 @@ ukb_ml_flow <- function(formula = NULL,
 
   tune_res <- NULL
   if (isTRUE(tune)) {
-    tune_call <- utils::modifyList(
+    tune_call <- modifyList(
       list(
         split = split,
         formula = formula,
@@ -2377,7 +2377,7 @@ ukb_ml_flow <- function(formula = NULL,
         threshold_source <- "train"
       }
     }
-    threshold_call <- utils::modifyList(
+    threshold_call <- modifyList(
       list(
         truth = threshold_truth,
         prob = threshold_prob,
@@ -2454,7 +2454,7 @@ ukb_ml_flow <- function(formula = NULL,
   shap_res <- NULL
   if (isTRUE(compute_shap)) {
     shap_data <- shap_data %||% split$test
-    shap_call <- utils::modifyList(
+    shap_call <- modifyList(
       list(
         object = final_model,
         data = shap_data,
@@ -2673,15 +2673,15 @@ ukb_ml_compare_flows <- function(formula = NULL,
   }
 
   if (is.null(feature_set_labels)) {
-    feature_set_labels <- stats::setNames(names(feature_sets), names(feature_sets))
+    feature_set_labels <- setNames(names(feature_sets), names(feature_sets))
   } else if (is.null(names(feature_set_labels))) {
-    feature_set_labels <- stats::setNames(as.character(feature_set_labels), names(feature_sets))
+    feature_set_labels <- setNames(as.character(feature_set_labels), names(feature_sets))
   }
   if (is.null(model_labels)) {
     model_meta <- ukb_ml_supported_models()
-    model_labels <- stats::setNames(model_meta$label, model_meta$model)
+    model_labels <- setNames(model_meta$label, model_meta$model)
   } else if (is.null(names(model_labels))) {
-    model_labels <- stats::setNames(as.character(model_labels), models)
+    model_labels <- setNames(as.character(model_labels), models)
   }
 
   dots <- list(...)
@@ -2704,7 +2704,7 @@ ukb_ml_compare_flows <- function(formula = NULL,
         outcome_type = outcome_type_arg
       )
     } else if (!is.null(data)) {
-      split_call <- utils::modifyList(
+      split_call <- modifyList(
         list(
           df = data,
           outcome = outcome,
@@ -2824,7 +2824,7 @@ ukb_ml_compare_flows <- function(formula = NULL,
     out
   }))
 
-  comparison <- stats::reshape(
+  comparison <- reshape(
     metrics_all,
     idvar = c("model_id", "model_label", "feature_set_id", "feature_set_label", "model"),
     timevar = "metric",
@@ -2959,7 +2959,7 @@ ukb_ml_compare_feature_sets <- function(split,
   if (is.null(model_labels)) {
     model_labels <- names(feature_sets)
   } else if (is.null(names(model_labels))) {
-    model_labels <- stats::setNames(as.character(model_labels), names(feature_sets))
+    model_labels <- setNames(as.character(model_labels), names(feature_sets))
   }
 
   model_results <- vector("list", length(feature_sets))
@@ -2982,7 +2982,7 @@ ukb_ml_compare_feature_sets <- function(split,
       grid_i <- .mlw_default_xgboost_grid(split$train[[outcome]], positive_class = positive_class)
     }
 
-    tune_call <- utils::modifyList(
+    tune_call <- modifyList(
       list(
         split = split,
         formula = ml_formula,
@@ -3029,7 +3029,7 @@ ukb_ml_compare_feature_sets <- function(split,
           threshold_source <- "train"
         }
       }
-      threshold_call <- utils::modifyList(
+      threshold_call <- modifyList(
         list(
           truth = threshold_truth,
           prob = threshold_prob,
@@ -3137,7 +3137,7 @@ ukb_ml_compare_feature_sets <- function(split,
   roc_all <- do.call(rbind, lapply(model_results, `[[`, "roc"))
   threshold_all <- do.call(rbind, lapply(model_results, `[[`, "threshold_table"))
 
-  comparison <- stats::reshape(
+  comparison <- reshape(
     metrics_all,
     idvar = c("model_id", "model_label"),
     timevar = "metric",

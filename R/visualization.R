@@ -1,13 +1,3 @@
-#' @importFrom stats relevel
-#' @importFrom ggplot2 ggplot aes geom_point geom_errorbarh geom_vline labs
-#'   theme_minimal theme element_text element_blank scale_x_log10
-#'   geom_step geom_ribbon geom_hline annotate scale_color_manual
-#'   scale_fill_manual coord_cartesian scale_x_continuous scale_y_continuous
-#'   geom_histogram geom_density geom_segment geom_errorbar geom_smooth
-#'   geom_abline geom_line geom_jitter coord_equal scale_size_continuous
-#'   scale_color_gradientn position_jitter guide_colorbar theme_classic
-#'   element_line margin expansion
-#' @importFrom survival Surv survfit survdiff
 NULL
 
 #' Plot Forest Plot for Subgroup Analysis
@@ -169,7 +159,6 @@ plot_forest <- function(results,
 #'
 #' @return A ggplot2 object (or a list with plot and risk table if risk_table = TRUE).
 #'
-#' @importFrom stats as.formula
 #' @export
 plot_km_curve <- function(data,
                            time_col,
@@ -202,11 +191,11 @@ plot_km_curve <- function(data,
 
   # Build survival formula
   if (is.null(group_col)) {
-    formula_obj <- stats::as.formula(
+    formula_obj <- as.formula(
       paste0("Surv(", time_col, ", ", status_col, ") ~ 1")
     )
   } else {
-    formula_obj <- stats::as.formula(
+    formula_obj <- as.formula(
       paste0("Surv(", time_col, ", ", status_col, ") ~ ", group_col)
     )
   }
@@ -257,7 +246,7 @@ plot_km_curve <- function(data,
     } else if (palette == "lancet") {
       colors <- c("#00468B", "#ED0000", "#42B540", "#0099B4", "#925E9F", "#FDAF91", "#AD002A", "#ADB6B6")
     } else {
-      colors <- scales::hue_pal()(n_groups)
+      colors <- hue_pal()(n_groups)
     }
   } else {
     colors <- palette
@@ -268,7 +257,7 @@ plot_km_curve <- function(data,
   p_val <- NA
   if (pvalue && !is.null(group_col)) {
     logrank <- survdiff(formula_obj, data = data)
-    p_val <- 1 - stats::pchisq(logrank$chisq, df = length(logrank$n) - 1)
+    p_val <- 1 - pchisq(logrank$chisq, df = length(logrank$n) - 1)
   }
 
   # Create main plot
@@ -555,7 +544,6 @@ plot_balance <- function(balance_before,
 #'
 #' @return A ggplot2 object.
 #'
-#' @importFrom stats quantile binom.test
 #' @export
 plot_calibration <- function(data,
                               predicted,
@@ -581,7 +569,7 @@ plot_calibration <- function(data,
   pred_vals <- data[[predicted]]
   obs_vals <- data[[observed]]
 
-  breaks <- stats::quantile(pred_vals, probs = seq(0, 1, length.out = n_bins + 1), na.rm = TRUE)
+  breaks <- quantile(pred_vals, probs = seq(0, 1, length.out = n_bins + 1), na.rm = TRUE)
   breaks <- unique(breaks)
   bins <- cut(pred_vals, breaks = breaks, include.lowest = TRUE, labels = FALSE)
 
@@ -599,11 +587,11 @@ plot_calibration <- function(data,
     n_total <- calib_data$count
 
     calib_data$lower <- mapply(function(x, n) {
-      if (n > 0) stats::binom.test(x, n)$conf.int[1] else NA
+      if (n > 0) binom.test(x, n)$conf.int[1] else NA
     }, n_events, n_total)
 
     calib_data$upper <- mapply(function(x, n) {
-      if (n > 0) stats::binom.test(x, n)$conf.int[2] else NA
+      if (n > 0) binom.test(x, n)$conf.int[2] else NA
     }, n_events, n_total)
   }
 
@@ -842,17 +830,17 @@ plot_mediation <- function(mediation_result,
       # Draw edges (arrows)
       geom_segment(
         aes(x = 0.15, y = 0.1, xend = 0.85, yend = 0.9),
-        arrow = grid::arrow(length = unit(0.3, "cm")),
+        arrow = arrow(length = unit(0.3, "cm")),
         linewidth = 1.2, color = colors["indirect"]
       ) +
       geom_segment(
         aes(x = 1.15, y = 0.9, xend = 1.85, yend = 0.1),
-        arrow = grid::arrow(length = unit(0.3, "cm")),
+        arrow = arrow(length = unit(0.3, "cm")),
         linewidth = 1.2, color = colors["indirect"]
       ) +
       geom_segment(
         aes(x = 0.15, y = -0.1, xend = 1.85, yend = -0.1),
-        arrow = grid::arrow(length = unit(0.3, "cm")),
+        arrow = arrow(length = unit(0.3, "cm")),
         linewidth = 1.2, color = colors["direct"]
       ) +
       # Draw nodes
@@ -1474,7 +1462,6 @@ plot_ml_roc <- function(object,
 #'
 #' @return A ggplot2 object.
 #'
-#' @importFrom stats setNames
 #' @export
 plot_ml_roc_compare <- function(roc_data,
                                 colors = NULL,
@@ -1523,7 +1510,7 @@ plot_ml_roc_compare <- function(roc_data,
     colors <- c("#2F6FA3", "#C74732", "#33B5A5", "#7B3294", "#E69F00", "#4D4D4D")
   }
   if (is.null(names(colors))) {
-    colors <- stats::setNames(rep(colors, length.out = length(legend_levels)), legend_levels)
+    colors <- setNames(rep(colors, length.out = length(legend_levels)), legend_levels)
   }
 
   ggplot(plot_data, aes(x = .data$fpr, y = .data$sensitivity, color = .data$legend_label)) +
@@ -2244,8 +2231,8 @@ plot_ml_gain <- function(object, title = "Gain Curve", ...) {
     geom_point(data = model_pts, size = 2) +
     scale_color_manual(values = c("Model" = "#2166AC", "Random" = "gray50")) +
     scale_linetype_manual(values = c("Model" = "solid", "Random" = "dashed")) +
-    scale_x_continuous(limits = c(0, 1), labels = scales::percent) +
-    scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+    scale_x_continuous(limits = c(0, 1), labels = percent) +
+    scale_y_continuous(limits = c(0, 1), labels = percent) +
     labs(
       title    = title,
       x        = "Population (%)",

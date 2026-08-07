@@ -48,7 +48,7 @@
 #'   a step-by-step participant attrition table in the terminal, including
 #'   counts before/after each filter and retention rates.
 #' @param dt_threads Optional integer. If provided, temporarily sets
-#'   \code{data.table} thread count via \code{data.table::setDTthreads()} for this
+#'   \code{data.table} thread count via \code{setDTthreads()} for this
 #'   function call, and restores the previous thread setting on exit.
 #'
 #' @return A data.table with columns:
@@ -95,7 +95,6 @@
 #'   \item Censored: (min(death_date, censor_date) - baseline_date) / 365.25
 #' }
 #'
-#' @import data.table
 #' @export
 build_survival_dataset <- function(dt,
                                     disease_definitions,
@@ -112,8 +111,8 @@ build_survival_dataset <- function(dt,
 
   output <- match.arg(output)
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (!is.null(dt_threads)) {
@@ -121,9 +120,9 @@ build_survival_dataset <- function(dt,
       stop("`dt_threads` must be NULL or a single positive integer", call. = FALSE)
     }
     dt_threads <- as.integer(dt_threads)
-    old_threads <- data.table::getDTthreads()
-    data.table::setDTthreads(threads = dt_threads)
-    on.exit(data.table::setDTthreads(threads = old_threads), add = TRUE)
+    old_threads <- getDTthreads()
+    setDTthreads(threads = dt_threads)
+    on.exit(setDTthreads(threads = old_threads), add = TRUE)
     message(sprintf(
       "[build_survival_dataset] data.table threads: %d (will restore to %d on exit)",
       dt_threads, old_threads
@@ -197,7 +196,7 @@ build_survival_dataset <- function(dt,
   message("[build_survival_dataset] Calculating survival times...")
 
   if (!is.null(skeleton_info)) {
-    all_eids <- data.table::copy(skeleton_info$time_skeleton)
+    all_eids <- copy(skeleton_info$time_skeleton)
     all_eids <- all_eids[, .(
       eid,
       baseline_date,
@@ -216,7 +215,7 @@ build_survival_dataset <- function(dt,
     all_eids[, end_date := followup_end_date]
     all_eids[, default_surv_time := as.numeric(end_date - baseline_date) / 365.25]
     all_eids[, `:=`(
-      time_followup_end_reason = data.table::fcase(
+      time_followup_end_reason = fcase(
         !is.na(death_date) & end_date == death_date,
         "death",
         !is.na(lost_to_followup_date) & end_date == lost_to_followup_date,
@@ -238,10 +237,10 @@ build_survival_dataset <- function(dt,
       d_prevalent <- prevalent_cases_dt[disease == d]
       d_outcome <- outcome_cases_dt[disease == d]
 
-      cohort <- data.table::copy(all_eids)
+      cohort <- copy(all_eids)
       cohort[, `:=`(
         disease = d,
-        status = data.table::fifelse(
+        status = fifelse(
           get("time_valid_followup"),
           0L,
           NA_integer_
@@ -249,7 +248,7 @@ build_survival_dataset <- function(dt,
         prevalent_case = FALSE,
         earliest_date = as.Date(NA),
         diagnosis_source = NA_character_,
-        surv_time = data.table::fifelse(
+        surv_time = fifelse(
           get("time_valid_followup"),
           get("default_surv_time"),
           NA_real_
@@ -292,8 +291,8 @@ build_survival_dataset <- function(dt,
       cohort
     })
 
-    full_cohort <- data.table::rbindlist(full_list, use.names = TRUE, fill = TRUE)
-    data.table::setorder(full_cohort, disease, eid)
+    full_cohort <- rbindlist(full_list, use.names = TRUE, fill = TRUE)
+    setorder(full_cohort, disease, eid)
 
     message("[build_survival_dataset] Complete")
     output_columns <- c(
@@ -327,18 +326,18 @@ build_survival_dataset <- function(dt,
     endpoint_columns = endpoint_columns
   )
 
-  result_dt <- data.table::merge.data.table(
-    data.table::copy(dt),
+  result_dt <- merge.data.table(
+    copy(dt),
     wide_dt,
     by = "eid",
     all.x = TRUE
   )
-  result_dt <- data.table::merge.data.table(result_dt, outcome_dt, by = "eid", all.x = TRUE)
+  result_dt <- merge.data.table(result_dt, outcome_dt, by = "eid", all.x = TRUE)
   internal_time_cols <- grep("^\\.ukba_time_skeleton_", names(result_dt), value = TRUE)
   if (length(internal_time_cols) > 0L) {
     result_dt[, (internal_time_cols) := NULL]
   }
-  data.table::setorder(result_dt, eid)
+  setorder(result_dt, eid)
 
   if (isTRUE(show_flow)) {
     flow_list <- lapply(seq_along(primary_disease), function(index) {
@@ -352,7 +351,7 @@ build_survival_dataset <- function(dt,
         time_col = columns[["time"]]
       )
 
-      flow_print <- data.table::copy(flow_dt)
+      flow_print <- copy(flow_dt)
       flow_print$retained_from_prev <- ifelse(
         is.na(flow_print$retained_from_prev),
         NA_character_,
@@ -376,12 +375,12 @@ build_survival_dataset <- function(dt,
       attr(result_dt, "participant_flow") <- flow_list[[1L]]
     } else {
       named_flow <- lapply(seq_along(flow_list), function(index) {
-        flow <- data.table::copy(flow_list[[index]])
+        flow <- copy(flow_list[[index]])
         flow[, disease := primary_disease[[index]]]
-        data.table::setcolorder(flow, c("disease", setdiff(names(flow), "disease")))
+        setcolorder(flow, c("disease", setdiff(names(flow), "disease")))
         flow
       })
-      attr(result_dt, "participant_flow") <- data.table::rbindlist(
+      attr(result_dt, "participant_flow") <- rbindlist(
         named_flow,
         use.names = TRUE
       )
@@ -412,15 +411,15 @@ build_survival_dataset <- function(dt,
                                            outcome_cases_dt,
                                            primary_diseases,
                                            endpoint_columns) {
-  outcome_dt <- data.table::copy(all_eids)
+  outcome_dt <- copy(all_eids)
 
   for (index in seq_along(primary_diseases)) {
     disease_key <- primary_diseases[[index]]
     status_col <- endpoint_columns[[index]][["status"]]
     time_col <- endpoint_columns[[index]][["time"]]
 
-    data.table::set(outcome_dt, j = status_col, value = 0L)
-    data.table::set(
+    set(outcome_dt, j = status_col, value = 0L)
+    set(
       outcome_dt,
       j = time_col,
       value = as.numeric(outcome_dt[["default_surv_time"]])
@@ -440,13 +439,13 @@ build_survival_dataset <- function(dt,
       outcome_index <- match(disease_outcomes[["eid"]], outcome_dt[["eid"]])
       keep <- !is.na(outcome_index)
       if (any(keep)) {
-        data.table::set(
+        set(
           outcome_dt,
           i = outcome_index[keep],
           j = status_col,
           value = as.integer(disease_outcomes[["status"]][keep])
         )
-        data.table::set(
+        set(
           outcome_dt,
           i = outcome_index[keep],
           j = time_col,
@@ -459,13 +458,13 @@ build_survival_dataset <- function(dt,
       prevalent_index <- match(prevalent_eids, outcome_dt[["eid"]])
       prevalent_index <- prevalent_index[!is.na(prevalent_index)]
       if (length(prevalent_index) > 0L) {
-        data.table::set(
+        set(
           outcome_dt,
           i = prevalent_index,
           j = status_col,
           value = NA_integer_
         )
-        data.table::set(
+        set(
           outcome_dt,
           i = prevalent_index,
           j = time_col,
@@ -509,7 +508,7 @@ build_survival_dataset <- function(dt,
   non_prevalent_n <- sum(idx_non_prevalent)
   valid_time_n <- sum(idx_valid_time)
 
-  flow_dt <- data.table::data.table(
+  flow_dt <- data.table(
     step = c(
       "Raw cohort",
       "After build_survival_dataset",
@@ -540,21 +539,21 @@ build_survival_dataset <- function(dt,
     )
   )
 
-  data.table::set(
+  set(
     flow_dt,
     j = "excluded",
     value = flow_dt[["n_before"]] - flow_dt[["n_after"]]
   )
-  data.table::set(
+  set(
     flow_dt,
     j = "retained_from_prev",
-    value = data.table::fifelse(
+    value = fifelse(
       flow_dt[["n_before"]] > 0,
       flow_dt[["n_after"]] / flow_dt[["n_before"]],
       NA_real_
     )
   )
-  data.table::set(
+  set(
     flow_dt,
     j = "retained_from_raw",
     value = if (raw_n > 0L) {
@@ -572,10 +571,10 @@ build_survival_dataset <- function(dt,
   if (is.null(time_skeleton)) {
     return(NULL)
   }
-  if (!data.table::is.data.table(time_skeleton)) {
-    time_skeleton <- data.table::as.data.table(time_skeleton)
+  if (!is.data.table(time_skeleton)) {
+    time_skeleton <- as.data.table(time_skeleton)
   } else {
-    time_skeleton <- data.table::copy(time_skeleton)
+    time_skeleton <- copy(time_skeleton)
   }
 
   required <- c("eid", "baseline_date", "followup_end_date", "followup_time_years")
@@ -631,8 +630,8 @@ build_survival_dataset <- function(dt,
     temp_followup_col <- paste0(temp_followup_col, "_")
   }
 
-  merged_dt <- data.table::merge.data.table(
-    data.table::copy(dt),
+  merged_dt <- merge.data.table(
+    copy(dt),
     skeleton_dt[, .(
       eid,
       .ukba_tmp_baseline = baseline_date,
@@ -642,10 +641,10 @@ build_survival_dataset <- function(dt,
     all.x = TRUE,
     sort = FALSE
   )
-  data.table::setnames(merged_dt, ".ukba_tmp_baseline", temp_baseline_col)
-  data.table::setnames(merged_dt, ".ukba_tmp_followup_end", temp_followup_col)
-  data.table::setorder(merged_dt, eid)
-  data.table::setorder(skeleton_dt, eid)
+  setnames(merged_dt, ".ukba_tmp_baseline", temp_baseline_col)
+  setnames(merged_dt, ".ukba_tmp_followup_end", temp_followup_col)
+  setorder(merged_dt, eid)
+  setorder(skeleton_dt, eid)
 
   list(
     dt = merged_dt,
@@ -677,8 +676,8 @@ build_full_cohort <- function(dt,
                                exclude_prevalent = TRUE,
                                dt_threads = NULL) {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   full_cohort <- build_survival_dataset(
@@ -699,7 +698,7 @@ build_full_cohort <- function(dt,
   }
 
   full_cohort <- full_cohort[!is.na(surv_time) & surv_time > 0]
-  data.table::setorder(full_cohort, disease, eid)
+  setorder(full_cohort, disease, eid)
 
   return(full_cohort)
 }

@@ -326,13 +326,13 @@ ukb_shap <- function(object,
     if (isTRUE(verbose)) message(sprintf("Using %d sampled observations for SHAP", sample_n))
   }
 
-  mf <- stats::model.frame(
+  mf <- model.frame(
     object$x_terms,
     data = data,
-    na.action = stats::na.pass,
+    na.action = na.pass,
     xlev = object$xlevels
   )
-  X <- stats::model.matrix(object$x_terms, data = mf, contrasts.arg = object$contrasts)
+  X <- model.matrix(object$x_terms, data = mf, contrasts.arg = object$contrasts)
   if ("(Intercept)" %in% colnames(X)) {
     X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
   }
@@ -530,7 +530,7 @@ ukb_shap <- function(object,
       stop("Package 'kernelshap' is required for method = 'kernelshap'.", call. = FALSE)
     }
     kernelshap_fun <- getExportedValue("kernelshap", "kernelshap")
-    args <- utils::modifyList(
+    args <- modifyList(
       list(
         object = object,
         X = X,
@@ -552,7 +552,7 @@ ukb_shap <- function(object,
       stop("`nsim` must be a positive integer for FastSHAP.", call. = FALSE)
     }
     fastshap_fun <- getExportedValue("fastshap", "explain")
-    args <- utils::modifyList(
+    args <- modifyList(
       list(
         object = object,
         feature_names = names(X),

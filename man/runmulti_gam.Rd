@@ -36,7 +36,7 @@ or family object.  Default \code{"gaussian"}.}
 \item{k}{Integer.  Basis dimension for each smooth term.  \code{-1} (default)
 lets \code{mgcv} choose automatically.}
 
-\item{...}{Additional arguments passed to \code{mgcv::gam()}.}
+\item{...}{Additional arguments passed to \code{gam()}.}
 }
 \value{
 When \code{smooth = TRUE}: a data.frame with columns
@@ -46,7 +46,7 @@ When \code{smooth = FALSE}: \code{variable}, \code{beta}, \code{lower95},
 \code{upper95}, \code{pvalue}, \code{family}, \code{link}, \code{n}.
 }
 \description{
-Fit GAMs (\code{mgcv::gam}) for each main variable separately.  By default
+Fit GAMs (\code{gam}) for each main variable separately.  By default
 each main variable enters the model as a penalised thin-plate regression
 spline \code{s(var)}, allowing non-linear dose-response relationships to be
 detected.

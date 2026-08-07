@@ -45,7 +45,7 @@ combine_prs_weights <- function(weights,
       stringsAsFactors = FALSE
     )
   })
-  long <- data.table::rbindlist(parts, use.names = TRUE)
+  long <- rbindlist(parts, use.names = TRUE)
   metadata <- unique(long[, .(KEY, ID, A1, A2, CHR, POS)])
   conflict <- metadata[, .N, by = KEY][N > 1L, KEY]
   if (length(conflict) > 0L) {
@@ -74,12 +74,12 @@ combine_prs_weights <- function(weights,
       stop("Output already exists; use `overwrite = TRUE`.", call. = FALSE)
     }
     dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
-    data.table::fwrite(out, output, sep = "\t", quote = FALSE, na = "NA")
+    fwrite(out, output, sep = "\t", quote = FALSE, na = "NA")
     attr(out, "path") <- normalizePath(output, mustWork = FALSE)
   }
   attr(out, "score_names") <- score_names
   attr(out, "score_columns") <- seq.int(3L, 2L + length(score_names))
-  attr(out, "variant_counts") <- stats::setNames(
+  attr(out, "variant_counts") <- setNames(
     vapply(weights, nrow, integer(1)), score_names
   )
   attr(out, "genome_build") <- builds[[1L]]
@@ -144,12 +144,12 @@ split_prs_weights <- function(weights,
   }
   for (i in seq_along(requested)) {
     part <- as.data.frame(weights[weights$CHR == requested[[i]], , drop = FALSE])
-    data.table::fwrite(part, paths[[i]], sep = "\t", quote = FALSE, na = "NA")
+    fwrite(part, paths[[i]], sep = "\t", quote = FALSE, na = "NA")
   }
-  files <- stats::setNames(normalizePath(paths, mustWork = FALSE), labels)
+  files <- setNames(normalizePath(paths, mustWork = FALSE), labels)
   out <- list(
     files = files,
-    counts = stats::setNames(unname(counts), labels),
+    counts = setNames(unname(counts), labels),
     score_names = if (inherits(weights, "ukb_prs_weight_matrix")) {
       attr(weights, "score_names")
     } else {

@@ -39,7 +39,7 @@ columns.}
 \item{cache}{Logical. If \code{TRUE}, save the metadata object as an RDS file.}
 
 \item{cache_dir}{Optional cache directory. Defaults to
-\code{tools::R_user_dir("UKBAnalytica", "cache")}.}
+\code{R_user_dir("UKBAnalytica", "cache")}.}
 
 \item{refresh}{Logical. Passed to \code{rap_list_fields()} when RAP discovery is
 used.}

@@ -72,7 +72,7 @@ a step-by-step participant attrition table in the terminal, including
 counts before/after each filter and retention rates.}
 
 \item{dt_threads}{Optional integer. If provided, temporarily sets
-\code{data.table} thread count via \code{data.table::setDTthreads()} for this
+\code{data.table} thread count via \code{setDTthreads()} for this
 function call, and restores the previous thread setting on exit.}
 }
 \value{

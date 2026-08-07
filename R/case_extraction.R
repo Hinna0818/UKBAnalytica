@@ -55,7 +55,6 @@
 #' \code{1902-02-02}, \code{1903-03-03}, \code{1909-09-09}, and
 #' \code{2037-07-07}) are excluded.
 #'
-#' @import data.table
 #' @export
 extract_cases_by_source <- function(dt,
                                      disease_definitions,
@@ -66,8 +65,8 @@ extract_cases_by_source <- function(dt,
   valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (!baseline_col %in% names(dt)) {
@@ -77,12 +76,12 @@ extract_cases_by_source <- function(dt,
   message(sprintf("[extract_cases_by_source] Using sources: %s", paste(sources, collapse = ", ")))
 
   # Extract only requested sources
-  icd10_long <- if ("ICD10" %in% sources) parse_icd10_diagnoses(dt) else data.table::data.table()
-  icd9_long <- if ("ICD9" %in% sources) parse_icd9_diagnoses(dt) else data.table::data.table()
-  sr_long <- if ("Self-report" %in% sources) parse_self_reported_illnesses(dt, baseline_col) else data.table::data.table()
-  death_long <- if ("Death" %in% sources) parse_death_records(dt) else data.table::data.table()
-  opcs4_long <- if ("OPCS4" %in% sources) parse_opcs4_procedures(dt) else data.table::data.table()
-  cancer_long <- if ("CancerRegistry" %in% sources) parse_cancer_registry(dt) else data.table::data.table()
+  icd10_long <- if ("ICD10" %in% sources) parse_icd10_diagnoses(dt) else data.table()
+  icd9_long <- if ("ICD9" %in% sources) parse_icd9_diagnoses(dt) else data.table()
+  sr_long <- if ("Self-report" %in% sources) parse_self_reported_illnesses(dt, baseline_col) else data.table()
+  death_long <- if ("Death" %in% sources) parse_death_records(dt) else data.table()
+  opcs4_long <- if ("OPCS4" %in% sources) parse_opcs4_procedures(dt) else data.table()
+  cancer_long <- if ("CancerRegistry" %in% sources) parse_cancer_registry(dt) else data.table()
 
   followup_window <- .ukb_followup_window(
     dt = dt,
@@ -209,7 +208,7 @@ extract_cases_by_source <- function(dt,
           !is.na(algo_date) & algo_date != as.Date("1900-01-01")
         ]
         if (nrow(algo_dt) > 0L) {
-          algo_dt[, source := data.table::fifelse(
+          algo_dt[, source := fifelse(
             !is.na(algo_source) & trimws(algo_source) != "",
             paste0("Algorithm_", trimws(algo_source)),
             "Algorithm"
@@ -227,7 +226,7 @@ extract_cases_by_source <- function(dt,
         !vapply(algorithm_records, is.null, logical(1))
       ]
       if (length(algorithm_records) > 0L) {
-        diagnosis_sources$algo <- data.table::rbindlist(
+        diagnosis_sources$algo <- rbindlist(
           algorithm_records,
           use.names = TRUE,
           fill = TRUE
@@ -237,7 +236,7 @@ extract_cases_by_source <- function(dt,
 
     if (length(diagnosis_sources) == 0) return(NULL)
 
-    all_diagnoses <- data.table::rbindlist(diagnosis_sources, use.names = TRUE, fill = TRUE)
+    all_diagnoses <- rbindlist(diagnosis_sources, use.names = TRUE, fill = TRUE)
 
     if (!"diagnosis_date_quality" %in% names(all_diagnoses)) {
       all_diagnoses[, "diagnosis_date_quality" := NA_character_]
@@ -267,17 +266,17 @@ extract_cases_by_source <- function(dt,
 
   if (length(results_list) == 0) {
     warning("[extract_cases_by_source] No cases found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), disease = character(0), earliest_date = as.Date(character(0)),
       diagnosis_source = character(0), prevalent_case = logical(0),
       status = integer(0), surv_time = numeric(0)
     ))
   }
 
-  diagnosis_dt <- data.table::rbindlist(results_list, use.names = TRUE, fill = TRUE)
+  diagnosis_dt <- rbindlist(results_list, use.names = TRUE, fill = TRUE)
 
   # Calculate survival metrics
-  surv_dt <- data.table::merge.data.table(
+  surv_dt <- merge.data.table(
     diagnosis_dt,
     followup_window,
     by = "eid",
@@ -287,7 +286,7 @@ extract_cases_by_source <- function(dt,
 
   surv_dt[, "undated_diagnosis" :=
     is.na(get("earliest_date")) & !is.na(get("diagnosis_source"))]
-  surv_dt[, prevalent_case := data.table::fifelse(
+  surv_dt[, prevalent_case := fifelse(
     get("undated_diagnosis"),
     NA,
     !is.na(earliest_date) & earliest_date <= baseline_date
@@ -302,7 +301,7 @@ extract_cases_by_source <- function(dt,
   surv_dt[is.na(baseline_date) | is.na(followup_end_date), status := NA_integer_]
   surv_dt[get("undated_diagnosis") %in% TRUE, status := NA_integer_]
 
-  surv_dt[, end_date := data.table::fifelse(
+  surv_dt[, end_date := fifelse(
     status == 1L, earliest_date,
     followup_end_date
   )]
@@ -314,7 +313,7 @@ extract_cases_by_source <- function(dt,
     "baseline_date", "death_date", "lost_to_followup_date",
     "followup_end_date", "end_date", "undated_diagnosis"
   ) := NULL]
-  data.table::setorder(surv_dt, disease, eid)
+  setorder(surv_dt, disease, eid)
 
   return(surv_dt)
 }
@@ -354,8 +353,8 @@ extract_disease_diagnosis <- function(dt,
                                       censor_date = as.Date("2023-10-31"),
                                       baseline_col = "p53_i0",
                                       include_all = TRUE) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
   if (!"eid" %in% names(dt)) {
     stop("Column 'eid' was not found in `dt`.", call. = FALSE)
@@ -380,18 +379,18 @@ extract_disease_diagnosis <- function(dt,
     censor_date = censor_date,
     baseline_col = baseline_col
   )
-  if (!data.table::is.data.table(cases)) {
-    cases <- data.table::as.data.table(cases)
+  if (!is.data.table(cases)) {
+    cases <- as.data.table(cases)
   }
 
-  all_pairs <- data.table::CJ(
+  all_pairs <- CJ(
     eid = dt[["eid"]],
     disease = disease_keys,
     unique = TRUE
   )
 
   if (nrow(cases) > 0L) {
-    out <- data.table::merge.data.table(
+    out <- merge.data.table(
       all_pairs,
       cases,
       by = c("eid", "disease"),
@@ -410,18 +409,18 @@ extract_disease_diagnosis <- function(dt,
 
   out[, diagnosed := !is.na(earliest_date) |
         diagnosis_source %in% "Self-report_unknown_date"]
-  out[, prevalent_case := data.table::fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
-  out[, incident_case := data.table::fifelse(is.na(status), 0L, as.integer(status == 1L))]
-  out[, status := data.table::fifelse(is.na(status), 0L, status)]
+  out[, prevalent_case := fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
+  out[, incident_case := fifelse(is.na(status), 0L, as.integer(status == 1L))]
+  out[, status := fifelse(is.na(status), 0L, status)]
 
-  data.table::setcolorder(
+  setcolorder(
     out,
     c(
       "eid", "disease", "diagnosed", "prevalent_case", "incident_case",
       "earliest_date", "diagnosis_source", "status", "surv_time"
     )
   )
-  data.table::setorder(out, disease, eid)
+  setorder(out, disease, eid)
   if (!isTRUE(include_all)) {
     out <- out[diagnosed == TRUE]
   }
@@ -488,8 +487,8 @@ generate_wide_format_dual_source <- function(dt,
                                               prevalent_long = NULL,
                                               outcome_long = NULL) {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   # Extract cases only if precomputed inputs are not provided.
@@ -499,8 +498,8 @@ generate_wide_format_dual_source <- function(dt,
       dt, disease_definitions, prevalent_sources, censor_date, baseline_col
     )
   }
-  if (!data.table::is.data.table(prevalent_long)) {
-    prevalent_long <- data.table::as.data.table(prevalent_long)
+  if (!is.data.table(prevalent_long)) {
+    prevalent_long <- as.data.table(prevalent_long)
   }
 
   if (is.null(outcome_long)) {
@@ -508,12 +507,12 @@ generate_wide_format_dual_source <- function(dt,
       dt, disease_definitions, outcome_sources, censor_date, baseline_col
     )
   }
-  if (!data.table::is.data.table(outcome_long)) {
-    outcome_long <- data.table::as.data.table(outcome_long)
+  if (!is.data.table(outcome_long)) {
+    outcome_long <- as.data.table(outcome_long)
   }
 
   all_eids <- dt[, .(eid)]
-  wide_dt <- data.table::copy(all_eids)
+  wide_dt <- copy(all_eids)
 
   diseases <- names(disease_definitions)
 
@@ -523,7 +522,7 @@ generate_wide_format_dual_source <- function(dt,
     # Incident from outcome_sources
     d_outcome <- outcome_long[disease == d]
 
-    d_wide <- data.table::copy(all_eids)
+    d_wide <- copy(all_eids)
 
     # Mark history (prevalent) from prevalent_sources
     prevalent_eids <- d_prevalent[prevalent_case == TRUE, eid]
@@ -547,14 +546,14 @@ generate_wide_format_dual_source <- function(dt,
     # Replace NA with 0
     hist_col <- paste0(d, "_history")
     inc_col <- paste0(d, "_incident")
-    data.table::set(d_wide, which(is.na(d_wide[[hist_col]])), hist_col, 0L)
-    data.table::set(d_wide, which(is.na(d_wide[[inc_col]])), inc_col, 0L)
+    set(d_wide, which(is.na(d_wide[[hist_col]])), hist_col, 0L)
+    set(d_wide, which(is.na(d_wide[[inc_col]])), inc_col, 0L)
 
     d_wide <- d_wide[, c("eid", hist_col, inc_col), with = FALSE]
-    wide_dt <- data.table::merge.data.table(wide_dt, d_wide, by = "eid", all.x = TRUE)
+    wide_dt <- merge.data.table(wide_dt, d_wide, by = "eid", all.x = TRUE)
   }
 
-  data.table::setorder(wide_dt, eid)
+  setorder(wide_dt, eid)
   return(wide_dt)
 }
 
@@ -584,20 +583,20 @@ generate_wide_format <- function(dt,
                                   baseline_col = "p53_i0",
                                   include_dates = FALSE) {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   surv_long <- extract_cases_by_source(dt, disease_definitions, sources, censor_date, baseline_col)
   all_eids <- dt[, .(eid)]
-  wide_dt <- data.table::copy(all_eids)
+  wide_dt <- copy(all_eids)
 
   diseases <- unique(surv_long$disease)
 
   for (d in diseases) {
     d_data <- surv_long[disease == d]
 
-    d_wide <- data.table::merge.data.table(
+    d_wide <- merge.data.table(
       all_eids,
       d_data[, .(eid, prevalent_case, status, earliest_date)],
       by = "eid", all.x = TRUE
@@ -614,15 +613,15 @@ generate_wide_format <- function(dt,
     if (include_dates) cols_to_keep <- c(cols_to_keep, paste0(d, "_date"))
 
     d_wide <- d_wide[, cols_to_keep, with = FALSE]
-    wide_dt <- data.table::merge.data.table(wide_dt, d_wide, by = "eid", all.x = TRUE)
+    wide_dt <- merge.data.table(wide_dt, d_wide, by = "eid", all.x = TRUE)
   }
 
   # Replace NA with 0 for binary columns
   for (col in grep("_(history|incident)$", names(wide_dt), value = TRUE)) {
-    data.table::set(wide_dt, which(is.na(wide_dt[[col]])), col, 0L)
+    set(wide_dt, which(is.na(wide_dt[[col]])), col, 0L)
   }
 
-  data.table::setorder(wide_dt, eid)
+  setorder(wide_dt, eid)
   return(wide_dt)
 }
 
@@ -644,8 +643,8 @@ compare_data_sources <- function(dt,
                                   disease_definitions,
                                   baseline_col = "p53_i0") {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   diseases <- names(disease_definitions)
@@ -655,30 +654,30 @@ compare_data_sources <- function(dt,
 
     icd10_cases <- tryCatch(
       extract_cases_by_source(dt, single_def, sources = "ICD10", baseline_col = baseline_col),
-      error = function(e) data.table::data.table()
+      error = function(e) data.table()
     )
 
     icd9_cases <- tryCatch(
       extract_cases_by_source(dt, single_def, sources = "ICD9", baseline_col = baseline_col),
-      error = function(e) data.table::data.table()
+      error = function(e) data.table()
     )
 
     sr_cases <- tryCatch(
       extract_cases_by_source(dt, single_def, sources = "Self-report", baseline_col = baseline_col),
-      error = function(e) data.table::data.table()
+      error = function(e) data.table()
     )
 
     hospital_cases <- tryCatch(
       extract_cases_by_source(dt, single_def, sources = c("ICD10", "ICD9"), baseline_col = baseline_col),
-      error = function(e) data.table::data.table()
+      error = function(e) data.table()
     )
 
     all_cases <- tryCatch(
       extract_cases_by_source(dt, single_def, sources = c("ICD10", "ICD9", "Self-report"), baseline_col = baseline_col),
-      error = function(e) data.table::data.table()
+      error = function(e) data.table()
     )
 
-    data.table::data.table(
+    data.table(
       disease = d,
       ICD10_total = nrow(icd10_cases),
       ICD10_incident = sum(icd10_cases$status == 1, na.rm = TRUE),
@@ -692,7 +691,7 @@ compare_data_sources <- function(dt,
     )
   })
 
-  result <- data.table::rbindlist(comparison_list)
+  result <- rbindlist(comparison_list)
   return(result)
 }
 
@@ -732,8 +731,8 @@ prepare_analysis_dataset <- function(dt,
     stop(sprintf("Primary outcome '%s' not found in disease definitions", primary_outcome))
   }
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   # Generate wide format with all diseases
@@ -746,21 +745,21 @@ prepare_analysis_dataset <- function(dt,
   # Get default survival time for non-cases
   death_dates <- get_death_dates(dt)
   baseline_dt <- dt[, .(eid, baseline_date = .safe_as_date(get(baseline_col), col_name = baseline_col))]
-  control_info <- data.table::merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
+  control_info <- merge.data.table(baseline_dt, death_dates, by = "eid", all.x = TRUE)
   control_info[, end_date := pmin(death_date, censor_date, na.rm = TRUE)]
   control_info[is.na(end_date), end_date := censor_date]
   control_info[, control_surv_time := as.numeric(end_date - baseline_date) / 365.25]
 
   # Merge primary outcome data
-  wide_dt <- data.table::merge.data.table(wide_dt, primary_data, by = "eid", all.x = TRUE)
-  wide_dt <- data.table::merge.data.table(
+  wide_dt <- merge.data.table(wide_dt, primary_data, by = "eid", all.x = TRUE)
+  wide_dt <- merge.data.table(
     wide_dt, control_info[, .(eid, control_surv_time)], by = "eid", all.x = TRUE
   )
 
   # Set outcome columns
-  wide_dt[, outcome_status := data.table::fifelse(is.na(status), 0L, status)]
-  wide_dt[, outcome_surv_time := data.table::fifelse(is.na(surv_time), control_surv_time, surv_time)]
-  wide_dt[, outcome_prevalent := data.table::fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
+  wide_dt[, outcome_status := fifelse(is.na(status), 0L, status)]
+  wide_dt[, outcome_surv_time := fifelse(is.na(surv_time), control_surv_time, surv_time)]
+  wide_dt[, outcome_prevalent := fifelse(is.na(prevalent_case), FALSE, prevalent_case)]
 
   # Clean up
   wide_dt[, c("status", "surv_time", "prevalent_case", "control_surv_time") := NULL]
@@ -777,7 +776,7 @@ prepare_analysis_dataset <- function(dt,
 
   wide_dt[, outcome_prevalent := NULL]
   wide_dt <- wide_dt[!is.na(outcome_surv_time) & outcome_surv_time > 0]
-  data.table::setorder(wide_dt, eid)
+  setorder(wide_dt, eid)
 
   return(wide_dt)
 }
@@ -833,8 +832,8 @@ extract_disease_history <- function(dt,
   valid_sources <- c("ICD10", "ICD9", "Self-report", "Death", "OPCS4", "CancerRegistry", "FirstOccurrence", "Algorithm")
   sources <- match.arg(sources, valid_sources, several.ok = TRUE)
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   # Use predefined diseases if not provided
@@ -865,14 +864,14 @@ extract_disease_history <- function(dt,
 
   # Get all eids
   all_eids <- dt[, .(eid)]
-  result_dt <- data.table::copy(all_eids)
+  result_dt <- copy(all_eids)
 
   # Create history column for each disease
   for (d in diseases) {
     d_data <- surv_long[disease == d & prevalent_case == TRUE, .(eid)]
     d_data[, (paste0(d, "_history")) := 1L]
 
-    result_dt <- data.table::merge.data.table(
+    result_dt <- merge.data.table(
       result_dt,
       d_data,
       by = "eid",
@@ -881,10 +880,10 @@ extract_disease_history <- function(dt,
 
     # Fill NA with 0
     hist_col <- paste0(d, "_history")
-    data.table::set(result_dt, which(is.na(result_dt[[hist_col]])), hist_col, 0L)
+    set(result_dt, which(is.na(result_dt[[hist_col]])), hist_col, 0L)
   }
 
-  data.table::setorder(result_dt, eid)
+  setorder(result_dt, eid)
 
   # Summary message
   for (d in diseases) {
@@ -941,8 +940,8 @@ extract_diabetes_subtype_baseline <- function(dt,
                                               hba1c_threshold = 48,
                                               include_hba1c = TRUE) {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (is.null(disease_definitions)) {
@@ -966,7 +965,7 @@ extract_diabetes_subtype_baseline <- function(dt,
     baseline_col = baseline_col
   )
 
-  result_dt <- data.table::copy(dm_hist)
+  result_dt <- copy(dm_hist)
 
   if (include_hba1c) {
     if (!hba1c_col %in% names(dt)) {
@@ -974,8 +973,8 @@ extract_diabetes_subtype_baseline <- function(dt,
       result_dt[, diabetes_hba1c := NA_integer_]
     } else {
       hba1c_dt <- unique(dt[, .(eid, hba1c_value = suppressWarnings(as.numeric(get(hba1c_col))))], by = "eid")
-      result_dt <- data.table::merge.data.table(result_dt, hba1c_dt, by = "eid", all.x = TRUE)
-      result_dt[, diabetes_hba1c := data.table::fifelse(
+      result_dt <- merge.data.table(result_dt, hba1c_dt, by = "eid", all.x = TRUE)
+      result_dt[, diabetes_hba1c := fifelse(
         is.na(hba1c_value),
         NA_integer_,
         as.integer(hba1c_value >= hba1c_threshold)
@@ -987,13 +986,13 @@ extract_diabetes_subtype_baseline <- function(dt,
   }
 
   result_dt[, T2DM_history_enhanced := {
-    t2_code <- data.table::fifelse(is.na(T2DM_history), 0L, T2DM_history)
-    hba1c_dm <- data.table::fifelse(is.na(diabetes_hba1c), 0L, diabetes_hba1c)
+    t2_code <- fifelse(is.na(T2DM_history), 0L, T2DM_history)
+    hba1c_dm <- fifelse(is.na(diabetes_hba1c), 0L, diabetes_hba1c)
     as.integer((t2_code == 1L) | (hba1c_dm == 1L))
   }]
 
   result_dt[, Diabetes_history := {
-    t1_code <- data.table::fifelse(is.na(T1DM_history), 0L, T1DM_history)
+    t1_code <- fifelse(is.na(T1DM_history), 0L, T1DM_history)
     as.integer((t1_code == 1L) | (T2DM_history_enhanced == 1L))
   }]
 
@@ -1001,7 +1000,7 @@ extract_diabetes_subtype_baseline <- function(dt,
   result_dt[T2DM_history_enhanced == 1L, diabetes_subtype := "Type2"]
   result_dt[T1DM_history == 1L, diabetes_subtype := "Type1"]
 
-  data.table::setorder(result_dt, eid)
+  setorder(result_dt, eid)
   return(result_dt[])
 }
 
@@ -1032,8 +1031,8 @@ extract_disease_history_sensitivity <- function(dt,
                                                  disease_definitions = NULL,
                                                  baseline_col = "p53_i0") {
 
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   if (is.null(disease_definitions)) {
@@ -1049,7 +1048,7 @@ extract_disease_history_sensitivity <- function(dt,
   )
   old_names <- paste0(diseases, "_history")
   new_names <- paste0(diseases, "_history_ICD10")
-  data.table::setnames(hist_icd10, old_names, new_names)
+  setnames(hist_icd10, old_names, new_names)
 
   # Hospital (ICD-10 + ICD-9)
   hist_hospital <- extract_disease_history(
@@ -1057,7 +1056,7 @@ extract_disease_history_sensitivity <- function(dt,
     sources = c("ICD10", "ICD9"), baseline_col = baseline_col
   )
   new_names <- paste0(diseases, "_history_hospital")
-  data.table::setnames(hist_hospital, old_names, new_names)
+  setnames(hist_hospital, old_names, new_names)
 
   # All sources
   hist_all <- extract_disease_history(
@@ -1065,11 +1064,11 @@ extract_disease_history_sensitivity <- function(dt,
     sources = c("ICD10", "ICD9", "Self-report"), baseline_col = baseline_col
   )
   new_names <- paste0(diseases, "_history_all")
-  data.table::setnames(hist_all, old_names, new_names)
+  setnames(hist_all, old_names, new_names)
 
   # Merge all variants
-  result_dt <- data.table::merge.data.table(hist_icd10, hist_hospital, by = "eid")
-  result_dt <- data.table::merge.data.table(result_dt, hist_all, by = "eid")
+  result_dt <- merge.data.table(hist_icd10, hist_hospital, by = "eid")
+  result_dt <- merge.data.table(result_dt, hist_all, by = "eid")
 
   # Summary
   message("\n[Summary] Prevalent case counts by source:")

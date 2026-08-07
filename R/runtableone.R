@@ -6,12 +6,10 @@
 #' @param continuous_cols a vector of column names that are continuous variables.
 #' @param test whether to perform statistical tests comparing cases and controls for each variable (default: FALSE).
 #' @return a list containing table one information.
-#' @import data.table
-#' @importFrom tableone CreateTableOne
 #' @export
 create_baseline_table <- function(data, case_col, factor_cols = NULL, continuous_cols = NULL, test = FALSE) {
-  if (!data.table::is.data.table(data)) {
-    data <- data.table::as.data.table(data)
+  if (!is.data.table(data)) {
+    data <- as.data.table(data)
   }
   
   # Ensure case_col is a factor

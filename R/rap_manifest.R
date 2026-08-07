@@ -455,7 +455,7 @@ ukb_create_extraction_manifest <- function(field_id = NULL,
   env <- ukb_check_rap_env(verbose = FALSE)
   manifest <- list(
     created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
-    package_version = as.character(utils::packageVersion("UKBAnalytica")),
+    package_version = as.character(packageVersion("UKBAnalytica")),
     dataset = dataset,
     entity = entity,
     output = output,
@@ -516,8 +516,8 @@ ukb_write_extraction_manifest <- function(manifest,
     return(invisible(path))
   }
 
-  utils::write.csv(manifest$fields, path, row.names = FALSE)
-  summary_path <- paste0(tools::file_path_sans_ext(path), "_summary.csv")
+  write.csv(manifest$fields, path, row.names = FALSE)
+  summary_path <- paste0(file_path_sans_ext(path), "_summary.csv")
   summary_df <- data.frame(
     item = c("created_at", "package_version", "dataset", "entity", "output", "include_eid", "purpose", "notes"),
     value = c(
@@ -532,7 +532,7 @@ ukb_write_extraction_manifest <- function(manifest,
     ),
     stringsAsFactors = FALSE
   )
-  utils::write.csv(summary_df, summary_path, row.names = FALSE)
+  write.csv(summary_df, summary_path, row.names = FALSE)
   invisible(path)
 }
 

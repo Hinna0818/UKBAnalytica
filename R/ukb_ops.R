@@ -65,15 +65,15 @@ ukb_clean_missing <- function(data,
   )
   informative_labels <- unique(informative_labels[!is.na(informative_labels) & nzchar(informative_labels)])
 
-  if (data.table::is.data.table(data) && isTRUE(in_place)) {
+  if (is.data.table(data) && isTRUE(in_place)) {
     dt <- data
   } else {
-    dt <- data.table::as.data.table(data.table::copy(data))
+    dt <- as.data.table(copy(data))
   }
 
   n_cols_affected <- 0L
   n_values_replaced <- 0L
-  per_col <- data.table::data.table(
+  per_col <- data.table(
     column = character(0),
     empty_to_na = integer(0),
     label_replaced = integer(0),
@@ -105,14 +105,14 @@ ukb_clean_missing <- function(data,
         x_chr[label_idx] <- if (action == "unknown") "Unknown" else NA_character_
       }
       if (empty_n + label_n > 0L || is.factor(dt[[col]]) || isTRUE(trim)) {
-        data.table::set(dt, j = col, value = x_chr)
+        set(dt, j = col, value = x_chr)
       }
     } else if (is.numeric(x) || is.integer(x)) {
       numeric_idx <- !is.na(x) & x %in% numeric_codes
       numeric_n <- sum(numeric_idx)
       if (numeric_n > 0L) {
         x[numeric_idx] <- NA
-        data.table::set(dt, j = col, value = x)
+        set(dt, j = col, value = x)
       }
     }
 
@@ -120,10 +120,10 @@ ukb_clean_missing <- function(data,
     if (total_n > 0L) {
       n_cols_affected <- n_cols_affected + 1L
       n_values_replaced <- n_values_replaced + total_n
-      per_col <- data.table::rbindlist(
+      per_col <- rbindlist(
         list(
           per_col,
-          data.table::data.table(
+          data.table(
             column = col,
             empty_to_na = empty_n,
             label_replaced = label_n,
@@ -182,7 +182,7 @@ ukb_snapshot <- function(data = NULL,
     if (exists(id, envir = .ukb_snapshot_store, inherits = FALSE)) {
       rm(list = id, envir = .ukb_snapshot_store)
     }
-    empty <- data.table::data.table()
+    empty <- data.table()
     if (isTRUE(verbose)) {
       message(sprintf("[ukb_snapshot] Cleared snapshot history: %s", id))
     }
@@ -191,9 +191,9 @@ ukb_snapshot <- function(data = NULL,
 
   if (is.null(data)) {
     if (exists(id, envir = .ukb_snapshot_store, inherits = FALSE)) {
-      return(data.table::copy(get(id, envir = .ukb_snapshot_store, inherits = FALSE)))
+      return(copy(get(id, envir = .ukb_snapshot_store, inherits = FALSE)))
     }
-    return(data.table::data.table())
+    return(data.table())
   }
 
   if (!is.data.frame(data)) {
@@ -203,7 +203,7 @@ ukb_snapshot <- function(data = NULL,
     stop("'label' must be a non-empty character scalar when recording a snapshot", call. = FALSE)
   }
 
-  dt <- data.table::as.data.table(data)
+  dt <- as.data.table(data)
   missing_cols <- vapply(dt, function(x) any(.ukb_missing_col(x)), logical(1))
   complete_rows <- if (ncol(dt) == 0L) {
     nrow(dt)
@@ -215,10 +215,10 @@ ukb_snapshot <- function(data = NULL,
   history <- if (exists(id, envir = .ukb_snapshot_store, inherits = FALSE)) {
     get(id, envir = .ukb_snapshot_store, inherits = FALSE)
   } else {
-    data.table::data.table()
+    data.table()
   }
 
-  size_mb <- as.numeric(utils::object.size(dt)) / 1024^2
+  size_mb <- as.numeric(object.size(dt)) / 1024^2
   idx <- nrow(history) + 1L
 
   previous <- if (nrow(history) > 0L) history[nrow(history)] else NULL
@@ -226,7 +226,7 @@ ukb_snapshot <- function(data = NULL,
   col_delta <- if (is.null(previous)) NA_integer_ else ncol(dt) - previous[["ncol"]]
   size_delta_mb <- if (is.null(previous)) NA_real_ else size_mb - previous[["size_mb"]]
 
-  snapshot <- data.table::data.table(
+  snapshot <- data.table(
     idx = idx,
     label = label,
     timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
@@ -240,7 +240,7 @@ ukb_snapshot <- function(data = NULL,
     size_delta_mb = round(size_delta_mb, 3)
   )
 
-  history <- data.table::rbindlist(list(history, snapshot), use.names = TRUE, fill = TRUE)
+  history <- rbindlist(list(history, snapshot), use.names = TRUE, fill = TRUE)
   assign(id, history, envir = .ukb_snapshot_store)
 
   if (isTRUE(verbose)) {
@@ -256,5 +256,5 @@ ukb_snapshot <- function(data = NULL,
     ))
   }
 
-  data.table::copy(history)
+  copy(history)
 }

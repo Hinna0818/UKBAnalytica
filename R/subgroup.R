@@ -1,5 +1,3 @@
-#' @importFrom stats relevel anova pchisq
-#' @importFrom survival Surv coxph
 NULL
 
 #' Run Subgroup Analysis
@@ -37,7 +35,6 @@ NULL
 #'     \item{p_interaction}{P-value for interaction between exposure and subgroup}
 #'   }
 #'
-#' @importFrom stats as.formula glm binomial lm coef confint qnorm
 #' @export
 run_subgroup_analysis <- function(data,
                                    exposure,
@@ -92,8 +89,8 @@ run_subgroup_analysis <- function(data,
   }
 
   # Convert to data.table for efficiency
-  if (!data.table::is.data.table(data)) {
-    data <- data.table::as.data.table(data)
+  if (!is.data.table(data)) {
+    data <- as.data.table(data)
   }
 
   # Ensure subgroup_var is a factor
@@ -166,7 +163,7 @@ run_subgroup_analysis <- function(data,
       }
       formula_str <- paste(outcome, "~", rhs)
     }
-    formula_obj <- stats::as.formula(formula_str)
+    formula_obj <- as.formula(formula_str)
 
     # Fit model
     tryCatch({
@@ -189,10 +186,10 @@ run_subgroup_analysis <- function(data,
         pvalue <- coefs[exp_row, "Pr(>|z|)"]
 
       } else if (model_type == "logistic") {
-        model <- stats::glm(formula_obj, data = subset_data, family = stats::binomial())
+        model <- glm(formula_obj, data = subset_data, family = binomial())
         sum_model <- summary(model)
         coefs <- sum_model$coefficients
-        ci <- suppressWarnings(stats::confint(model))
+        ci <- suppressWarnings(confint(model))
 
         exp_row <- .find_exposure_row(model, coefs, exposure)
         if (is.na(exp_row)) {
@@ -206,7 +203,7 @@ run_subgroup_analysis <- function(data,
         pvalue <- coefs[exp_row, "Pr(>|z|)"]
 
       } else if (model_type == "glm") {
-        model     <- stats::glm(formula_obj, data = subset_data,
+        model     <- glm(formula_obj, data = subset_data,
                                 family = family_obj)
         sum_model <- summary(model)
         coefs     <- sum_model$coefficients
@@ -221,11 +218,11 @@ run_subgroup_analysis <- function(data,
         se <- coefs[exp_row, "Std. Error"]
 
         if (is_quasi) {
-          z95 <- stats::qnorm(0.975)
+          z95 <- qnorm(0.975)
           ci_lo <- b - z95 * se
           ci_hi <- b + z95 * se
         } else {
-          ci_mat <- suppressWarnings(stats::confint(model))
+          ci_mat <- suppressWarnings(confint(model))
           ci_lo  <- ci_mat[exp_row, 1]
           ci_hi  <- ci_mat[exp_row, 2]
         }
@@ -238,7 +235,7 @@ run_subgroup_analysis <- function(data,
         pvalue    <- coefs[exp_row, pval_col]
 
       } else if (model_type == "negbin") {
-        model     <- MASS::glm.nb(formula_obj, data = subset_data)
+        model     <- glm.nb(formula_obj, data = subset_data)
         sum_model <- summary(model)
         coefs     <- sum_model$coefficients
         exp_row   <- .find_exposure_row(model, coefs, exposure)
@@ -248,7 +245,7 @@ run_subgroup_analysis <- function(data,
                                   p_interaction))
         }
 
-        ci_mat   <- suppressWarnings(stats::confint(model))
+        ci_mat   <- suppressWarnings(confint(model))
         estimate <- exp(coefs[exp_row, "Estimate"])
         lower95  <- exp(ci_mat[exp_row, 1])
         upper95  <- exp(ci_mat[exp_row, 2])
@@ -256,10 +253,10 @@ run_subgroup_analysis <- function(data,
 
       } else {
         # Linear model
-        model <- stats::lm(formula_obj, data = subset_data)
+        model <- lm(formula_obj, data = subset_data)
         sum_model <- summary(model)
         coefs <- sum_model$coefficients
-        ci <- stats::confint(model)
+        ci <- confint(model)
 
         exp_row <- .find_exposure_row(model, coefs, exposure)
         if (is.na(exp_row)) {
@@ -312,10 +309,10 @@ run_subgroup_analysis <- function(data,
   }
 
   # 2) Use model-matrix assign mapping (safe for factor exposure)
-  mm <- tryCatch(stats::model.matrix(model), error = function(e) NULL)
+  mm <- tryCatch(model.matrix(model), error = function(e) NULL)
   if (!is.null(mm)) {
     assign <- attr(mm, "assign")
-    term_labels <- attr(stats::terms(model), "term.labels")
+    term_labels <- attr(terms(model), "term.labels")
     exposure_terms <- c(exposure, paste0("`", exposure, "`"))
     exp_term_idx <- which(term_labels %in% exposure_terms)
 
@@ -419,35 +416,35 @@ run_multi_subgroup <- function(data,
   tryCatch({
     # -- fit full (interaction) model ------------------------------------------
     if (model_type == "cox") {
-      formula_obj <- stats::as.formula(paste0(
+      formula_obj <- as.formula(paste0(
         "Surv(", endpoint[1], ", ", endpoint[2], ") ~ ",
         .build_int_rhs(int_term)
       ))
       model <- coxph(formula_obj, data = data)
 
     } else if (model_type == "logistic") {
-      formula_obj <- stats::as.formula(
+      formula_obj <- as.formula(
         paste(outcome, "~", .build_int_rhs(int_term))
       )
-      model <- stats::glm(formula_obj, data = data, family = stats::binomial())
+      model <- glm(formula_obj, data = data, family = binomial())
 
     } else if (model_type == "glm") {
-      formula_obj <- stats::as.formula(
+      formula_obj <- as.formula(
         paste(outcome, "~", .build_int_rhs(int_term))
       )
-      model <- stats::glm(formula_obj, data = data, family = family_obj)
+      model <- glm(formula_obj, data = data, family = family_obj)
 
     } else if (model_type == "negbin") {
-      formula_obj <- stats::as.formula(
+      formula_obj <- as.formula(
         paste(outcome, "~", .build_int_rhs(int_term))
       )
-      model <- MASS::glm.nb(formula_obj, data = data)
+      model <- glm.nb(formula_obj, data = data)
 
     } else {
-      formula_obj <- stats::as.formula(
+      formula_obj <- as.formula(
         paste(outcome, "~", .build_int_rhs(int_term))
       )
-      model <- stats::lm(formula_obj, data = data)
+      model <- lm(formula_obj, data = data)
     }
 
     # -- locate interaction coefficient rows -----------------------------------
@@ -468,34 +465,34 @@ run_multi_subgroup <- function(data,
     rhs_no_int <- .build_no_int_rhs()
 
     if (model_type == "cox") {
-      formula_no_int <- stats::as.formula(paste0(
+      formula_no_int <- as.formula(paste0(
         "Surv(", endpoint[1], ", ", endpoint[2], ") ~ ", rhs_no_int
       ))
       model_no_int <- coxph(formula_no_int, data = data)
-      av <- stats::anova(model_no_int, model)
+      av <- anova(model_no_int, model)
 
     } else if (model_type == "logistic") {
-      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-      model_no_int   <- stats::glm(formula_no_int, data = data,
-                                   family = stats::binomial())
-      av <- stats::anova(model_no_int, model, test = "Chisq")
+      formula_no_int <- as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- glm(formula_no_int, data = data,
+                                   family = binomial())
+      av <- anova(model_no_int, model, test = "Chisq")
 
     } else if (model_type == "glm") {
-      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-      model_no_int   <- stats::glm(formula_no_int, data = data,
+      formula_no_int <- as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- glm(formula_no_int, data = data,
                                    family = family_obj)
       test_type <- if (is_quasi) "F" else "Chisq"
-      av <- stats::anova(model_no_int, model, test = test_type)
+      av <- anova(model_no_int, model, test = test_type)
 
     } else if (model_type == "negbin") {
-      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-      model_no_int   <- MASS::glm.nb(formula_no_int, data = data)
-      av <- stats::anova(model_no_int, model, test = "Chisq")
+      formula_no_int <- as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- glm.nb(formula_no_int, data = data)
+      av <- anova(model_no_int, model, test = "Chisq")
 
     } else {
-      formula_no_int <- stats::as.formula(paste(outcome, "~", rhs_no_int))
-      model_no_int   <- stats::lm(formula_no_int, data = data)
-      av <- stats::anova(model_no_int, model)
+      formula_no_int <- as.formula(paste(outcome, "~", rhs_no_int))
+      model_no_int   <- lm(formula_no_int, data = data)
+      av <- anova(model_no_int, model)
     }
 
     # Robustly extract p-value regardless of column name differences

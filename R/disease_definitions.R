@@ -874,7 +874,7 @@ combine_disease_definitions <- function(..., name = "Combined") {
   } else NULL
 
   # Combine UKB First Occurrence date/source fields as paired metadata.
-  first_occurrence_pairs <- data.table::rbindlist(lapply(defs, function(x) {
+  first_occurrence_pairs <- rbindlist(lapply(defs, function(x) {
     date_fields <- x$first_occurrence_fields
     if (is.null(date_fields) || length(date_fields) == 0L) {
       return(NULL)
@@ -883,7 +883,7 @@ combine_disease_definitions <- function(..., name = "Combined") {
     if (is.null(source_fields)) {
       source_fields <- date_fields + 1L
     }
-    data.table::data.table(
+    data.table(
       date_field = as.integer(date_fields),
       source_field = as.integer(source_fields)
     )
@@ -923,7 +923,7 @@ combine_disease_definitions <- function(..., name = "Combined") {
   if (length(sr_codes) == 0) sr_codes <- NULL
 
   # Preserve every algorithm date/source pair in composite definitions.
-  algorithm_pairs <- data.table::rbindlist(lapply(defs, function(x) {
+  algorithm_pairs <- rbindlist(lapply(defs, function(x) {
     date_fields <- x$algo_date_field
     if (is.null(date_fields) || length(date_fields) == 0L) {
       return(NULL)
@@ -932,7 +932,7 @@ combine_disease_definitions <- function(..., name = "Combined") {
     if (is.null(source_fields)) {
       source_fields <- rep(NA_integer_, length(date_fields))
     }
-    data.table::data.table(
+    data.table(
       date_field = as.integer(date_fields),
       source_field = as.integer(source_fields)
     )

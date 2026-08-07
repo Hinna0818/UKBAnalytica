@@ -166,8 +166,6 @@ NULL
 #'   - "drop": Remove rows with any missing values in processed variables
 #' @param invalid_codes Numeric vector of UKB codes to treat as missing.
 #'   Default: c(-1, -3) which are "Prefer not to answer" and "Do not know"
-#' @importFrom data.table := data.table copy is.data.table 
-#' @importFrom stats complete.cases 
 #' @return A data.table with original data plus processed variable columns
 #' @export
 preprocess_baseline <- function(df, 
@@ -184,8 +182,8 @@ preprocess_baseline <- function(df,
   }
 
   # use data.table for further processing (faster)
-  if (!data.table::is.data.table(df)) {
-    df <- data.table::as.data.table(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
   }
   
   # Merge default and custom mappings
@@ -210,7 +208,7 @@ preprocess_baseline <- function(df,
          "\nUse get_variable_info() to see available variables, or provide custom_mapping.")
   }
   
-  result_df <- data.table::copy(df)
+  result_df <- copy(df)
   processed_vars <- character(0)
   
   # Process each variable
@@ -245,7 +243,7 @@ preprocess_baseline <- function(df,
   # Handle missing values
   if (missing_action == "drop" && length(processed_vars) > 0) {
     n_before <- nrow(result_df)
-    complete_rows <- stats::complete.cases(result_df[, processed_vars, with = FALSE])
+    complete_rows <- complete.cases(result_df[, processed_vars, with = FALSE])
     result_df <- result_df[complete_rows]
     n_dropped <- n_before - nrow(result_df)
     if (n_dropped > 0) {
@@ -397,7 +395,6 @@ preprocess_baseline <- function(df,
 #' @param type Character: "sbp" or "dbp"
 #' @param prefer Character: `"auto"` (default) or `"manual"`, controlling which
 #'   measurement source is treated as primary when both are available.
-#' @importFrom data.table := data.table copy is.data.table as.data.table
 #' 
 #' @return A data.table with calculated `sbp` or `dbp` column added
 #' 
@@ -406,10 +403,10 @@ calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = c("aut
   type <- match.arg(type)
   prefer <- match.arg(prefer)
   
-  if (!data.table::is.data.table(df)) {
-    df <- data.table::as.data.table(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
   }
-  result_df <- data.table::copy(df)
+  result_df <- copy(df)
   
   if (type == "sbp") {
     auto_cols <- c("p4080_i0_a0", "p4080_i0_a1")
@@ -472,17 +469,16 @@ calculate_blood_pressure <- function(df, type = c("sbp", "dbp"), prefer = c("aut
 #' @param df A data.table containing medication columns (p6177_i0, p6153_i0)
 #' @param medications Character vector of medications to extract.
 #'   Available: "cholesterol", "blood_pressure", "insulin"
-#' @importFrom data.table := data.table copy is.data.table fifelse as.data.table
 #' 
 #' @return A data.table with binary medication columns added (1=Yes, 0=No, NA=Missing)
 #' 
 #' @export
 extract_medications <- function(df, medications = c("cholesterol", "blood_pressure", "insulin")) {
   
-  if (!data.table::is.data.table(df)) {
-    df <- data.table::as.data.table(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
   }
-  result_df <- data.table::copy(df)
+  result_df <- copy(df)
   
   # Check columns
   drug_cols <- c("p6177_i0", "p6153_i0")
@@ -537,16 +533,15 @@ extract_medications <- function(df, medications = c("cholesterol", "blood_pressu
 #' @param df A data.table containing air pollution columns
 #' @param pollutants Character vector of pollutants to calculate.
 #'   Available: "NO2", "PM10", "PM2.5", "NOx"
-#' @importFrom data.table := data.table copy is.data.table as.data.table fifelse
 #' @return A data.table with averaged pollution columns
 #' 
 #' @export
 calculate_air_pollution <- function(df, pollutants = c("NO2", "PM10", "PM2.5", "NOx")) {
   
-  if (!data.table::is.data.table(df)) {
-    df <- data.table::as.data.table(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
   }
-  result_df <- data.table::copy(df)
+  result_df <- copy(df)
   
   # Pollutant column mappings
   pollutant_cols <- list(
@@ -592,7 +587,6 @@ calculate_air_pollution <- function(df, pollutants = c("NO2", "PM10", "PM2.5", "
 #'   Available: "fruit", "vegetable", "fish", "meat", "cereal", "milk"
 #' @param na_handling Character: "strict" (NA if any component missing) or 
 #'   "partial" (calculate from available components, NA only if insufficient data)
-#' @importFrom data.table := data.table copy is.data.table as.data.table fifelse
 #' @return A data.table with diet_score column (0-7 scale)
 #' 
 #' @export
@@ -602,10 +596,10 @@ calculate_diet_score <- function(df,
   
   na_handling <- match.arg(na_handling)
   
-  if (!data.table::is.data.table(df)) {
-    df <- data.table::as.data.table(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
   }
-  result_df <- data.table::copy(df)
+  result_df <- copy(df)
   
   # Calculate component scores
   
@@ -708,7 +702,6 @@ calculate_diet_score <- function(df,
 #'   - "all": All variables (default)
 #'   - "demographics", "anthropometrics", "lifestyle", "socioeconomic",
 #'     "blood_pressure", "medications", "biomarkers", "pollution", "diet"
-#' @importFrom data.table data.table
 #' @return A data.frame with variable information
 #' 
 #' @export

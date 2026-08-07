@@ -22,18 +22,17 @@
 #' died from a specific disease, the death date becomes the diagnosis date
 #' for that condition (if not previously diagnosed).
 #'
-#' @import data.table
 #' @export
 parse_death_records <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   # Step 1: Extract death dates
   death_date_cols <- grep("^p40000_i[0-9]+$", names(dt), value = TRUE)
   if (length(death_date_cols) == 0) {
     message("[parse_death_records] No p40000 death date columns found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), death_code = character(0),
       death_date = as.Date(character(0)), source = character(0),
       cause_type = character(0)
@@ -42,7 +41,7 @@ parse_death_records <- function(dt) {
 
   death_dates <- dt[, c("eid", death_date_cols), with = FALSE]
   death_dates[, (death_date_cols) := lapply(.SD, as.character), .SDcols = death_date_cols]
-  death_dates_long <- data.table::melt(
+  death_dates_long <- melt(
     death_dates, id.vars = "eid", measure.vars = death_date_cols,
     variable.name = "col", value.name = "death_date", na.rm = TRUE
   )
@@ -58,7 +57,7 @@ parse_death_records <- function(dt) {
 
   if (nrow(death_dates_agg) == 0) {
     message("[parse_death_records] No death records found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), death_code = character(0),
       death_date = as.Date(character(0)), source = character(0),
       cause_type = character(0)
@@ -71,7 +70,7 @@ parse_death_records <- function(dt) {
 
   if (length(primary_cols) > 0) {
     dt[, (primary_cols) := lapply(.SD, as.character), .SDcols = primary_cols]
-    primary_long <- data.table::melt(
+    primary_long <- melt(
       dt[, c("eid", primary_cols), with = FALSE],
       id.vars = "eid", measure.vars = primary_cols,
       variable.name = "col", value.name = "death_code", na.rm = TRUE
@@ -87,7 +86,7 @@ parse_death_records <- function(dt) {
 
   if (length(secondary_cols) > 0) {
     dt[, (secondary_cols) := lapply(.SD, as.character), .SDcols = secondary_cols]
-    secondary_long <- data.table::melt(
+    secondary_long <- melt(
       dt[, c("eid", secondary_cols), with = FALSE],
       id.vars = "eid", measure.vars = secondary_cols,
       variable.name = "col", value.name = "death_code", na.rm = TRUE
@@ -98,14 +97,14 @@ parse_death_records <- function(dt) {
   }
 
   # Step 4: Combine all causes
-  all_causes <- data.table::rbindlist(
+  all_causes <- rbindlist(
     list(primary_long, secondary_long),
     use.names = TRUE, fill = TRUE
   )
 
   if (nrow(all_causes) == 0) {
     message("[parse_death_records] No death cause codes found")
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), death_code = character(0),
       death_date = as.Date(character(0)), source = character(0),
       cause_type = character(0)
@@ -115,11 +114,11 @@ parse_death_records <- function(dt) {
   all_causes <- unique(all_causes, by = c("eid", "death_code"))
 
   # Step 5: Join with death dates
-  result <- data.table::merge.data.table(
+  result <- merge.data.table(
     all_causes, death_dates_agg, by = "eid", all.x = TRUE
   )
   result[, source := "Death"]
-  data.table::setorder(result, eid, cause_type, death_code)
+  setorder(result, eid, cause_type, death_code)
 
   return(result[, .(eid, death_code, death_date, source, cause_type)])
 }
@@ -138,8 +137,8 @@ parse_death_records <- function(dt) {
 #'
 #' @keywords internal
 filter_death_codes <- function(death_long, pattern, disease_label) {
-  if (!data.table::is.data.table(death_long)) {
-    death_long <- data.table::as.data.table(death_long)
+  if (!is.data.table(death_long)) {
+    death_long <- as.data.table(death_long)
   }
   result <- death_long[grepl(pattern, death_code, perl = TRUE)]
   result[, disease := disease_label]
@@ -159,8 +158,8 @@ filter_death_codes <- function(death_long, pattern, disease_label) {
 #'
 #' @keywords internal
 aggregate_death_as_diagnosis <- function(death_filtered) {
-  if (!data.table::is.data.table(death_filtered)) {
-    death_filtered <- data.table::as.data.table(death_filtered)
+  if (!is.data.table(death_filtered)) {
+    death_filtered <- as.data.table(death_filtered)
   }
   result <- death_filtered[
     !is.na(death_date),
@@ -183,20 +182,20 @@ aggregate_death_as_diagnosis <- function(death_filtered) {
 #'
 #' @export
 get_death_dates <- function(dt) {
-  if (!data.table::is.data.table(dt)) {
-    dt <- data.table::as.data.table(dt)
+  if (!is.data.table(dt)) {
+    dt <- as.data.table(dt)
   }
 
   death_date_cols <- grep("^p40000_i[0-9]+$", names(dt), value = TRUE)
   if (length(death_date_cols) == 0) {
-    return(data.table::data.table(
+    return(data.table(
       eid = integer(0), death_date = as.Date(character(0))
     ))
   }
 
   dt[, (death_date_cols) := lapply(.SD, as.character), .SDcols = death_date_cols]
 
-  death_dates <- data.table::melt(
+  death_dates <- melt(
     dt[, c("eid", death_date_cols), with = FALSE],
     id.vars = "eid", measure.vars = death_date_cols,
     variable.name = "col", value.name = "death_date", na.rm = TRUE

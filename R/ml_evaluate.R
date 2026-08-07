@@ -5,7 +5,6 @@
 #'
 #' @name ml_evaluate
 #' @keywords internal
-#' @importFrom pROC roc auc ci.auc
 NULL
 
 #' Create ROC Curve Data for Binary ML Predictions

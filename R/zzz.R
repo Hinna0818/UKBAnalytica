@@ -1,6 +1,6 @@
 .onAttach <- function(libname, pkgname) {
   version <- tryCatch(
-    as.character(utils::packageVersion(pkgname)),
+    as.character(packageVersion(pkgname)),
     error = function(e) NA_character_
   )
   version_label <- if (!is.na(version)) paste0(" ", version) else ""

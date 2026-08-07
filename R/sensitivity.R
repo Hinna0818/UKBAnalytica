@@ -47,8 +47,8 @@ sensitivity_exclude_early_events <- function(data,
   )
 
   dt <- data
-  if (isTRUE(copy) && data.table::is.data.table(data)) {
-    dt <- data.table::copy(data)
+  if (isTRUE(copy) && is.data.table(data)) {
+    dt <- copy(data)
   }
 
   time_col <- endpoint[[1]]
@@ -76,7 +76,7 @@ sensitivity_exclude_early_events <- function(data,
     !is.na(time_vals) &
     time_vals <= n_years
 
-  if (data.table::is.data.table(dt)) {
+  if (is.data.table(dt)) {
     result <- dt[!drop_idx]
   } else {
     result <- dt[!drop_idx, , drop = FALSE]
@@ -152,11 +152,11 @@ sensitivity_exclude_missing_covariates <- function(data,
   )
 
   dt <- data
-  if (isTRUE(copy) && data.table::is.data.table(data)) {
-    dt <- data.table::copy(data)
+  if (isTRUE(copy) && is.data.table(data)) {
+    dt <- copy(data)
   }
 
-  if (data.table::is.data.table(dt)) {
+  if (is.data.table(dt)) {
     cov_data <- dt[, covariates, with = FALSE]
   } else {
     cov_data <- dt[, covariates, drop = FALSE]
@@ -164,7 +164,7 @@ sensitivity_exclude_missing_covariates <- function(data,
 
   if (isTRUE(stepwise)) {
     current_keep <- rep(TRUE, nrow(dt))
-    flow <- data.table::data.table(
+    flow <- data.table(
       step = integer(0),
       variable = character(0),
       n_before = integer(0),
@@ -183,10 +183,10 @@ sensitivity_exclude_missing_covariates <- function(data,
       current_keep[var_missing] <- FALSE
       n_after <- sum(current_keep)
 
-      flow <- data.table::rbindlist(
+      flow <- rbindlist(
         list(
           flow,
-          data.table::data.table(
+          data.table(
             step = i,
             variable = var,
             n_before = n_before,
@@ -203,11 +203,11 @@ sensitivity_exclude_missing_covariates <- function(data,
 
     drop_idx <- !current_keep
   } else {
-    drop_idx <- !stats::complete.cases(cov_data)
+    drop_idx <- !complete.cases(cov_data)
     flow <- NULL
   }
 
-  if (data.table::is.data.table(dt)) {
+  if (is.data.table(dt)) {
     result <- dt[!drop_idx]
   } else {
     result <- dt[!drop_idx, , drop = FALSE]

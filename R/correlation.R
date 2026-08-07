@@ -5,7 +5,6 @@
 #' @param vars A character vector of column names for which to calculate the correlation matrix.
 #' @param method The method to use for calculating correlation. Options are "pearson", "spearman", or "kendall". Default is "pearson".
 #' @param threshold Numeric value between 0 and 1. If specified, the variables with absolute correlation above this threshold will be highlighted in the output. Default is 0.7.
-#' @importFrom stats cor
 #' @return A correlation matrix of the specified variables.
 #' @export
 #' @name run_correlation
@@ -69,8 +68,6 @@ run_correlation <- function(df,
 #' @param color_mid Character. Color for zero correlation. Default: \code{"white"}.
 #' @param color_high Character. Color for positive correlations. Default: \code{"#B40426"} (red).
 #' @param upper_triangle Logical. If \code{TRUE}, show only upper triangle. Default: \code{FALSE}.
-#' @importFrom ggplot2 ggplot aes geom_tile geom_text scale_fill_gradient2
-#'   theme_minimal theme element_text element_blank coord_fixed labs
 #' @return A \code{ggplot2} object. Can be further customized with \code{ggplot2} functions.
 #'
 #' @export

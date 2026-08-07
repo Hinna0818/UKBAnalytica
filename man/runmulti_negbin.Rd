@@ -15,7 +15,7 @@ runmulti_negbin(data, main_var, outcome, covariates = NULL, ...)
 
 \item{covariates}{A character vector of covariate names. Default \code{NULL}.}
 
-\item{...}{Additional arguments passed to \code{MASS::glm.nb()}.}
+\item{...}{Additional arguments passed to \code{glm.nb()}.}
 }
 \value{
 A data.frame with columns: \code{variable}, \code{contrast},
@@ -27,7 +27,7 @@ non-reference contrast.
 (larger values indicate less overdispersion).
 }
 \description{
-Fit negative-binomial GLMs (\code{MASS::glm.nb}) for each main variable
+Fit negative-binomial GLMs (\code{glm.nb}) for each main variable
 separately.  This is the standard approach for overdispersed count outcomes
 where the Poisson variance assumption is violated.
 

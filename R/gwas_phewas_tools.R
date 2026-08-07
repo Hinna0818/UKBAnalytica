@@ -579,7 +579,7 @@ ukb_plan_plink2_dosage <- function(bgen,
   out <- list(
     tool = "PLINK2",
     commands = commands,
-    expected_raw = stats::setNames(paste0(outputs, ".raw"), labels),
+    expected_raw = setNames(paste0(outputs, ".raw"), labels),
     settings = list(
       bgen = bgen,
       sample = sample,
@@ -747,7 +747,7 @@ ukb_run_phewas <- function(
   if (nrow(x$phewas_long) == 0L) {
     stop("The phenotype object contains no PheWAS diagnosis codes.", call. = FALSE)
   }
-  genotype <- data.table::as.data.table(data.table::copy(genotypes))
+  genotype <- as.data.table(copy(genotypes))
   .gpp_require_columns(genotype, genotype_id_col, "genotypes")
   if (anyDuplicated(genotype[[genotype_id_col]])) {
     stop("`genotypes` must contain one row per participant ID.", call. = FALSE)
@@ -774,8 +774,8 @@ ukb_run_phewas <- function(
     }
   }
   genotype <- genotype[, c(genotype_id_col, genotype_cols), with = FALSE]
-  data.table::setnames(genotype, genotype_id_col, "id")
-  data.table::set(genotype, j = "id", value = as.character(genotype[["id"]]))
+  setnames(genotype, genotype_id_col, "id")
+  set(genotype, j = "id", value = as.character(genotype[["id"]]))
   genotype <- as.data.frame(genotype)
 
   covariate_cols <- .gpt_names(covariate_cols, "covariate_cols", allow_empty = TRUE)

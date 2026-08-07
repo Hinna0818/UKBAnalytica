@@ -15,7 +15,7 @@ runmulti_lm(data, main_var, covariates = NULL, outcome, ...)
 
 \item{outcome}{A character string specifying the outcome (dependent) variable name.}
 
-\item{...}{Additional arguments passed to \code{stats::lm()}.}
+\item{...}{Additional arguments passed to \code{lm()}.}
 }
 \value{
 A data.frame with columns: \code{variable}, \code{contrast},
