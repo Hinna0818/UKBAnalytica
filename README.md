@@ -85,212 +85,6 @@ multi_surv <- build_survival_dataset(
 ## Hypertension_status / Hypertension_surv_time.
 ```
 
-## GWAS and PheWAS phenotype preparation
-
-The GWAS/PheWAS module accepts outputs from the existing phenotyping workflow
-without modifying them. It builds REGENIE-compatible phenotype/covariate files
-and the four-column ICD-10 table used by the PheWAS R package. The builder is
-in-memory only; writing participant-level files is a separate, explicit RAP
-operation.
-
-```r
-icd10_long <- parse_icd10_diagnoses(ukb_raw)
-
-gwas_phewas <- build_gwas_phewas_phenotype(
-  data = surv_dt,
-  phenotype_cols = "outcome_status",
-  diagnoses = icd10_long,
-  covariates = c("p31", "p21022"),
-  categorical_covariates = "p31",
-  diagnosis_date_col = "diag_date",
-  sex_col = "p31",
-  sample_qc = ukb_gwas_qc_profile("none")
-)
-
-gwas_phewas$trait_summary
-gwas_phewas$qc_flow
-
-# Inside RAP only; defaults to requiring a path below /mnt/project.
-# files <- ukb_write_gwas_phewas_phenotype(
-#   gwas_phewas,
-#   "/mnt/project/Analysis/GWAS_PheWAS/phenotype"
-# )
-```
-
-Use `ukb_plan_regenie()` and `ukb_plan_plink2_dosage()` to create auditable
-dry-run command plans. Execution remains opt-in. See the
-[GWAS and PheWAS workflow](https://hinna0818.github.io/UKBAnalytica/14-gwas-phewas.html)
-for the complete RAP example.
-
-The structured REGENIE planner accepts additional non-conflicting official
-tokens through `step1_args` and `step2_args`. For complete control, use
-`ukb_plan_regenie_command()`:
-
-```r
-custom_regenie <- ukb_plan_regenie_command(
-  args = c(
-    "--step", "2",
-    "--pgen", "/mnt/project/Genotype/cohort",
-    "--phenoFile", "/mnt/project/Analysis/phenotype.tsv",
-    "--phenoColList", "disease",
-    "--bt",
-    "--pred", "/mnt/project/Analysis/step1_pred.list",
-    "--bsize", "400",
-    "--minMAC", "20",
-    "--minINFO", "0.8",
-    "--chr", "19",
-    "--gz",
-    "--out", "/mnt/project/Analysis/disease_chr19"
-  ),
-  label = "disease_chr19"
-)
-
-ukb_run_regenie(custom_regenie)  # dry run
-```
-
-Raw tokens are preserved, but their validity depends on the REGENIE version
-installed in the execution environment.
-
-Common genotype formats can be converted through the same PLINK2 execution
-boundary:
-
-```r
-# BED/BIM/FAM -> BGEN 1.2; creates a plan and does not execute by default.
-conversion <- convert_gwas_datatype(
-  input = "/mnt/project/Genotype/array/ukb_array.bed",
-  from = "auto",
-  to = "bgen",
-  output_prefix = "/mnt/project/Analysis/converted/ukb_array",
-  bgen_bits = 8,
-  plink2_args = c("--maf", "0.01", "--threads", "16")
-)
-
-conversion$commands$convert$display
-
-# Explicit execution in a RAP environment with PLINK2 on PATH:
-# conversion_run <- convert_gwas_datatype(
-#   input = "/mnt/project/Genotype/array/ukb_array.bed",
-#   to = "bgen",
-#   output_prefix = "/mnt/project/Analysis/converted/ukb_array",
-#   execute = TRUE
-# )
-```
-
-For PLINK2 functionality without a dedicated wrapper, pass the official
-command-line tokens to `ukb_plan_plink2()`, then execute the returned plan with
-`ukb_run_plink2(..., execute = TRUE)`.
-
-## Polygenic risk scores
-
-Published UK Biobank PRS Release V2 fields can be inspected and loaded without
-reading genotype files:
-
-```r
-ukb_prs_catalog("standard", c("HT", "T2D"))
-
-# From a participant table already extracted in RAP:
-published_prs <- load_ukb_prs(
-  participant_data,
-  trait = c("HT", "T2D"),
-  type = "standard",
-  standardize = TRUE
-)
-
-# Enhanced PRS defaults to setting scores outside field 26200 to NA.
-# Use eligibility = "require" to retain testing-subgroup participants only.
-
-# Or omit `data` to use the existing RAP phenotype extractor:
-# published_prs <- load_ukb_prs(
-#   trait = c("HT", "T2D"), type = "standard"
-# )
-```
-
-For a custom fixed-weight PRS, first normalize a public weight table, then
-create and explicitly execute a PLINK2 plan. The package passes genotype paths
-to PLINK2 and never loads or caches UKB BGEN data in R.
-
-```r
-weights <- prepare_prs_weights(
-  published_weights,
-  variant_col = "rsid",
-  effect_allele_col = "effect_allele",
-  other_allele_col = "other_allele",
-  chr_col = "chr",
-  pos_col = "position",
-  effect_allele_freq_col = "effect_allele_frequency",
-  weight_col = "odds_ratio",
-  weight_type = "or",       # converted to log(OR)
-  genome_build = "GRCh37"
-)
-
-# ukb_variant_map is a target-map table with ID/CHR/POS/ALT/REF/ALT_FREQ.
-# Builds must match; no silent liftOver is performed.
-weights <- harmonize_prs_weights(
-  weights,
-  variant_map = ukb_variant_map,
-  target_allele1_freq_col = "ALT_FREQ",
-  target_build = "GRCh37",
-  palindromic = "infer_by_af",
-  output = "/mnt/project/Analysis/PRS/t2d_weights_harmonized.tsv"
-)
-
-attr(weights, "harmonization_qc")
-
-prs_plan <- ukb_plan_prs(
-  weights = weights,
-  bgen = sprintf(
-    "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb_c%d_b0_v3.bgen",
-    1:22
-  ),
-  sample = "/mnt/project/Bulk/Imputation/UKB imputation from genotype/ukb22828_c1_b0_v3_s487395.sample",
-  keep_file = "/mnt/project/Analysis/PRS/cohort.keep",
-  frequency_file = "/mnt/project/Analysis/PRS/ukb_reference.acount",
-  output_prefix = "/mnt/project/Analysis/PRS/t2d",
-  score_name = "T2D_PRS",
-  plink2_args = c("--threads", "16")
-)
-
-ukb_run_prs(prs_plan) # dry run
-# result <- ukb_run_prs(prs_plan, execute = TRUE)
-# result$scores
-```
-
-When several scores use the same target genotype map, combine their
-harmonized weights before planning. This produces one PLINK2 genotype scan per
-chromosome, with one score column per PRS. Splitting the weights also prevents
-commands from being created for chromosomes with no contributing variants.
-
-```r
-multi_weights <- combine_prs_weights(
-  list(HT_PRS = ht_weights, T2D_PRS = t2d_weights),
-  output = "/mnt/project/Analysis/PRS/ht_t2d_weights.tsv"
-)
-
-weights_by_chr <- split_prs_weights(
-  multi_weights,
-  output_dir = "/mnt/project/Analysis/PRS/weights_by_chr"
-)
-
-multi_plan <- ukb_plan_prs(
-  weights = weights_by_chr,
-  genotype = sprintf("/mnt/project/Genotype/pgen/ukb_chr%d.pgen", 1:22),
-  genotype_format = "pgen", # BED/BIM/FAM is also accepted with "bed"
-  keep_file = "/mnt/project/Analysis/PRS/cohort.keep",
-  output_prefix = "/mnt/project/Analysis/PRS/ht_t2d"
-)
-
-# Reruns only incomplete chromosomes; up to four PLINK2 processes at once.
-# multi_result <- ukb_run_prs(
-#   multi_plan, execute = TRUE, workers = 4, resume = TRUE
-# )
-# multi_result$scores[, .(IID, HT_PRS, T2D_PRS)]
-```
-
-`workers` controls independent chromosome-level PLINK2 processes. Keep the
-sum of PLINK2 threads across workers within the RAP instance CPU allocation.
-With `resume = TRUE`, complete `.sscore` (and `.sscore.vars`, when requested)
-outputs are reused; partial outputs require `overwrite = TRUE` before rerun.
-
 ## Disease Definition Sources
 
 UKBAnalytica builds disease phenotypes by taking the earliest valid evidence
@@ -610,11 +404,17 @@ Here we provide some learning materials for UK Biobank in which you may be inter
 ## Star History
 
 <p align="center">
-  <a href="https://www.star-history.com/?repos=Hinna0818%2FUKBAnalytica&type=date&legend=top-left">
-    <img 
-      src="https://api.star-history.com/svg?repos=Hinna0818/UKBAnalytica&type=date&legend=top-left"
-      width="600"
-      alt="Star History Chart"
-    />
+  <a href="https://repostars.dev/?repos=Hinna0818%2FUKBAnalytica&amp;theme=light">
+    <picture>
+      <source
+        media="(prefers-color-scheme: dark)"
+        srcset="https://repostars.dev/api/embed?repo=Hinna0818%2FUKBAnalytica&amp;theme=dark"
+      />
+      <img
+        src="https://repostars.dev/api/embed?repo=Hinna0818%2FUKBAnalytica&amp;theme=light"
+        width="700"
+        alt="UKBAnalytica star history (estimated timeline, exact current total)"
+      />
+    </picture>
   </a>
 </p>
